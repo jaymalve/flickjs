@@ -1,0 +1,30 @@
+{
+  "name": "flick-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "packages/create-app/test-project"
+  ],
+  "scripts": {
+    "build": "bun run build:runtime && bun run build:compiler && bun run build:router && bun run build:create-app",
+    "build:runtime": "cd packages/runtime && bunx tsc && bun build src/index.ts --outdir dist --minify --target browser",
+    "build:compiler": "cd packages/compiler && bun build src/index.ts --outfile dist/index.js --target node",
+    "build:router": "cd packages/router && bunx tsc",
+    "build:create-app": "cd packages/create-app && bun build src/index.ts --outfile dist/index.js --target node",
+    "clean": "rm -rf packages/*/dist",
+    "publish:all": "bun run build && cd packages/runtime && npm publish --tag beta && cd ../compiler && npm publish --tag beta && cd ../router && npm publish --tag beta && cd ../create-app && npm publish --tag beta",
+    "publish:dry": "bun run build && cd packages/runtime && npm publish --dry-run --tag beta && cd ../compiler && npm publish --dry-run --tag beta && cd ../router && npm publish --dry-run --tag beta && cd ../create-app && npm publish --dry-run --tag beta",
+    "version:update": "node -e \"const fs = require('fs'); const version = process.argv[1]; ['runtime', 'compiler', 'router', 'create-app'].forEach(pkg => { const path = './packages/' + pkg + '/package.json'; const json = JSON.parse(fs.readFileSync(path)); json.version = version; fs.writeFileSync(path, JSON.stringify(json, null, 2) + '\\\\n'); });\""
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "description": "Flick - A tiny reactive UI framework with fine-grained reactivity",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jaymalave/flick.git"
+  },
+  "author": "Jay Malave",
+  "license": "MIT"
+}

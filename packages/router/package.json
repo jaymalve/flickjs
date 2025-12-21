@@ -1,0 +1,50 @@
+{
+  "name": "@flickjs/router",
+  "version": "0.0.1-beta.1",
+  "description": "File-based router for Flick framework",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./vite": {
+      "types": "./dist/vite-plugin.d.ts",
+      "import": "./dist/vite-plugin.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "router",
+    "routing",
+    "file-based",
+    "flick",
+    "spa"
+  ],
+  "author": "Jay Malave",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jaymalave/flick.git",
+    "directory": "packages/router"
+  },
+  "homepage": "https://github.com/jaymalave/flick#readme",
+  "bugs": {
+    "url": "https://github.com/jaymalave/flick/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@flickjs/runtime": "^0.0.1-beta.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "vite": "^5.0.0"
+  }
+}

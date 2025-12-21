@@ -1,0 +1,5 @@
+src/
+*.test.ts
+*.test.js
+.DS_Store
+node_modules/

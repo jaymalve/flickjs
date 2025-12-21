@@ -1,0 +1,44 @@
+{
+  "name": "@flickjs/compiler",
+  "version": "0.0.1-beta.2",
+  "description": "JSX compiler for Flick framework",
+  "type": "module",
+  "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "babel-plugin",
+    "jsx",
+    "compiler",
+    "flick",
+    "reactive",
+    "transform"
+  ],
+  "author": "Jay Malave",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jaymalave/flick.git",
+    "directory": "packages/compiler"
+  },
+  "homepage": "https://github.com/jaymalave/flick#readme",
+  "bugs": {
+    "url": "https://github.com/jaymalave/flick/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "@babel/core": "^7.0.0"
+  },
+  "dependencies": {
+    "@babel/types": "^7.24.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.0"
+  }
+}

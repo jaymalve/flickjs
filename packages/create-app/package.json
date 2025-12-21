@@ -1,0 +1,39 @@
+{
+  "name": "create-flick-app",
+  "version": "0.0.1-beta.2",
+  "description": "Scaffolding CLI tool for creating new Flick projects",
+  "bin": {
+    "create-flick-app": "dist/index.js"
+  },
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "flickjs",
+    "create-app",
+    "scaffold",
+    "cli",
+    "generator"
+  ],
+  "author": "Jay Malave",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jaymalave/flick.git",
+    "directory": "packages/create-app"
+  },
+  "homepage": "https://github.com/jaymalave/flick#readme",
+  "bugs": {
+    "url": "https://github.com/jaymalave/flick/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "fs-extra": "^11.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  }
+}

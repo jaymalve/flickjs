@@ -1,0 +1,44 @@
+{
+  "name": "@flickjs/runtime",
+  "version": "0.0.1-beta.2",
+  "description": "A tiny reactive runtime library with fine-grained reactivity",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "jsx-runtime.d.ts",
+  "exports": {
+    ".": {
+      "types": "./jsx-runtime.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./jsx-runtime": {
+      "types": "./jsx-runtime.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "jsx-runtime.d.ts"
+  ],
+  "keywords": [
+    "reactive",
+    "signals",
+    "fine-grained",
+    "ui",
+    "framework",
+    "lightweight",
+    "dom"
+  ],
+  "author": "Jay Malave",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jaymalave/flick.git",
+    "directory": "packages/runtime"
+  },
+  "homepage": "https://github.com/jaymalave/flick#readme",
+  "bugs": {
+    "url": "https://github.com/jaymalave/flick/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
