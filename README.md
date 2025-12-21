@@ -20,7 +20,7 @@ Flick is a lightweight, reactive UI framework that combines the simplicity of mo
 The fastest way to get started is using the CLI:
 
 ```bash
-bun create flickdev-app my-app
+bun create flick-app my-app
 cd my-app
 bun install
 bun dev
@@ -87,12 +87,12 @@ bun add -d @flickjs/compiler @babel/core
 
 [View Compiler Documentation →](./packages/compiler/README.md)
 
-### [create-flickdev-app](./packages/create-app)
+### [create-flick-app](./packages/create-app)
 
 CLI tool for scaffolding new Flick projects.
 
 ```bash
-bun create flickdev-app my-app
+bun create flick-app my-app
 ```
 
 [View CLI Documentation →](./packages/create-app/README.md)
@@ -152,7 +152,7 @@ bun build src/main.tsx --outdir dist
 
 | Feature        | Flick        | SolidJS      | Vue 3        | React          |
 | -------------- | ------------ | ------------ | ------------ | -------------- |
-| Size           | ~300 bytes   | ~7 KB        | ~34 KB       | ~45 KB         |
+| Size           | ~1 KB   | ~7 KB        | ~34 KB       | ~45 KB         |
 | Reactivity     | Fine-grained | Fine-grained | Fine-grained | Coarse-grained |
 | Virtual DOM    | No           | No           | Optional     | Yes            |
 | JSX Support    | Yes          | Yes          | Via plugin   | Yes            |
@@ -287,4 +287,4 @@ MIT © Jay Malave
 - [Issues](https://github.com/jaymalave/flick/issues)
 - [npm: @flickjs/runtime](https://www.npmjs.com/package/@flickjs/runtime)
 - [npm: @flickjs/compiler](https://www.npmjs.com/package/@flickjs/compiler)
-- [npm: create-flickdev-app](https://www.npmjs.com/package/create-flickdev-app)
+- [npm: create-flick-app](https://www.npmjs.com/package/create-flick-app)
