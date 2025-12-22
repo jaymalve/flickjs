@@ -147,3 +147,43 @@ export function resource<S, T>(
 
   return read;
 }
+
+
+type LazyComponent<P> = (props: P) => Node;
+type LazyLoader<P> = () => Promise<{ default: LazyComponent<P> }>;
+
+export function lazy<P extends Record<string, any> = {}>(
+  loader: LazyLoader<P>
+): LazyComponent<P> {
+  let cachedComponent: LazyComponent<P> | null = null;
+  let loadPromise: Promise<void> | null = null;
+
+  return (props: P): Node => {
+    if (cachedComponent) {
+      return cachedComponent(props);
+    }
+
+    const placeholder = document.createComment("lazy");
+
+    const suspenseContext = getCurrentSuspense();
+
+    if (!loadPromise) {
+      loadPromise = loader().then((module) => {
+        cachedComponent = module.default;
+      });
+    }
+
+    if (suspenseContext) {
+      suspenseContext.register(loadPromise);
+    }
+
+    loadPromise.then(() => {
+      if (cachedComponent && placeholder.parentNode) {
+        const componentNode = cachedComponent(props);
+        placeholder.parentNode.replaceChild(componentNode, placeholder);
+      }
+    });
+
+    return placeholder;
+  };
+}

@@ -128,5 +128,5 @@ declare global {
 // Users don't need to do anything - types are automatically available
 export const jsxTypes = Symbol("jsx-types");
 
-export { Suspense, getCurrentSuspense, resource } from "./suspense";
+export { Suspense, getCurrentSuspense, resource, lazy } from "./suspense";
 export type { SuspenseContext, SuspenseProps, Resource } from "./suspense";
