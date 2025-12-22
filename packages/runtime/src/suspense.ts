@@ -63,3 +63,87 @@ export function Suspense(props: SuspenseProps): Node {
 
   return container;
 }
+
+type ResourceState = "pending" | "resolved" | "rejected";
+
+export interface Resource<T> {
+  (): T | undefined;
+  loading: () => boolean;
+  error: () => Error | undefined;
+  latest: () => T | undefined;
+  refetch: () => void;
+}
+
+type Fetcher<S, T> = (source: S) => Promise<T>;
+
+export function resource<T>(fetcher: () => Promise<T>): Resource<T>;
+export function resource<S, T>(
+  source: () => S,
+  fetcher: Fetcher<S, T>
+): Resource<T>;
+
+export function resource<S, T>(
+  sourceOrFetcher: (() => S) | (() => Promise<T>),
+  maybeFetcher?: Fetcher<S, T>
+): Resource<T> {
+  const hasSource = maybeFetcher !== undefined;
+  const source = hasSource ? (sourceOrFetcher as () => S) : undefined;
+  const fetcher = hasSource
+    ? maybeFetcher!
+    : (sourceOrFetcher as () => Promise<T>);
+
+  const state = signal<ResourceState>("pending");
+  const value = signal<T | undefined>(undefined);
+  const error = signal<Error | undefined>(undefined);
+  const latest = signal<T | undefined>(undefined);
+
+  const suspenseContext = getCurrentSuspense();
+
+  const load = (sourceValue?: S) => {
+    state.set("pending");
+    error.set(undefined);
+
+    const promise = hasSource
+      ? (fetcher as Fetcher<S, T>)(sourceValue as S)
+      : (fetcher as unknown as () => Promise<T>)();
+
+    if (suspenseContext) {
+      suspenseContext.register(promise);
+    }
+
+    promise
+      .then((result) => {
+        value.set(result);
+        latest.set(result);
+        state.set("resolved");
+      })
+      .catch((err) => {
+        error.set(err instanceof Error ? err : new Error(String(err)));
+        state.set("rejected");
+      });
+  };
+
+  if (hasSource) {
+    effect(() => {
+      const sourceValue = source!();
+      load(sourceValue);
+    });
+  } else {
+    load();
+  }
+
+  // Create the resource accessor
+  const read = (() => value()) as Resource<T>; // Guarantees type safety
+  read.loading = () => state() === "pending";
+  read.error = () => error();
+  read.latest = () => latest();
+  read.refetch = () => {
+    if (hasSource) {
+      load(source!());
+    } else {
+      load();
+    }
+  };
+
+  return read;
+}
