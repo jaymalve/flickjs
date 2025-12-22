@@ -316,6 +316,86 @@ function ColorBox() {
 
 ---
 
+## Tailwind CSS Setup
+
+
+### Installation
+
+```bash
+bun add -D tailwindcss @tailwindcss/vite
+```
+
+### Configuration
+
+**1. Create `src/index.css`:**
+
+```css
+@import "tailwindcss";
+```
+
+**2. Update `vite.config.js`:**
+
+```js
+import { defineConfig } from "vite";
+import tailwindcss from "@tailwindcss/vite";
+// ... your existing flickPlugin
+
+export default defineConfig({
+  plugins: [
+    flickPlugin(),
+    tailwindcss(),
+  ],
+});
+```
+
+**3. Import CSS in `src/main.tsx`:**
+
+```tsx
+import "./index.css";
+import { signal, mount } from "@flickjs/runtime";
+
+// ... rest of your app
+```
+
+### Usage Example
+
+```tsx
+import "./index.css";
+import { signal, mount } from "@flickjs/runtime";
+
+function Counter() {
+  const count = signal(0);
+
+  return (
+    <div class="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div class="bg-white p-8 rounded-lg shadow-lg">
+        <h1 class="text-3xl font-bold text-gray-800 mb-4">
+          Count: {count()}
+        </h1>
+        <div class="flex gap-2">
+          <button
+            class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+            onclick={() => count.set(count() + 1)}
+          >
+            Increment
+          </button>
+          <button
+            class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"
+            onclick={() => count.set(count() - 1)}
+          >
+            Decrement
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+mount(Counter, document.getElementById("app"));
+```
+
+---
+
 ## File-Based Router (Optional)
 
 For multi-page apps, use the Flick router:
