@@ -94,29 +94,34 @@ export function resource<S, T>(
   const error = signal<Error | undefined>(undefined);
   const latest = signal<T | undefined>(undefined);
 
-  const suspenseContext = getCurrentSuspense();
+  // Track current promise and which Suspense contexts we've registered with
+  let currentPromise: Promise<T> | null = null;
+  let registeredWith = new Set<SuspenseContext>();
 
   const load = (sourceValue?: S) => {
     state.set("pending");
     error.set(undefined);
 
+    // Clear registrations for new load
+    registeredWith = new Set<SuspenseContext>();
+
     const promise = hasSource
       ? (fetcher as Fetcher<S, T>)(sourceValue as S)
       : (fetcher as unknown as () => Promise<T>)();
 
-    if (suspenseContext) {
-      suspenseContext.register(promise);
-    }
+    currentPromise = promise;
 
     promise
       .then((result) => {
         value.set(result);
         latest.set(result);
         state.set("resolved");
+        currentPromise = null;
       })
       .catch((err) => {
         error.set(err instanceof Error ? err : new Error(String(err)));
         state.set("rejected");
+        currentPromise = null;
       });
   };
 
@@ -129,8 +134,18 @@ export function resource<S, T>(
     load();
   }
 
-  // Create the resource accessor
-  const read = (() => value()) as Resource<T>; // Guarantees type safety
+  // Create the resource accessor - registers with Suspense at READ time
+  const read = (() => {
+    const suspenseContext = getCurrentSuspense();
+    if (suspenseContext && currentPromise && state() === "pending") {
+      if (!registeredWith.has(suspenseContext)) {
+        registeredWith.add(suspenseContext);
+        suspenseContext.register(currentPromise);
+      }
+    }
+    return value();
+  }) as Resource<T>;
+
   read.loading = () => state() === "pending";
   read.error = () => error();
   read.latest = () => latest();
@@ -144,7 +159,6 @@ export function resource<S, T>(
 
   return read;
 }
-
 
 type LazyComponent<P> = (props: P) => Node;
 type LazyLoader<P> = () => Promise<{ default: LazyComponent<P> }>;
