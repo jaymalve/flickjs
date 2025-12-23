@@ -38,25 +38,24 @@ export function Suspense(props: SuspenseProps): Node {
       : props.fallback;
   };
 
-  const resolveChildren = (): Node => {
+  const fallbackNode = resolveFallback();
+
+  const childrenWrapper = document.createElement("div");
+
+  effect(() => {
     suspenseStack.push(context);
     const result =
       typeof props.children === "function" ? props.children() : props.children;
     suspenseStack.pop();
-    return result ?? document.createDocumentFragment();
-  };
 
-  let currentContent: Node | null = null;
+    childrenWrapper.innerHTML = "";
+    childrenWrapper.appendChild(result ?? document.createDocumentFragment());
+  });
 
   effect(() => {
     const isPending = pending() > 0;
-    const nextContent = isPending ? resolveFallback() : resolveChildren();
-
-    if (currentContent !== nextContent) {
-      container.innerHTML = "";
-      container.appendChild(nextContent);
-      currentContent = nextContent;
-    }
+    container.innerHTML = "";
+    container.appendChild(isPending ? fallbackNode : childrenWrapper);
   });
 
   return container;
