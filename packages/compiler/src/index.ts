@@ -149,16 +149,24 @@ export default function flickJSX(): PluginObj {
             });
 
             // Add children prop if there are any
-            if (childNodes.length === 1) {
+            if (childNodes.length > 0) {
+              let childrenValue: t.Expression;
+
+              if (childNodes.length === 1) {
+                childrenValue = childNodes[0];
+              } else {
+                childrenValue = t.arrayExpression(childNodes);
+              }
+
+              // Wrap Suspense children in arrow function for deferred execution
+              // This ensures children are evaluated inside Suspense's effect,
+              // when the suspense context is on the stack
+              if (tagName === "Suspense") {
+                childrenValue = t.arrowFunctionExpression([], childrenValue);
+              }
+
               props.push(
-                t.objectProperty(t.identifier("children"), childNodes[0])
-              );
-            } else if (childNodes.length > 1) {
-              props.push(
-                t.objectProperty(
-                  t.identifier("children"),
-                  t.arrayExpression(childNodes)
-                )
+                t.objectProperty(t.identifier("children"), childrenValue)
               );
             }
 

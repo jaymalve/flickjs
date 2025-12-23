@@ -1,6 +1,6 @@
-import { effect, signal } from "@flickjs/runtime";
+import { effect, signal, Suspense } from "@flickjs/runtime";
 import { currentPath, params, query } from "./signals";
-import { matchRoute, type Route, type MatchResult } from "./utils";
+import { matchRoute, type Route } from "./utils";
 
 /**
  * Update routing state from current URL
@@ -21,18 +21,26 @@ window.addEventListener("popstate", () => {
   updateRoutingState();
 });
 
+
+function DefaultFallback(): Node {
+  const div = document.createElement("div");
+  // div.textContent = "Loading...";
+  return div;
+}
+
+export interface RouterProps {
+  routes: Route[];
+  fallback?: () => Node;
+}
+
 /**
  * Router component that handles route matching and rendering
- * <Router routes={}/>
- * {
- *
- * }
+ * Integrates with Suspense for loading states
  */
-export function Router(props: { routes: Route[] }) {
+export function Router(props: RouterProps) {
   const container = document.createElement("div");
   const currentComponent = signal<{ fn: () => Node } | null>(null);
-
-  const loading = signal(false);
+  const routeError = signal<Error | null>(null);
 
   // Match route on path change
   effect(() => {
@@ -42,19 +50,17 @@ export function Router(props: { routes: Route[] }) {
     if (match) {
       // Update params signal
       params.set(match.params);
+      routeError.set(null);
 
       // Load component
-      loading.set(true);
       match.route
         .component()
         .then((module) => {
           currentComponent.set({ fn: module.default });
-
-          loading.set(false);
         })
         .catch((error) => {
           console.error("Failed to load route component:", error);
-          loading.set(false);
+          routeError.set(error);
           currentComponent.set(null);
         });
     } else {
@@ -69,30 +75,37 @@ export function Router(props: { routes: Route[] }) {
     }
   });
 
-  // Render component when it changes
-  effect(() => {
-    const component = currentComponent();
-    const isLoading = loading();
+  const fallback = props.fallback || DefaultFallback;
 
-    container.innerHTML = "";
+  const suspenseContent = Suspense({
+    fallback,
+    children: () => {
+      const component = currentComponent();
+      const error = routeError();
 
-    if (isLoading) {
-      const loadingDiv = document.createElement("div");
-      loadingDiv.textContent = "Loading...";
-      container.appendChild(loadingDiv);
-    } else if (component) {
-      try {
-        const node = component.fn();
-        console.log(node, "node from component");
-        container.appendChild(node);
-      } catch (error) {
-        console.error("Error rendering component123:", error);
+      if (error) {
         const errorDiv = document.createElement("div");
-        errorDiv.textContent = "Error rendering component";
-        container.appendChild(errorDiv);
+        errorDiv.textContent = "Error loading page";
+        return errorDiv;
       }
-    }
+
+      if (component) {
+        try {
+          return component.fn();
+        } catch (err) {
+          console.error("Error rendering component:", err);
+          const errorDiv = document.createElement("div");
+          errorDiv.textContent = "Error rendering component";
+          return errorDiv;
+        }
+      }
+
+      // Return empty placeholder while waiting for first route match
+      return document.createComment("router-placeholder");
+    },
   });
+
+  container.appendChild(suspenseContent);
 
   return container;
 }

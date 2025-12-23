@@ -40,7 +40,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@flickjs/runtime": "^0.0.1-beta.1"
+    "@flickjs/runtime": "link:@flickjs/runtime"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

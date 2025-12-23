@@ -1,8 +1,10 @@
 type Effect = () => void;
 
+export type Signal<T> = (() => T) & { set: (next: T | ((v: T) => T)) => void };
+
 let activeEffect: Effect | null = null;
 
-export function signal<T>(value: T) {
+export function signal<T>(value: T): Signal<T> {
   const subs = new Set<Effect>();
 
   function read() {
@@ -127,3 +129,6 @@ declare global {
 // This ensures JSX types are loaded when the module is imported
 // Users don't need to do anything - types are automatically available
 export const jsxTypes = Symbol("jsx-types");
+
+export { Suspense, getCurrentSuspense, resource, lazy } from "./suspense";
+export type { SuspenseContext, SuspenseProps, Resource } from "./suspense";
