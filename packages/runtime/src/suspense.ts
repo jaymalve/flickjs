@@ -1,8 +1,8 @@
-import { signal, effect } from "./index";
+import { signal, effect, Signal } from "./index";
 
 export interface SuspenseContext {
   register: (promise: Promise<any>) => void;
-  pending: ReturnType<typeof signal<number>>;
+  pending: Signal<number>;
 }
 
 const suspenseStack: SuspenseContext[] = [];
@@ -13,7 +13,7 @@ export function getCurrentSuspense(): SuspenseContext | undefined {
 
 export interface SuspenseProps {
   fallback: Node | (() => Node);
-  children: Node | (() => Node);
+  children?: Node | (() => Node);
 }
 
 export function Suspense(props: SuspenseProps): Node {
@@ -40,19 +40,17 @@ export function Suspense(props: SuspenseProps): Node {
 
   const resolveChildren = (): Node => {
     suspenseStack.push(context);
-    const children =
+    const result =
       typeof props.children === "function" ? props.children() : props.children;
     suspenseStack.pop();
-    return children;
+    return result ?? document.createDocumentFragment();
   };
-
-  const childrenNode = resolveChildren();
 
   let currentContent: Node | null = null;
 
   effect(() => {
     const isPending = pending() > 0;
-    const nextContent = isPending ? resolveFallback() : childrenNode;
+    const nextContent = isPending ? resolveFallback() : resolveChildren();
 
     if (currentContent !== nextContent) {
       container.innerHTML = "";

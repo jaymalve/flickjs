@@ -8,6 +8,18 @@ export declare function effect(fn: Effect): void;
 
 export declare function mount(App: () => Node, el: HTMLElement): void;
 
+export declare function Suspense(props: SuspenseProps): Node;
+export interface SuspenseProps {
+  fallback: Node | (() => Node);
+  children?: Node | (() => Node);
+}
+
+export declare function resource<T>(fetcher: () => Promise<T>): Resource<T>;
+export declare function resource<S, T>(
+  source: () => S,
+  fetcher: (source: S) => Promise<T>
+): Resource<T>;
+
 // JSX Type Definitions for Flick Framework - automatically available when imported
 declare global {
   namespace JSX {

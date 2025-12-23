@@ -1,8 +1,10 @@
 type Effect = () => void;
 
+export type Signal<T> = (() => T) & { set: (next: T | ((v: T) => T)) => void };
+
 let activeEffect: Effect | null = null;
 
-export function signal<T>(value: T) {
+export function signal<T>(value: T): Signal<T> {
   const subs = new Set<Effect>();
 
   function read() {
