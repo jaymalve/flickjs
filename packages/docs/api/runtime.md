@@ -29,16 +29,16 @@ console.log(count()); // 5
 function signal<T>(initialValue: T): Signal<T>;
 
 interface Signal<T> {
-  (): T;                    // Read the value
-  set(value: T): void;      // Set a new value
+  (): T; // Read the value
+  set(value: T): void; // Set a new value
 }
 ```
 
 ### Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `initialValue` | `T` | The initial value of the signal |
+| Parameter      | Type | Description                     |
+| -------------- | ---- | ------------------------------- |
+| `initialValue` | `T`  | The initial value of the signal |
 
 ### Returns
 
@@ -70,9 +70,9 @@ function effect(fn: () => void): void;
 
 ### Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `fn` | `() => void` | The effect function to run |
+| Parameter | Type         | Description                |
+| --------- | ------------ | -------------------------- |
+| `fn`      | `() => void` | The effect function to run |
 
 ---
 
@@ -98,10 +98,10 @@ function mount(component: () => Element, container: Element | null): void;
 
 ### Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `component` | `() => Element` | The component function to mount |
-| `container` | `Element \| null` | The DOM element to mount into |
+| Parameter   | Type              | Description                     |
+| ----------- | ----------------- | ------------------------------- |
+| `component` | `() => Element`   | The component function to mount |
+| `container` | `Element \| null` | The DOM element to mount into   |
 
 ---
 
@@ -128,10 +128,10 @@ function App() {
 
 ### Props
 
-| Prop | Type | Description |
-|------|------|-------------|
+| Prop       | Type      | Description                   |
+| ---------- | --------- | ----------------------------- |
 | `fallback` | `Element` | Content to show while loading |
-| `children` | `Element` | Content to show when loaded |
+| `children` | `Element` | Content to show when loaded   |
 
 ---
 
@@ -143,15 +143,12 @@ Creates an async data fetcher that integrates with Suspense.
 import { signal, resource } from "@flickjs/runtime";
 
 // Simple resource
-const posts = resource(() =>
-  fetch("/api/posts").then((res) => res.json())
-);
+const posts = resource(() => fetch("/api/posts").then((res) => res.json()));
 
 // Resource with reactive source
 const userId = signal(1);
-const user = resource(
-  () => userId(),
-  (id) => fetch(`/api/users/${id}`).then((r) => r.json())
+const user = resource(userId, (id) =>
+  fetch(`/api/users/${id}`).then((r) => r.json())
 );
 ```
 
@@ -168,23 +165,23 @@ function resource<T, S>(
 ): Resource<T>;
 
 interface Resource<T> {
-  (): T | undefined;           // Current value
-  loading(): boolean;          // Is fetching
-  error(): Error | undefined;  // Error if failed
-  latest(): T | undefined;     // Last successful value
-  refetch(): void;             // Manually refetch
+  (): T | undefined; // Current value
+  loading(): boolean; // Is fetching
+  error(): Error | undefined; // Error if failed
+  latest(): T | undefined; // Last successful value
+  refetch(): void; // Manually refetch
 }
 ```
 
 ### Resource Properties
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `()` | `T \| undefined` | Returns current value |
-| `loading()` | `boolean` | Returns true while fetching |
-| `error()` | `Error \| undefined` | Returns error if fetch failed |
-| `latest()` | `T \| undefined` | Returns last successful value |
-| `refetch()` | `void` | Manually triggers a refetch |
+| Property    | Type                 | Description                   |
+| ----------- | -------------------- | ----------------------------- |
+| `()`        | `T \| undefined`     | Returns current value         |
+| `loading()` | `boolean`            | Returns true while fetching   |
+| `error()`   | `Error \| undefined` | Returns error if fetch failed |
+| `latest()`  | `T \| undefined`     | Returns last successful value |
+| `refetch()` | `void`               | Manually triggers a refetch   |
 
 ---
 
@@ -209,13 +206,11 @@ function App() {
 ### Type Signature
 
 ```ts
-function lazy<T>(
-  loader: () => Promise<{ default: T }>
-): () => T;
+function lazy<T>(loader: () => Promise<{ default: T }>): () => T;
 ```
 
 ### Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `loader` | `() => Promise<{ default: T }>` | Dynamic import function |
+| Parameter | Type                            | Description             |
+| --------- | ------------------------------- | ----------------------- |
+| `loader`  | `() => Promise<{ default: T }>` | Dynamic import function |

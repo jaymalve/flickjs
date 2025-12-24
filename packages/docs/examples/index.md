@@ -124,9 +124,7 @@ function TodoApp() {
         ))}
       </ul>
 
-      <p>
-        {todos().filter((t) => !t.done).length} items remaining
-      </p>
+      <p>{todos().filter((t) => !t.done).length} items remaining</p>
     </div>
   );
 }
@@ -263,10 +261,8 @@ import { params } from "@flickjs/router";
 import { resource, Suspense } from "@flickjs/runtime";
 
 export default function UserPage() {
-
-  const user = resource(
-    () => params().id,
-    (id) => fetch(`/api/users/${id}`).then((r) => r.json())
+  const user = resource(params().id, (id) =>
+    fetch(`/api/users/${id}`).then((r) => r.json())
   );
 
   return (

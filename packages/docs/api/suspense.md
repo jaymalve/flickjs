@@ -10,9 +10,7 @@ The `Suspense` component displays a fallback UI while async operations are pendi
 import { mount, Suspense, resource } from "@flickjs/runtime";
 
 function UserProfile() {
-  const user = resource(() =>
-    fetch("/api/user").then(res => res.json())
-  );
+  const user = resource(() => fetch("/api/user").then((res) => res.json()));
 
   return (
     <div>
@@ -50,14 +48,14 @@ mount(App, document.getElementById("app"));
 ```tsx
 import { resource, Suspense } from "@flickjs/runtime";
 
-const posts = resource(() =>
-  fetch("/api/posts").then(res => res.json())
-);
+const posts = resource(() => fetch("/api/posts").then((res) => res.json()));
 
 function PostList() {
   return (
     <ul>
-      {posts()?.map(post => <li>{post.title}</li>)}
+      {posts()?.map((post) => (
+        <li>{post.title}</li>
+      ))}
     </ul>
   );
 }
@@ -74,21 +72,21 @@ function UserPosts() {
   const userId = signal(1);
 
   const posts = resource(
-    () => userId(),  // Source - refetches when this changes
-    (id) => fetch(`/api/users/${id}/posts`).then(res => res.json())
+    userId, // Source - refetches when this changes
+    (id) => fetch(`/api/users/${id}/posts`).then((res) => res.json())
   );
 
   return (
     <div>
-      <button onclick={() => userId.set(userId() + 1)}>
-        Next User
-      </button>
+      <button onclick={() => userId.set(userId() + 1)}>Next User</button>
 
       {posts.loading() && <p>Loading...</p>}
       {posts.error() && <p>Error: {posts.error()?.message}</p>}
 
       <ul>
-        {posts()?.map(post => <li>{post.title}</li>)}
+        {posts()?.map((post) => (
+          <li>{post.title}</li>
+        ))}
       </ul>
     </div>
   );
@@ -97,13 +95,13 @@ function UserPosts() {
 
 ### Resource API
 
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `resource()` | `T \| undefined` | Current value (undefined while loading) |
-| `resource.loading()` | `boolean` | True while fetching |
-| `resource.error()` | `Error \| undefined` | Error if fetch failed |
-| `resource.latest()` | `T \| undefined` | Last successful value (useful during refetch) |
-| `resource.refetch()` | `void` | Manually trigger a refetch |
+| Method               | Returns              | Description                                   |
+| -------------------- | -------------------- | --------------------------------------------- |
+| `resource()`         | `T \| undefined`     | Current value (undefined while loading)       |
+| `resource.loading()` | `boolean`            | True while fetching                           |
+| `resource.error()`   | `Error \| undefined` | Error if fetch failed                         |
+| `resource.latest()`  | `T \| undefined`     | Last successful value (useful during refetch) |
+| `resource.refetch()` | `void`               | Manually trigger a refetch                    |
 
 ---
 
@@ -123,9 +121,7 @@ function App() {
 
   return (
     <div>
-      <button onclick={() => showChart.set(!showChart())}>
-        Toggle Chart
-      </button>
+      <button onclick={() => showChart.set(!showChart())}>Toggle Chart</button>
 
       {showChart() && (
         <Suspense fallback={<p>Loading chart...</p>}>
@@ -185,7 +181,7 @@ function Dashboard() {
   // Resource that refetches when timeRange changes
   const stats = resource(
     () => timeRange(),
-    (range) => fetch(`/api/stats?range=${range}`).then(r => r.json())
+    (range) => fetch(`/api/stats?range=${range}`).then((r) => r.json())
   );
 
   return (
