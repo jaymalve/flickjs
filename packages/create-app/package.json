@@ -1,6 +1,6 @@
 {
   "name": "create-flick-app",
-  "version": "0.0.1-beta.2",
+  "version": "0.0.1-beta.3",
   "description": "Scaffolding CLI tool for creating new Flick projects",
   "bin": {
     "create-flick-app": "dist/index.js"
