@@ -42,12 +42,25 @@ export function Suspense(props: SuspenseProps): Node {
 
   const childrenWrapper = document.createElement("div");
 
-  effect(() => {
+  const evaluateChildren = (): Node | null => {
     suspenseStack.push(context);
-    const result =
-      typeof props.children === "function" ? props.children() : props.children;
-    suspenseStack.pop();
+    try {
+      return typeof props.children === "function"
+        ? props.children()
+        : props.children ?? null;
+    } catch (thrown) {
+      if (thrown instanceof Promise) {
+        // Resource threw a promise, already registered, return placeholder
+        return document.createComment("suspense-pending");
+      }
+      throw thrown;
+    } finally {
+      suspenseStack.pop();
+    }
+  };
 
+  effect(() => {
+    const result = evaluateChildren();
     childrenWrapper.innerHTML = "";
     childrenWrapper.appendChild(result ?? document.createDocumentFragment());
   });
@@ -132,16 +145,16 @@ export function resource<S, T>(
     });
   } else {
     load();
-  }
-
-  // Create the resource accessor - registers with Suspense at READ time
+  
+  // Create the resource accessor - throws promise while pending
   const read = (() => {
-    const suspenseContext = getCurrentSuspense();
-    if (suspenseContext && currentPromise && state() === "pending") {
-      if (!registeredWith.has(suspenseContext)) {
+    if (state() === "pending" && currentPromise) {
+      const suspenseContext = getCurrentSuspense();
+      if (suspenseContext && !registeredWith.has(suspenseContext)) {
         registeredWith.add(suspenseContext);
         suspenseContext.register(currentPromise);
       }
+      throw currentPromise;
     }
     return value();
   }) as Resource<T>;
