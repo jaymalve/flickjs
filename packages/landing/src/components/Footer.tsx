@@ -5,11 +5,11 @@ const Footer = () => {
         <div className="flex flex-col md:flex-row items-center justify-center gap-4">
           {/* Links */}
           <div className="flex items-center gap-6">
-            <a href="#docs" className="nav-link text-xs">
+            <a href="https://docs.flickjs.com" className="nav-link text-xs">
               Docs
             </a>
             <a
-              href="https://github.com"
+              href="https://github.com/jaymalve/flick"
               target="_blank"
               rel="noopener noreferrer"
               className="nav-link text-xs"
@@ -17,7 +17,7 @@ const Footer = () => {
               GitHub
             </a>
             <a
-              href="https://npmjs.com"
+              href="https://www.npmjs.com/package/@flickjs/runtime"
               target="_blank"
               rel="noopener noreferrer"
               className="nav-link text-xs"
@@ -25,7 +25,7 @@ const Footer = () => {
               NPM
             </a>
             <a
-              href="https://twitter.com"
+              href="https://x.com/jaydotdev"
               target="_blank"
               rel="noopener noreferrer"
               className="nav-link text-xs"
