@@ -1,0 +1,144 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Flick Design System - Dark Mode Only */
+    --background: 35 20% 9%;
+    --foreground: 0 0% 100%;
+
+    --card: 35 15% 11%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 35 15% 11%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 0 0% 100%;
+    --primary-foreground: 35 20% 9%;
+
+    --secondary: 35 10% 15%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 35 10% 18%;
+    --muted-foreground: 240 4% 66%;
+
+    --accent: 45 100% 50%;
+    --accent-foreground: 35 20% 9%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 100% / 0.08;
+    --input: 0 0% 100% / 0.08;
+    --ring: 45 100% 50%;
+
+    --radius: 0.25rem;
+
+    /* Custom tokens */
+    --glow-gold: 0 0 60px hsl(45 100% 50% / 0.15);
+    --glow-subtle: 0 0 80px hsl(35 20% 20% / 0.5);
+    --gradient-radial: radial-gradient(ellipse at 50% 0%, hsl(35 15% 15%) 0%, hsl(35 20% 9%) 70%);
+    --gradient-code: linear-gradient(180deg, hsl(35 12% 12%) 0%, hsl(35 15% 10%) 100%);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  ::selection {
+    @apply bg-accent/20 text-foreground;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .tracking-tight {
+    letter-spacing: -0.02em;
+  }
+
+  .tracking-tighter {
+    letter-spacing: -0.04em;
+  }
+}
+
+@layer components {
+  .gradient-bg {
+    background: var(--gradient-radial);
+  }
+
+  .code-block {
+    background: var(--gradient-code);
+    box-shadow: 
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.03),
+      0 0 0 1px hsl(0 0% 100% / 0.06);
+  }
+
+  .card-glow {
+    box-shadow: 
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.03),
+      0 0 0 1px hsl(0 0% 100% / 0.06);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+  }
+
+  .card-glow:hover {
+    box-shadow: 
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.05),
+      0 0 0 1px hsl(0 0% 100% / 0.1),
+      0 8px 32px -8px hsl(0 0% 0% / 0.4);
+    /* transform: translateY(-2px); */
+  }
+
+  .nav-link {
+    @apply text-muted-foreground transition-colors duration-200;
+  }
+
+  .nav-link:hover {
+    @apply text-foreground;
+  }
+
+  .animate-fade-up {
+    animation: fadeUp 0.6s ease-out forwards;
+    opacity: 0;
+  }
+
+  .animate-fade-up-delay-1 {
+    animation: fadeUp 0.6s ease-out 0.1s forwards;
+    opacity: 0;
+  }
+
+  .animate-fade-up-delay-2 {
+    animation: fadeUp 0.6s ease-out 0.2s forwards;
+    opacity: 0;
+  }
+
+  .animate-fade-up-delay-3 {
+    animation: fadeUp 0.6s ease-out 0.3s forwards;
+    opacity: 0;
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
