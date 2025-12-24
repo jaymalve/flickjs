@@ -36,8 +36,8 @@ async function scanPagesDirectory(
       // Found a route file
       const relativePath = relative(baseDir, fullPath);
       const route = filePathToRoute(relativePath, pagesDir);
-      // Use absolute path for virtual module imports
-      const importPath = fullPath.replace(/\\/g, "/");
+      // Use @/ alias for portable imports
+      const importPath = "@/" + relativePath.replace(/\\/g, "/");
 
       routes.push({
         path: fullPath,
@@ -75,6 +75,17 @@ export function flickRouter(options?: {
 
   return {
     name: "flick-router",
+    config(userConfig) {
+      const srcPath = resolve(root, "src");
+      return {
+        resolve: {
+          alias: {
+            "@": srcPath,
+            ...userConfig.resolve?.alias,
+          },
+        },
+      };
+    },
     resolveId(id) {
       if (id === VIRTUAL_MODULE_ID) {
         return RESOLVED_VIRTUAL_MODULE_ID;
