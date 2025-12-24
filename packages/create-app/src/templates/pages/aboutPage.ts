@@ -25,18 +25,20 @@ export default function About() {
         <div class="bg-white rounded-lg shadow-md p-6 mb-6">
           <h2 class="text-2xl font-semibold mb-4">What is Flick?</h2>
           <p class="text-gray-600 mb-4">
-            Flick is a lightweight, reactive JavaScript framework with fine-grained
-            reactivity. It features a tiny runtime, compiled JSX, and intuitive APIs
-            for building modern web applications.
+            Flick is a lightweight, reactive JavaScript framework with
+            fine-grained reactivity. It features a tiny runtime, compiled JSX,
+            and intuitive APIs for building modern web applications.
           </p>
         </div>
 
         <div class="bg-white rounded-lg shadow-md p-6">
-          <h2 class="text-2xl font-semibold mb-4">Features (Lazy Loaded Component)</h2>
-          <Suspense fallback={() => (
-            <div class="text-gray-500">Loading features...</div>
-          )}>
-            {() => LazyFeatureList({})}
+          <h2 class="text-2xl font-semibold mb-4">
+            Features (Lazy Loaded Component)
+          </h2>
+          <Suspense
+            fallback={<div class="text-gray-500">Loading features...</div>}
+          >
+            <LazyFeatureList />
           </Suspense>
         </div>
       </div>

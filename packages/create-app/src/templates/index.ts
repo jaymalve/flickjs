@@ -9,6 +9,7 @@ export { createIndexHtml } from "./config/indexHtml";
 // Source file templates
 export { createIndexCss } from "./src/indexCss";
 export { createMainTsx } from "./src/mainTsx";
+export { createViteEnv } from "./src/viteEnv";
 
 // Page templates
 export { createHomePage } from "./pages/homePage";
@@ -18,3 +19,7 @@ export { createAboutPage } from "./pages/aboutPage";
 
 // Component templates
 export { createFeatureList } from "./components/featureList";
+export { createTodoChip } from "./components/todoChip";
+
+// Type templates
+export { createTodoInterface } from "./types/todoInterface";

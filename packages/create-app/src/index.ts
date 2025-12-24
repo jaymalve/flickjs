@@ -10,11 +10,14 @@ import {
   createIndexHtml,
   createIndexCss,
   createMainTsx,
+  createViteEnv,
   createHomePage,
   createTodosPage,
   createTodoDetailPage,
   createAboutPage,
   createFeatureList,
+  createTodoChip,
+  createTodoInterface,
 } from "./templates";
 
 const name = process.argv[2] || "flick-app";
@@ -26,6 +29,7 @@ fs.ensureDirSync(path.join(root, "src"));
 fs.ensureDirSync(path.join(root, "src/pages"));
 fs.ensureDirSync(path.join(root, "src/pages/todos"));
 fs.ensureDirSync(path.join(root, "src/components"));
+fs.ensureDirSync(path.join(root, "src/types"));
 
 // Create config files
 createPackageJson(root, name);
@@ -38,6 +42,7 @@ createIndexHtml(root);
 // Create source files
 createIndexCss(root);
 createMainTsx(root);
+createViteEnv(root);
 
 // Create pages
 createHomePage(root);
@@ -47,6 +52,10 @@ createAboutPage(root);
 
 // Create components
 createFeatureList(root);
+createTodoChip(root);
+
+// Create types
+createTodoInterface(root);
 
 // Output success message
 console.log("Updated Flick app created!");
