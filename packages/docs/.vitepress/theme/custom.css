@@ -1,0 +1,316 @@
+/**
+ * Flick Docs - Warm Brown/Gold Dark Theme
+ *
+ * Color Palette:
+ * - Background: hsl(35 20% 9%) - Deep warm brown
+ * - Foreground: hsl(0 0% 100%) - Pure white
+ * - Card: hsl(35 15% 11%) - Slightly lighter brown
+ * - Accent: hsl(45 100% 50%) - Gold
+ */
+
+/* ============================================
+   BASE COLORS
+   ============================================ */
+
+:root {
+  /* Background Colors */
+  --vp-c-bg: hsl(35 20% 9%);
+  --vp-c-bg-alt: hsl(35 15% 11%);
+  --vp-c-bg-elv: hsl(35 10% 15%);
+  --vp-c-bg-soft: hsl(35 15% 11%);
+
+  /* Text Colors */
+  --vp-c-text-1: hsl(0 0% 100%);
+  --vp-c-text-2: hsl(240 4% 66%);
+  --vp-c-text-3: hsl(240 4% 50%);
+
+  /* Border Colors */
+  --vp-c-border: hsl(0 0% 100% / 0.08);
+  --vp-c-divider: hsl(0 0% 100% / 0.06);
+  --vp-c-gutter: hsl(35 20% 6%);
+
+  /* Neutral Colors */
+  --vp-c-neutral: hsl(0 0% 100%);
+  --vp-c-neutral-inverse: hsl(35 20% 9%);
+}
+
+/* ============================================
+   BRAND/ACCENT COLORS (GOLD)
+   ============================================ */
+
+:root {
+  /* Gold accent palette */
+  --vp-c-brand-1: hsl(45 100% 50%);
+  --vp-c-brand-2: hsl(45 100% 45%);
+  --vp-c-brand-3: hsl(45 100% 40%);
+  --vp-c-brand-soft: hsl(45 100% 50% / 0.16);
+  --vp-c-brand: var(--vp-c-brand-1);
+
+  /* Tip colors - use gold */
+  --vp-c-tip-1: var(--vp-c-brand-1);
+  --vp-c-tip-2: var(--vp-c-brand-2);
+  --vp-c-tip-3: var(--vp-c-brand-3);
+  --vp-c-tip-soft: var(--vp-c-brand-soft);
+}
+
+/* ============================================
+   GRAY PALETTE (Warm Tones)
+   ============================================ */
+
+:root {
+  --vp-c-gray-1: hsl(35 10% 35%);
+  --vp-c-gray-2: hsl(35 10% 25%);
+  --vp-c-gray-3: hsl(35 10% 18%);
+  --vp-c-gray-soft: hsl(35 10% 18% / 0.16);
+
+  --vp-c-default-1: var(--vp-c-gray-1);
+  --vp-c-default-2: var(--vp-c-gray-2);
+  --vp-c-default-3: var(--vp-c-gray-3);
+  --vp-c-default-soft: var(--vp-c-gray-soft);
+}
+
+/* ============================================
+   NAVIGATION
+   ============================================ */
+
+:root {
+  --vp-nav-bg-color: hsl(35 20% 9%);
+  --vp-nav-screen-bg-color: hsl(35 20% 9%);
+  --vp-local-nav-bg-color: hsl(35 20% 9%);
+}
+
+/* ============================================
+   SIDEBAR
+   ============================================ */
+
+:root {
+  --vp-sidebar-bg-color: hsl(35 15% 11%);
+}
+
+/* ============================================
+   CODE BLOCKS
+   ============================================ */
+
+:root {
+  --vp-code-block-bg: hsl(35 20% 7%);
+  --vp-code-block-color: hsl(0 0% 90%);
+  --vp-code-block-divider-color: hsl(0 0% 100% / 0.06);
+
+  /* Inline code */
+  --vp-code-color: var(--vp-c-brand-1);
+  --vp-code-bg: hsl(35 15% 15%);
+
+  /* Code copy button */
+  --vp-code-copy-code-border-color: hsl(0 0% 100% / 0.08);
+  --vp-code-copy-code-bg: hsl(35 15% 15%);
+  --vp-code-copy-code-hover-border-color: hsl(0 0% 100% / 0.12);
+  --vp-code-copy-code-hover-bg: hsl(35 15% 18%);
+  --vp-code-copy-code-active-text: hsl(0 0% 100%);
+
+  /* Code tabs */
+  --vp-code-tab-text-color: hsl(240 4% 66%);
+  --vp-code-tab-hover-text-color: hsl(0 0% 100%);
+  --vp-code-tab-active-text-color: hsl(0 0% 100%);
+  --vp-code-tab-active-bar-color: var(--vp-c-brand-1);
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+:root {
+  /* Brand button (primary CTA) */
+  --vp-button-brand-border: transparent;
+  --vp-button-brand-text: hsl(35 20% 9%);
+  --vp-button-brand-bg: var(--vp-c-brand-1);
+  --vp-button-brand-hover-border: transparent;
+  --vp-button-brand-hover-text: hsl(35 20% 9%);
+  --vp-button-brand-hover-bg: var(--vp-c-brand-2);
+  --vp-button-brand-active-border: transparent;
+  --vp-button-brand-active-text: hsl(35 20% 9%);
+  --vp-button-brand-active-bg: var(--vp-c-brand-3);
+
+  /* Alt button (secondary) */
+  --vp-button-alt-border: transparent;
+  --vp-button-alt-text: hsl(0 0% 100%);
+  --vp-button-alt-bg: hsl(35 10% 18%);
+  --vp-button-alt-hover-border: transparent;
+  --vp-button-alt-hover-text: hsl(0 0% 100%);
+  --vp-button-alt-hover-bg: hsl(35 10% 22%);
+  --vp-button-alt-active-border: transparent;
+  --vp-button-alt-active-text: hsl(0 0% 100%);
+  --vp-button-alt-active-bg: hsl(35 10% 25%);
+}
+
+/* ============================================
+   HOME PAGE HERO
+   ============================================ */
+
+:root {
+  /* Hero name with gold gradient */
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(
+    135deg,
+    hsl(45 100% 50%) 0%,
+    hsl(40 100% 60%) 50%,
+    hsl(45 100% 50%) 100%
+  );
+
+  /* Hero image glow effect */
+  --vp-home-hero-image-background-image: radial-gradient(
+    circle,
+    hsl(45 100% 50% / 0.15) 0%,
+    transparent 70%
+  );
+  --vp-home-hero-image-filter: blur(60px);
+}
+
+/* ============================================
+   CUSTOM BLOCKS (Info, Tip, Warning, etc.)
+   ============================================ */
+
+:root {
+  /* Info block */
+  --vp-custom-block-info-border: hsl(0 0% 100% / 0.08);
+  --vp-custom-block-info-text: hsl(0 0% 100%);
+  --vp-custom-block-info-bg: hsl(35 10% 15%);
+  --vp-custom-block-info-code-bg: hsl(35 10% 12%);
+
+  /* Tip block - gold themed */
+  --vp-custom-block-tip-border: hsl(45 100% 50% / 0.3);
+  --vp-custom-block-tip-text: hsl(0 0% 100%);
+  --vp-custom-block-tip-bg: hsl(45 100% 50% / 0.1);
+  --vp-custom-block-tip-code-bg: hsl(45 100% 50% / 0.08);
+
+  /* Warning block */
+  --vp-custom-block-warning-border: hsl(38 92% 50% / 0.3);
+  --vp-custom-block-warning-text: hsl(0 0% 100%);
+  --vp-custom-block-warning-bg: hsl(38 92% 50% / 0.1);
+
+  /* Danger block */
+  --vp-custom-block-danger-border: hsl(0 70% 50% / 0.3);
+  --vp-custom-block-danger-text: hsl(0 0% 100%);
+  --vp-custom-block-danger-bg: hsl(0 70% 50% / 0.1);
+}
+
+/* ============================================
+   SEARCH
+   ============================================ */
+
+:root {
+  --vp-local-search-bg: hsl(35 15% 11%);
+  --vp-local-search-result-bg: hsl(35 20% 9%);
+  --vp-local-search-result-border: hsl(0 0% 100% / 0.08);
+  --vp-local-search-result-selected-bg: hsl(35 15% 15%);
+  --vp-local-search-result-selected-border: var(--vp-c-brand-1);
+  --vp-local-search-highlight-bg: var(--vp-c-brand-1);
+  --vp-local-search-highlight-text: hsl(35 20% 9%);
+}
+
+/* ============================================
+   SHADOWS (Warmer tones)
+   ============================================ */
+
+:root {
+  --vp-shadow-1: 0 1px 2px hsl(35 20% 5% / 0.2), 0 1px 2px hsl(35 20% 5% / 0.3);
+  --vp-shadow-2: 0 3px 12px hsl(35 20% 5% / 0.3), 0 1px 4px hsl(35 20% 5% / 0.3);
+  --vp-shadow-3: 0 12px 32px hsl(35 20% 5% / 0.4),
+    0 2px 6px hsl(35 20% 5% / 0.3);
+  --vp-shadow-4: 0 14px 44px hsl(35 20% 5% / 0.5),
+    0 3px 9px hsl(35 20% 5% / 0.4);
+  --vp-shadow-5: 0 18px 56px hsl(35 20% 5% / 0.6),
+    0 4px 12px hsl(35 20% 5% / 0.5);
+}
+
+/* ============================================
+   BADGES
+   ============================================ */
+
+:root {
+  --vp-badge-info-border: transparent;
+  --vp-badge-info-text: hsl(240 4% 66%);
+  --vp-badge-info-bg: hsl(35 10% 18%);
+
+  --vp-badge-tip-border: transparent;
+  --vp-badge-tip-text: var(--vp-c-brand-1);
+  --vp-badge-tip-bg: var(--vp-c-brand-soft);
+
+  --vp-badge-warning-border: transparent;
+  --vp-badge-warning-text: hsl(38 92% 50%);
+  --vp-badge-warning-bg: hsl(38 92% 50% / 0.16);
+
+  --vp-badge-danger-border: transparent;
+  --vp-badge-danger-text: hsl(0 70% 60%);
+  --vp-badge-danger-bg: hsl(0 70% 50% / 0.16);
+}
+
+/* ============================================
+   INPUT FIELDS
+   ============================================ */
+
+:root {
+  --vp-input-border-color: hsl(0 0% 100% / 0.08);
+  --vp-input-bg-color: hsl(35 15% 11%);
+  --vp-input-switch-bg-color: hsl(35 10% 18%);
+}
+
+/* ============================================
+   BACKDROP
+   ============================================ */
+
+:root {
+  --vp-backdrop-bg-color: hsl(35 20% 5% / 0.8);
+}
+
+/* ============================================
+   ADDITIONAL STYLES
+   ============================================ */
+
+/* Gold glow effect utility class */
+.gold-glow {
+  box-shadow: 0 0 60px hsl(45 100% 50% / 0.15);
+}
+
+/* Ensure links use gold accent */
+.vp-doc a {
+  color: var(--vp-c-brand-1);
+}
+
+.vp-doc a:hover {
+  color: var(--vp-c-brand-2);
+}
+
+/* Sidebar active link styling */
+.VPSidebarItem.is-active > .item > .link > .text {
+  color: var(--vp-c-brand-1);
+}
+
+/* Header anchor styling */
+.header-anchor {
+  color: var(--vp-c-brand-1);
+}
+
+/* Selection color */
+::selection {
+  background: hsl(45 100% 50% / 0.3);
+  color: hsl(0 0% 100%);
+}
+
+/* Scrollbar styling for webkit browsers */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(35 20% 9%);
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(35 10% 25%);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(35 10% 30%);
+}

@@ -318,7 +318,6 @@ function ColorBox() {
 
 ## Tailwind CSS Setup
 
-
 ### Installation
 
 ```bash
@@ -341,10 +340,7 @@ import tailwindcss from "@tailwindcss/vite";
 // ... your existing flickPlugin
 
 export default defineConfig({
-  plugins: [
-    flickPlugin(),
-    tailwindcss(),
-  ],
+  plugins: [flickPlugin(), tailwindcss()],
 });
 ```
 
@@ -369,9 +365,7 @@ function Counter() {
   return (
     <div class="min-h-screen bg-gray-100 flex items-center justify-center">
       <div class="bg-white p-8 rounded-lg shadow-lg">
-        <h1 class="text-3xl font-bold text-gray-800 mb-4">
-          Count: {count()}
-        </h1>
+        <h1 class="text-3xl font-bold text-gray-800 mb-4">Count: {count()}</h1>
         <div class="flex gap-2">
           <button
             class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
@@ -408,9 +402,7 @@ The `Suspense` component displays a fallback UI while async operations are pendi
 import { mount, Suspense, resource } from "@flickjs/runtime";
 
 function UserProfile() {
-  const user = resource(() =>
-    fetch("/api/user").then(res => res.json())
-  );
+  const user = resource(() => fetch("/api/user").then((res) => res.json()));
 
   return (
     <div>
@@ -432,6 +424,7 @@ mount(App, document.getElementById("app"));
 ```
 
 **Key points:**
+
 - `fallback` is displayed while any async operations inside are pending
 - Once all resources resolve, the children are shown
 - Suspense boundaries can be nested for granular loading states
@@ -444,30 +437,28 @@ mount(App, document.getElementById("app"));
 import { signal, resource, Suspense } from "@flickjs/runtime";
 
 // Simple resource (no source)
-const posts = resource(() =>
-  fetch("/api/posts").then(res => res.json())
-);
+const posts = resource(() => fetch("/api/posts").then((res) => res.json()));
 
 // Resource with reactive source
 function UserPosts() {
   const userId = signal(1);
 
   const posts = resource(
-    () => userId(),  // Source - refetches when this changes
-    (id) => fetch(`/api/users/${id}/posts`).then(res => res.json())
+    () => userId(), // Source - refetches when this changes
+    (id) => fetch(`/api/users/${id}/posts`).then((res) => res.json())
   );
 
   return (
     <div>
-      <button onclick={() => userId.set(userId() + 1)}>
-        Next User
-      </button>
+      <button onclick={() => userId.set(userId() + 1)}>Next User</button>
 
       {posts.loading() && <p>Loading...</p>}
       {posts.error() && <p>Error: {posts.error()?.message}</p>}
 
       <ul>
-        {posts()?.map(post => <li>{post.title}</li>)}
+        {posts()?.map((post) => (
+          <li>{post.title}</li>
+        ))}
       </ul>
     </div>
   );
@@ -475,6 +466,7 @@ function UserPosts() {
 ```
 
 **Resource API:**
+
 - `resource()` - returns the current value (or `undefined` while loading)
 - `resource.loading()` - returns `true` while fetching
 - `resource.error()` - returns the error if the fetch failed
@@ -497,9 +489,7 @@ function App() {
 
   return (
     <div>
-      <button onclick={() => showChart.set(!showChart())}>
-        Toggle Chart
-      </button>
+      <button onclick={() => showChart.set(!showChart())}>Toggle Chart</button>
 
       {showChart() && (
         <Suspense fallback={<p>Loading chart...</p>}>
@@ -529,7 +519,7 @@ function Dashboard() {
   // Resource that refetches when timeRange changes
   const stats = resource(
     () => timeRange(),
-    (range) => fetch(`/api/stats?range=${range}`).then(r => r.json())
+    (range) => fetch(`/api/stats?range=${range}`).then((r) => r.json())
   );
 
   return (
@@ -640,10 +630,9 @@ export default function About() {
 }
 
 // src/pages/blog/[slug].tsx
-import { useParams } from "@flickjs/router";
+import { params } from "@flickjs/router";
 
 export default function BlogPost() {
-  const params = useParams();
   return <h1>Blog Post: {params().slug}</h1>;
 }
 ```
@@ -670,12 +659,12 @@ function Navigation() {
 ### Get Current Route
 
 ```tsx
-import { useRoute } from "@flickjs/router";
+import { currentPath } from "@flickjs/router";
 
 function Breadcrumb() {
-  const route = useRoute();
+  const route = currentPath();
 
-  return <p>Current path: {route().path}</p>;
+  return <p>Current path: {route}</p>;
 }
 ```
 
