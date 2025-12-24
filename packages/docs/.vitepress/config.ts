@@ -1,9 +1,24 @@
 import { defineConfig } from "vitepress";
+import fs from "node:fs";
+import path from "node:path";
 
 export default defineConfig({
   title: "Flick",
   description: "A tiny reactive JS framework from the future",
   base: "/flick/",
+
+  transformPageData(pageData) {
+    if (!pageData.relativePath.endsWith(".md")) return;
+
+    const srcDir = path.resolve(__dirname, "..");
+    const filePath = path.resolve(srcDir, pageData.relativePath);
+
+    try {
+      (pageData as any).rawMarkdown = fs.readFileSync(filePath, "utf-8");
+    } catch {
+      (pageData as any).rawMarkdown = null;
+    }
+  },
 
   // Force dark mode only - no light mode toggle
   appearance: "force-dark",
