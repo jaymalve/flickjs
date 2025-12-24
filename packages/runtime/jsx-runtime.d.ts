@@ -9,6 +9,10 @@ export declare function effect(fn: Effect): void;
 export declare function mount(App: () => Node, el: HTMLElement): void;
 
 export declare function Suspense(props: SuspenseProps): Node;
+
+export declare function lazy<P extends Record<string, any> = {}>(
+  loader: LazyLoader<P>
+): LazyComponent<P>;
 export interface SuspenseProps {
   fallback: Node | (() => Node);
   children?: Node | (() => Node);

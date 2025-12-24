@@ -60,6 +60,9 @@ export function Suspense(props: SuspenseProps): Node {
   };
 
   effect(() => {
+    if (pending() > 0) {
+      return;
+    }
     const result = evaluateChildren();
     childrenWrapper.innerHTML = "";
     childrenWrapper.appendChild(result ?? document.createDocumentFragment());
@@ -145,7 +148,7 @@ export function resource<S, T>(
     });
   } else {
     load();
-  
+  }
   // Create the resource accessor - throws promise while pending
   const read = (() => {
     if (state() === "pending" && currentPromise) {
