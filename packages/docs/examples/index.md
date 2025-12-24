@@ -259,11 +259,10 @@ export default function Home() {
 
 ```tsx
 // src/pages/users/[id].tsx
-import { useParams } from "@flickjs/router";
+import { params } from "@flickjs/router";
 import { resource, Suspense } from "@flickjs/runtime";
 
 export default function UserPage() {
-  const params = useParams();
 
   const user = resource(
     () => params().id,

@@ -48,13 +48,14 @@ interface ButtonProps {
   disabled?: boolean;
 }
 
-function Button({ children, onclick, variant = "primary", disabled = false }: ButtonProps) {
+function Button({
+  children,
+  onclick,
+  variant = "primary",
+  disabled = false,
+}: ButtonProps) {
   return (
-    <button
-      class={`btn btn-${variant}`}
-      onclick={onclick}
-      disabled={disabled}
-    >
+    <button class={`btn btn-${variant}`} onclick={onclick} disabled={disabled}>
       {children}
     </button>
   );
@@ -80,10 +81,7 @@ function List<T>({ items, renderItem }: ListProps<T>) {
 }
 
 // Usage
-<List
-  items={[1, 2, 3]}
-  renderItem={(num) => <span>{num * 2}</span>}
-/>
+<List items={[1, 2, 3]} renderItem={(num) => <span>{num * 2}</span>} />;
 ```
 
 ## Typing Events
@@ -104,11 +102,7 @@ function Form() {
 
   return (
     <form onsubmit={handleSubmit}>
-      <input
-        type="text"
-        value={value()}
-        oninput={handleInput}
-      />
+      <input type="text" value={value()} oninput={handleInput} />
       <button type="submit">Submit</button>
     </form>
   );
@@ -120,16 +114,16 @@ function Form() {
 When using the router, add type definitions for dynamic params:
 
 ```tsx
-import { useParams } from "@flickjs/router";
+import { params } from "@flickjs/router";
 
 interface BlogParams {
   slug: string;
 }
 
 function BlogPost() {
-  const params = useParams<BlogParams>();
+  const typedParams = params<BlogParams>();
 
-  return <h1>Blog Post: {params().slug}</h1>;
+  return <h1>Blog Post: {typedParams.slug}</h1>;
 }
 ```
 
@@ -144,9 +138,7 @@ interface User {
   email: string;
 }
 
-const user = resource<User>(() =>
-  fetch("/api/user").then((res) => res.json())
-);
+const user = resource<User>(() => fetch("/api/user").then((res) => res.json()));
 
 // user() returns User | undefined
 // user.loading() returns boolean

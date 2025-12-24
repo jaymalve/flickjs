@@ -22,8 +22,8 @@ File-based routing for Flick. Includes:
 - `Router` - Main router component
 - `Link` - Navigation link component
 - `navigate()` - Programmatic navigation
-- `useRoute()` - Current route hook
-- `useParams()` - Route params hook
+- `currentPath()` - Current route 
+- `params()` - Route params
 
 ### [@flickjs/compiler](/api/suspense)
 

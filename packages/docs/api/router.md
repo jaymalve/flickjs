@@ -15,10 +15,7 @@ import { defineConfig } from "vite";
 import { flickRouter } from "@flickjs/router/vite";
 
 export default defineConfig({
-  plugins: [
-    flickPlugin(),
-    flickRouter({ pagesDir: "pages" })
-  ],
+  plugins: [flickPlugin(), flickRouter({ pagesDir: "pages" })],
 });
 ```
 
@@ -60,8 +57,8 @@ function App() {
 
 ### Props
 
-| Prop | Type | Description |
-|------|------|-------------|
+| Prop     | Type      | Description                |
+| -------- | --------- | -------------------------- |
 | `routes` | `Route[]` | Array of route definitions |
 
 ---
@@ -86,10 +83,10 @@ function Navigation() {
 
 ### Props
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `href` | `string` | The path to navigate to |
-| `children` | `Element` | Link content |
+| Prop       | Type      | Description             |
+| ---------- | --------- | ----------------------- |
+| `href`     | `string`  | The path to navigate to |
+| `children` | `Element` | Link content            |
 
 ---
 
@@ -123,34 +120,23 @@ function navigate(path: string): void;
 
 ### Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `path` | `string` | The path to navigate to |
+| Parameter | Type     | Description             |
+| --------- | -------- | ----------------------- |
+| `path`    | `string` | The path to navigate to |
 
 ---
 
-## useRoute
+## currentPath
 
 Get the current route information.
 
 ```tsx
-import { useRoute } from "@flickjs/router";
+import { currentPath } from "@flickjs/router";
 
 function Breadcrumb() {
-  const route = useRoute();
+  const route = currentPath();
 
-  return <p>Current path: {route().path}</p>;
-}
-```
-
-### Type Signature
-
-```ts
-function useRoute(): () => Route;
-
-interface Route {
-  path: string;
-  params: Record<string, string>;
+  return <p>Current path: {route}</p>;
 }
 ```
 
@@ -160,26 +146,20 @@ A function that returns the current route object with `path` and `params`.
 
 ---
 
-## useParams
+## params
 
 Get the current route parameters.
 
 ```tsx
-import { useParams } from "@flickjs/router";
+import { params } from "@flickjs/router";
 
 // For route /blog/[slug].tsx
 function BlogPost() {
-  const params = useParams();
 
   return <h1>Blog Post: {params().slug}</h1>;
 }
 ```
 
-### Type Signature
-
-```ts
-function useParams<T = Record<string, string>>(): () => T;
-```
 
 ### Returns
 
@@ -261,10 +241,9 @@ export default function Home() {
 
 ```tsx
 // src/pages/blog/[slug].tsx
-import { useParams } from "@flickjs/router";
+import { params } from "@flickjs/router";
 
 export default function BlogPost() {
-  const params = useParams();
   return <h1>Blog Post: {params().slug}</h1>;
 }
 ```
