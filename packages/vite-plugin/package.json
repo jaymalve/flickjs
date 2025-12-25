@@ -1,0 +1,49 @@
+{
+  "name": "@flickjs/vite-plugin",
+  "version": "0.0.1-beta.1",
+  "description": "Vite plugin for Flick framework",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "vite-plugin",
+    "flick",
+    "jsx",
+    "compiler",
+    "reactive"
+  ],
+  "author": "Jay Malave",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jaymalave/flick.git",
+    "directory": "packages/vite-plugin"
+  },
+  "homepage": "https://github.com/jaymalave/flick#readme",
+  "bugs": {
+    "url": "https://github.com/jaymalave/flick/issues"
+  },
+  "peerDependencies": {
+    "vite": "^5.0.0"
+  },
+  "dependencies": {
+    "@babel/core": "^7.24.0",
+    "@flickjs/compiler": "^0.0.1-beta.2"
+  },
+  "devDependencies": {
+    "@types/babel__core": "^7.20.0",
+    "vite": "^5.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

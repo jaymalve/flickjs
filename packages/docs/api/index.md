@@ -1,6 +1,6 @@
 # API Reference
 
-Flick consists of three main packages:
+Flick consists of four main packages:
 
 ## Packages
 
@@ -22,12 +22,16 @@ File-based routing for Flick. Includes:
 - `Router` - Main router component
 - `Link` - Navigation link component
 - `navigate()` - Programmatic navigation
-- `currentPath()` - Current route 
+- `currentPath()` - Current route
 - `params()` - Route params
 
-### [@flickjs/compiler](/api/suspense)
+### @flickjs/vite-plugin
 
-Babel plugin for JSX transformation. Used at build time only.
+Vite plugin for Flick JSX compilation. Handles all build-time transformation.
+
+### @flickjs/compiler
+
+Babel plugin for JSX transformation. Used internally by the vite plugin.
 
 ## Installation
 
@@ -35,8 +39,8 @@ Babel plugin for JSX transformation. Used at build time only.
 # Core runtime (required)
 bun add @flickjs/runtime
 
-# Compiler (required for JSX)
-bun add -D @flickjs/compiler @babel/core
+# Vite plugin (required for JSX)
+bun add -D @flickjs/vite-plugin
 
 # Router (optional)
 bun add @flickjs/router
