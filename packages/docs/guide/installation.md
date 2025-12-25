@@ -42,7 +42,7 @@ Create an `index.html`:
   </head>
   <body>
     <div id="app"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="/src/main.tsx"><​/script>
   </body>
 </html>
 ```
