@@ -19,8 +19,7 @@ export function createPackageJson(root: string, name: string) {
           "@flickjs/router": "^0.0.1-beta.1",
         },
         devDependencies: {
-          "@babel/core": "^7.24.0",
-          "@flickjs/compiler": "^0.0.1-beta.2",
+          "@flickjs/vite-plugin": "^0.0.1-beta.1",
           "@tailwindcss/vite": "^4.1.18",
           tailwindcss: "^4",
           vite: "^5.0.0",
