@@ -8,7 +8,7 @@ Use `class` (not `className`):
 
 ```tsx
 function StyledComponent() {
-  const isActive = signal(false);
+  const isActive = fx(false);
 
   return (
     <div class={isActive() ? "active" : "inactive"}>
@@ -24,7 +24,7 @@ function StyledComponent() {
 
 ```tsx
 function ColorBox() {
-  const color = signal("red");
+  const color = fx("red");
 
   return (
     <div style={`background-color: ${color()}; padding: 20px;`}>
@@ -70,7 +70,7 @@ export default defineConfig({
 
 ```tsx
 import "./index.css";
-import { signal, mount } from "@flickjs/runtime";
+import { fx, mount } from "@flickjs/runtime";
 
 // ... rest of your app
 ```
@@ -79,10 +79,10 @@ import { signal, mount } from "@flickjs/runtime";
 
 ```tsx
 import "./index.css";
-import { signal, mount } from "@flickjs/runtime";
+import { fx, mount } from "@flickjs/runtime";
 
 function Counter() {
-  const count = signal(0);
+  const count = fx(0);
 
   return (
     <div class="min-h-screen bg-gray-100 flex items-center justify-center">

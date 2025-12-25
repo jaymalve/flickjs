@@ -6,14 +6,14 @@ The `@flickjs/runtime` package provides the core reactive primitives.
 bun add @flickjs/runtime
 ```
 
-## signal
+## fx
 
-Creates a reactive signal.
+Creates a reactive fx.
 
 ```tsx
-import { signal } from "@flickjs/runtime";
+import { fx } from "@flickjs/runtime";
 
-const count = signal(0);
+const count = fx(0);
 
 // Read value
 console.log(count()); // 0
@@ -26,9 +26,9 @@ console.log(count()); // 5
 ### Type Signature
 
 ```ts
-function signal<T>(initialValue: T): Signal<T>;
+function fx<T>(initialValue: T): Fx<T>;
 
-interface Signal<T> {
+interface Fx<T> {
   (): T; // Read the value
   set(value: T): void; // Set a new value
 }
@@ -36,26 +36,26 @@ interface Signal<T> {
 
 ### Parameters
 
-| Parameter      | Type | Description                     |
-| -------------- | ---- | ------------------------------- |
-| `initialValue` | `T`  | The initial value of the signal |
+| Parameter      | Type | Description                  |
+| -------------- | ---- | ---------------------------- |
+| `initialValue` | `T`  | The initial value of the fx  |
 
 ### Returns
 
-A signal object that can be called to read the value and has a `set` method to update it.
+A fx object that can be called to read the value and has a `set` method to update it.
 
 ---
 
-## effect
+## run
 
 Runs a side effect when its dependencies change.
 
 ```tsx
-import { signal, effect } from "@flickjs/runtime";
+import { fx, run } from "@flickjs/runtime";
 
-const count = signal(0);
+const count = fx(0);
 
-effect(() => {
+run(() => {
   console.log("Count is:", count());
 });
 
@@ -65,14 +65,14 @@ count.set(1); // Logs: "Count is: 1"
 ### Type Signature
 
 ```ts
-function effect(fn: () => void): void;
+function run(fn: () => void): void;
 ```
 
 ### Parameters
 
-| Parameter | Type         | Description                |
-| --------- | ------------ | -------------------------- |
-| `fn`      | `() => void` | The effect function to run |
+| Parameter | Type         | Description           |
+| --------- | ------------ | --------------------- |
+| `fn`      | `() => void` | The run function      |
 
 ---
 
@@ -110,10 +110,10 @@ function mount(component: () => Element, container: Element | null): void;
 A component that shows fallback content while async operations are pending.
 
 ```tsx
-import { Suspense, resource } from "@flickjs/runtime";
+import { Suspense, query } from "@flickjs/runtime";
 
 function UserProfile() {
-  const user = resource(() => fetchUser());
+  const user = query(() => fetchUser());
   return <div>{user()?.name}</div>;
 }
 
@@ -135,19 +135,19 @@ function App() {
 
 ---
 
-## resource
+## query
 
 Creates an async data fetcher that integrates with Suspense.
 
 ```tsx
-import { signal, resource } from "@flickjs/runtime";
+import { fx, query } from "@flickjs/runtime";
 
-// Simple resource
-const posts = resource(() => fetch("/api/posts").then((res) => res.json()));
+// Simple query
+const posts = query(() => fetch("/api/posts").then((res) => res.json()));
 
-// Resource with reactive source
-const userId = signal(1);
-const user = resource(userId, (id) =>
+// Query with reactive source
+const userId = fx(1);
+const user = query(userId, (id) =>
   fetch(`/api/users/${id}`).then((r) => r.json())
 );
 ```
@@ -156,15 +156,15 @@ const user = resource(userId, (id) =>
 
 ```ts
 // Without source
-function resource<T>(fetcher: () => Promise<T>): Resource<T>;
+function query<T>(fetcher: () => Promise<T>): Query<T>;
 
 // With source
-function resource<T, S>(
+function query<T, S>(
   source: () => S,
   fetcher: (source: S) => Promise<T>
-): Resource<T>;
+): Query<T>;
 
-interface Resource<T> {
+interface Query<T> {
   (): T | undefined; // Current value
   loading(): boolean; // Is fetching
   error(): Error | undefined; // Error if failed
@@ -173,7 +173,7 @@ interface Resource<T> {
 }
 ```
 
-### Resource Properties
+### Query Properties
 
 | Property    | Type                 | Description                   |
 | ----------- | -------------------- | ----------------------------- |

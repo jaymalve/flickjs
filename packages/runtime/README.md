@@ -19,9 +19,9 @@ The entire reactive runtime is incredibly lightweight, making it perfect for per
 
 ## API
 
-### `signal<T>(initialValue: T)`
+### `fx<T>(initialValue: T)`
 
-Creates a reactive signal that holds a value. Signals are the foundation of Flick's reactivity system.
+Creates a reactive fx that holds a value. Fx are the foundation of Flick's reactivity system.
 
 **Returns**: An object with:
 
@@ -31,9 +31,9 @@ Creates a reactive signal that holds a value. Signals are the foundation of Flic
 **Example**:
 
 ```tsx
-import { signal } from "@flickjs/runtime";
+import { fx } from "@flickjs/runtime";
 
-const count = signal(0);
+const count = fx(0);
 
 console.log(count()); // 0
 count.set(5);
@@ -44,22 +44,22 @@ count.set(count() + 1);
 console.log(count()); // 6
 ```
 
-### `effect(fn: () => void)`
+### `run(fn: () => void)`
 
-Creates an effect that automatically tracks signal dependencies and re-runs when they change.
+Creates a run that automatically tracks fx dependencies and re-runs when they change.
 
 **Parameters**:
 
-- `fn`: A function that will be executed immediately and re-executed whenever any signal it reads changes
+- `fn`: A function that will be executed immediately and re-executed whenever any fx it reads changes
 
 **Example**:
 
 ```tsx
-import { signal, effect } from "@flickjs/runtime";
+import { fx, run } from "@flickjs/runtime";
 
-const count = signal(0);
+const count = fx(0);
 
-effect(() => {
+run(() => {
   console.log("Count is:", count());
 });
 // Logs: "Count is: 0"
@@ -68,7 +68,7 @@ count.set(5);
 // Logs: "Count is: 5"
 ```
 
-**Note**: In most cases, you won't need to use `effect()` directly. The Flick compiler automatically wraps reactive expressions in JSX with effect calls.
+**Note**: In most cases, you won't need to use `run()` directly. The Flick compiler automatically wraps reactive expressions in JSX with run calls.
 
 ### `mount(Component: () => Element, target: Element)`
 
@@ -82,10 +82,10 @@ Mounts a Flick component to a DOM element.
 **Example**:
 
 ```tsx
-import { signal, mount } from "@flickjs/runtime";
+import { fx, mount } from "@flickjs/runtime";
 
 function App() {
-  const count = signal(0);
+  const count = fx(0);
 
   return (
     <div>
@@ -103,10 +103,10 @@ mount(App, document.getElementById("app"));
 ### Counter
 
 ```tsx
-import { signal, mount } from "@flickjs/runtime";
+import { fx, mount } from "@flickjs/runtime";
 
 function Counter() {
-  const count = signal(0);
+  const count = fx(0);
 
   const increment = () => count.set(count() + 1);
   const decrement = () => count.set(count() - 1);
@@ -128,10 +128,10 @@ mount(Counter, document.getElementById("app"));
 ### Input Binding
 
 ```tsx
-import { signal, mount } from "@flickjs/runtime";
+import { fx, mount } from "@flickjs/runtime";
 
 function NameInput() {
-  const name = signal("");
+  const name = fx("");
 
   return (
     <div>
@@ -152,20 +152,20 @@ mount(NameInput, document.getElementById("app"));
 ### Computed Values
 
 ```tsx
-import { signal, effect, mount } from "@flickjs/runtime";
+import { fx, run, mount } from "@flickjs/runtime";
 
 function TodoApp() {
-  const todos = signal([
+  const todos = fx([
     { id: 1, text: "Learn Flick", done: false },
     { id: 2, text: "Build something", done: false },
     { id: 3, text: "Ship it", done: false },
   ]);
 
-  const remaining = signal(0);
-  const total = signal(0);
+  const remaining = fx(0);
+  const total = fx(0);
 
-  // Computed values using effects
-  effect(() => {
+  // Computed values using run
+  run(() => {
     const list = todos();
     total.set(list.length);
     remaining.set(list.filter((t) => !t.done).length);
@@ -205,14 +205,14 @@ mount(TodoApp, document.getElementById("app"));
 ### Multiple Signals
 
 ```tsx
-import { signal, effect, mount } from "@flickjs/runtime";
+import { fx, run, mount } from "@flickjs/runtime";
 
 function Calculator() {
-  const a = signal(0);
-  const b = signal(0);
-  const result = signal(0);
+  const a = fx(0);
+  const b = fx(0);
+  const result = fx(0);
 
-  effect(() => {
+  run(() => {
     result.set(a() + b());
   });
 
@@ -248,10 +248,10 @@ Effects automatically clean up and re-run when their dependencies change. No man
 Multiple signal updates are automatically batched within the same synchronous execution:
 
 ```tsx
-const count = signal(0);
-const doubled = signal(0);
+const count = fx(0);
+const doubled = fx(0);
 
-effect(() => {
+run(() => {
   doubled.set(count() * 2);
 });
 
@@ -259,7 +259,7 @@ effect(() => {
 count.set(5);
 count.set(10);
 count.set(15);
-// Effect runs only once with final value (15)
+// Run executes only once with final value (15)
 ```
 
 ### Nested Components
@@ -272,7 +272,7 @@ function Button({ label, onClick }) {
 }
 
 function App() {
-  const count = signal(0);
+  const count = fx(0);
 
   return (
     <div>
@@ -288,7 +288,7 @@ function App() {
 The runtime is fully typed. Import types for better IDE support:
 
 ```tsx
-import { signal, effect, mount } from "@flickjs/runtime";
+import { fx, run, mount } from "@flickjs/runtime";
 
 interface Todo {
   id: number;
@@ -296,29 +296,29 @@ interface Todo {
   done: boolean;
 }
 
-const todos = signal<Todo[]>([]);
+const todos = fx<Todo[]>([]);
 ```
 
 ## How It Works
 
 Flick's runtime uses a simple but effective reactivity system:
 
-1. **Signals** store values and track their dependents
-2. **Effects** register themselves as dependents when they read signals
-3. When a signal updates via `.set()`, it notifies all dependent effects
-4. Effects re-run and update the DOM directly
+1. **Fx** store values and track their dependents
+2. **Run** registers themselves as dependents when they read fx
+3. When an fx updates via `.set()`, it notifies all dependent run
+4. Run re-executes and updates the DOM directly
 
-This is called "fine-grained reactivity" because only the specific parts of the DOM that depend on changed signals are updated. There's no virtual DOM diffing.
+This is called "fine-grained reactivity" because only the specific parts of the DOM that depend on changed fx are updated. There's no virtual DOM diffing.
 
 ## Bundle Size Impact
 
 The runtime adds minimal overhead to your bundle:
 
 - **Runtime**: ~300 bytes
-- **Per signal**: ~50 bytes
-- **Per effect**: ~40 bytes
+- **Per fx**: ~50 bytes
+- **Per run**: ~40 bytes
 
-A typical small app with 10 signals and 15 effects would add less than 1.5 KB to your bundle.
+A typical small app with 10 fx and 15 run would add less than 1.5 KB to your bundle.
 
 ## Browser Support
 

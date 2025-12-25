@@ -1,8 +1,8 @@
-import { signal, effect, Signal } from "./index";
+import { fx, run, Fx } from "./index";
 
 export interface SuspenseContext {
   register: (promise: Promise<any>) => void;
-  pending: Signal<number>;
+  pending: Fx<number>;
 }
 
 const suspenseStack: SuspenseContext[] = [];
@@ -20,7 +20,7 @@ export function Suspense(props: SuspenseProps): Node {
   const container = document.createElement("div");
   container.setAttribute("data-suspense", "");
 
-  const pending = signal(0);
+  const pending = fx(0);
 
   const context: SuspenseContext = {
     pending,
@@ -59,7 +59,7 @@ export function Suspense(props: SuspenseProps): Node {
     }
   };
 
-  effect(() => {
+  run(() => {
     if (pending() > 0) {
       return;
     }
@@ -68,7 +68,7 @@ export function Suspense(props: SuspenseProps): Node {
     childrenWrapper.appendChild(result ?? document.createDocumentFragment());
   });
 
-  effect(() => {
+  run(() => {
     const isPending = pending() > 0;
     container.innerHTML = "";
     container.appendChild(isPending ? fallbackNode : childrenWrapper);
@@ -77,9 +77,9 @@ export function Suspense(props: SuspenseProps): Node {
   return container;
 }
 
-type ResourceState = "pending" | "resolved" | "rejected";
+type QueryState = "pending" | "resolved" | "rejected";
 
-export interface Resource<T> {
+export interface Query<T> {
   (): T | undefined;
   loading: () => boolean;
   error: () => Error | undefined;
@@ -89,26 +89,26 @@ export interface Resource<T> {
 
 type Fetcher<S, T> = (source: S) => Promise<T>;
 
-export function resource<T>(fetcher: () => Promise<T>): Resource<T>;
-export function resource<S, T>(
+export function query<T>(fetcher: () => Promise<T>): Query<T>;
+export function query<S, T>(
   source: () => S,
   fetcher: Fetcher<S, T>
-): Resource<T>;
+): Query<T>;
 
-export function resource<S, T>(
+export function query<S, T>(
   sourceOrFetcher: (() => S) | (() => Promise<T>),
   maybeFetcher?: Fetcher<S, T>
-): Resource<T> {
+): Query<T> {
   const hasSource = maybeFetcher !== undefined;
   const source = hasSource ? (sourceOrFetcher as () => S) : undefined;
   const fetcher = hasSource
     ? maybeFetcher!
     : (sourceOrFetcher as () => Promise<T>);
 
-  const state = signal<ResourceState>("pending");
-  const value = signal<T | undefined>(undefined);
-  const error = signal<Error | undefined>(undefined);
-  const latest = signal<T | undefined>(undefined);
+  const state = fx<QueryState>("pending");
+  const value = fx<T | undefined>(undefined);
+  const error = fx<Error | undefined>(undefined);
+  const latest = fx<T | undefined>(undefined);
 
   // Track current promise and which Suspense contexts we've registered with
   let currentPromise: Promise<T> | null = null;
@@ -142,14 +142,14 @@ export function resource<S, T>(
   };
 
   if (hasSource) {
-    effect(() => {
+    run(() => {
       const sourceValue = source!();
       load(sourceValue);
     });
   } else {
     load();
   }
-  // Create the resource accessor - throws promise while pending
+  // Create the query accessor - throws promise while pending
   const read = (() => {
     if (state() === "pending" && currentPromise) {
       const suspenseContext = getCurrentSuspense();
@@ -160,7 +160,7 @@ export function resource<S, T>(
       throw currentPromise;
     }
     return value();
-  }) as Resource<T>;
+  }) as Query<T>;
 
   read.loading = () => state() === "pending";
   read.error = () => error();

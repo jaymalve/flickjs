@@ -30,10 +30,10 @@ This creates a new project with:
 ## Your First Component
 
 ```tsx
-import { signal, mount } from "@flickjs/runtime";
+import { fx, mount } from "@flickjs/runtime";
 
 function Counter() {
-  const count = signal(0);
+  const count = fx(0);
 
   return (
     <div>
@@ -49,13 +49,13 @@ mount(Counter, document.getElementById("app"));
 
 ## Key Concepts
 
-- **Signals** - Reactive values that automatically update the UI when changed
-- **Effects** - Side effects that run when signals change
+- **Fx** - Reactive values that automatically update the UI when changed
+- **Run** - Side effects that run when fx change
 - **Components** - Functions that return JSX
-- **Fine-grained reactivity** - Only the specific DOM nodes that use a signal will update
+- **Fine-grained reactivity** - Only the specific DOM nodes that use an fx will update
 
 ## Next Steps
 
 - [Installation](/guide/installation) - Manual setup for existing projects
-- [Signals](/guide/signals) - Deep dive into reactive state
+- [Fx](/guide/fx) - Deep dive into reactive state
 - [Components](/guide/components) - Building UI with components

@@ -4,7 +4,7 @@ import path from "path";
 export function createTodoDetailPage(root: string) {
   fs.writeFileSync(
     path.join(root, "src/pages/todos/[id].tsx"),
-    `import { resource, signal, Suspense } from "@flickjs/runtime";
+    `import { query, fx, Suspense } from "@flickjs/runtime";
 import { Link, params } from "@flickjs/router";
 
 interface Todo {
@@ -16,7 +16,7 @@ interface Todo {
 
 export default function TodoDetail() {
   // Access dynamic route parameter
-  const todoId = signal(params().id);
+  const todoId = fx(params().id);
 
   const handleFetchTodo = async (id: string) => {
     const res = await fetch(\`https://jsonplaceholder.typicode.com/todos/\${id}\`);
@@ -25,8 +25,8 @@ export default function TodoDetail() {
     return response;
   };
 
-  // Resource that fetches todo by ID from route params
-  const todo = resource(todoId, handleFetchTodo);
+  // Query that fetches todo by ID from route params
+  const todo = query(todoId, handleFetchTodo);
 
   return (
     <div class="min-h-screen bg-gray-100 p-8">
@@ -87,7 +87,7 @@ export default function TodoDetail() {
             <div class="mt-6 pt-4 border-t">
               <p class="text-sm text-gray-500">
                 This page demonstrates dynamic routing with params() and
-                source-based resource fetching.
+                source-based query fetching.
               </p>
             </div>
           </div>

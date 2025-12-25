@@ -61,15 +61,15 @@ export default defineConfig({
 
 ## Core Concepts
 
-### Signals
+### Fx
 
-Signals are reactive values that automatically update the UI when changed.
+Fx are reactive values that automatically update the UI when changed.
 
 ```tsx
-import { signal, mount } from "@flickjs/runtime";
+import { fx, mount } from "@flickjs/runtime";
 
 function Counter() {
-  const count = signal(0);
+  const count = fx(0);
 
   return (
     <div>
@@ -85,10 +85,10 @@ mount(Counter, document.getElementById("app"));
 
 **Key points:**
 
-- `signal(initialValue)` creates a reactive signal
+- `fx(initialValue)` creates a reactive fx
 - `count()` reads the current value
 - `count.set(newValue)` updates the value and triggers UI updates
-- Only the specific DOM nodes that use the signal will update (fine-grained reactivity)
+- Only the specific DOM nodes that use the fx will update (fine-grained reactivity)
 
 ### Derived Values
 
@@ -96,8 +96,8 @@ Computed values that automatically update when their dependencies change:
 
 ```tsx
 function PriceCalculator() {
-  const price = signal(100);
-  const quantity = signal(1);
+  const price = fx(100);
+  const quantity = fx(1);
 
   // Derived value - automatically updates
   const total = () => price() * quantity();
@@ -113,18 +113,18 @@ function PriceCalculator() {
 }
 ```
 
-### Effects
+### Run
 
-Run side effects when signals change:
+Run side effects when fx change:
 
 ```tsx
-import { signal, effect, mount } from "@flickjs/runtime";
+import { fx, run, mount } from "@flickjs/runtime";
 
 function Logger() {
-  const count = signal(0);
+  const count = fx(0);
 
   // Runs whenever count changes
-  effect(() => {
+  run(() => {
     console.log("Count changed to:", count());
   });
 
@@ -182,7 +182,7 @@ function App() {
 
 ```tsx
 function Toggle() {
-  const visible = signal(true);
+  const visible = fx(true);
 
   return (
     <div>
@@ -197,7 +197,7 @@ function Toggle() {
 
 ```tsx
 function TodoList() {
-  const todos = signal([
+  const todos = fx([
     { id: 1, text: "Learn Flick" },
     { id: 2, text: "Build something" },
   ]);
@@ -220,7 +220,7 @@ Use lowercase event names (standard DOM events):
 
 ```tsx
 function Form() {
-  const value = signal("");
+  const value = fx("");
 
   return (
     <div>
@@ -254,7 +254,7 @@ Use `class` (not `className`):
 
 ```tsx
 function StyledComponent() {
-  const isActive = signal(false);
+  const isActive = fx(false);
 
   return (
     <div class={isActive() ? "active" : "inactive"}>
@@ -270,7 +270,7 @@ function StyledComponent() {
 
 ```tsx
 function ColorBox() {
-  const color = signal("red");
+  const color = fx("red");
 
   return (
     <div style={`background-color: ${color()}; padding: 20px;`}>
@@ -315,7 +315,7 @@ export default defineConfig({
 
 ```tsx
 import "./index.css";
-import { signal, mount } from "@flickjs/runtime";
+import { fx, mount } from "@flickjs/runtime";
 
 // ... rest of your app
 ```
@@ -324,10 +324,10 @@ import { signal, mount } from "@flickjs/runtime";
 
 ```tsx
 import "./index.css";
-import { signal, mount } from "@flickjs/runtime";
+import { fx, mount } from "@flickjs/runtime";
 
 function Counter() {
-  const count = signal(0);
+  const count = fx(0);
 
   return (
     <div class="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -359,17 +359,17 @@ mount(Counter, document.getElementById("app"));
 
 ## Suspense & Async Data
 
-Flick provides built-in support for handling asynchronous operations with `Suspense`, `resource`, and `lazy` loading.
+Flick provides built-in support for handling asynchronous operations with `Suspense`, `query`, and `lazy` loading.
 
 ### Suspense Component
 
 The `Suspense` component displays a fallback UI while async operations are pending:
 
 ```tsx
-import { mount, Suspense, resource } from "@flickjs/runtime";
+import { mount, Suspense, query } from "@flickjs/runtime";
 
 function UserProfile() {
-  const user = resource(() => fetch("/api/user").then((res) => res.json()));
+  const user = query(() => fetch("/api/user").then((res) => res.json()));
 
   return (
     <div>
@@ -393,24 +393,24 @@ mount(App, document.getElementById("app"));
 **Key points:**
 
 - `fallback` is displayed while any async operations inside are pending
-- Once all resources resolve, the children are shown
+- Once all queries resolve, the children are shown
 - Suspense boundaries can be nested for granular loading states
 
-### Resource
+### Query
 
-`resource` creates an async data fetcher that integrates with Suspense:
+`query` creates an async data fetcher that integrates with Suspense:
 
 ```tsx
-import { signal, resource, Suspense } from "@flickjs/runtime";
+import { fx, query, Suspense } from "@flickjs/runtime";
 
-// Simple resource (no source)
-const posts = resource(() => fetch("/api/posts").then((res) => res.json()));
+// Simple query (no source)
+const posts = query(() => fetch("/api/posts").then((res) => res.json()));
 
-// Resource with reactive source
+// Query with reactive source
 function UserPosts() {
-  const userId = signal(1);
+  const userId = fx(1);
 
-  const posts = resource(
+  const posts = query(
     () => userId(), // Source - refetches when this changes
     (id) => fetch(`/api/users/${id}/posts`).then((res) => res.json())
   );
@@ -432,13 +432,13 @@ function UserPosts() {
 }
 ```
 
-**Resource API:**
+**Query API:**
 
-- `resource()` - returns the current value (or `undefined` while loading)
-- `resource.loading()` - returns `true` while fetching
-- `resource.error()` - returns the error if the fetch failed
-- `resource.latest()` - returns the last successful value (useful during refetch)
-- `resource.refetch()` - manually trigger a refetch
+- `query()` - returns the current value (or `undefined` while loading)
+- `query.loading()` - returns `true` while fetching
+- `query.error()` - returns the error if the fetch failed
+- `query.latest()` - returns the last successful value (useful during refetch)
+- `query.refetch()` - manually trigger a refetch
 
 ### Lazy Loading Components
 
@@ -452,7 +452,7 @@ const HeavyChart = lazy(() => import("./components/HeavyChart"));
 const Settings = lazy(() => import("./pages/Settings"));
 
 function App() {
-  const showChart = signal(false);
+  const showChart = fx(false);
 
   return (
     <div>
@@ -472,19 +472,19 @@ mount(App, document.getElementById("app"));
 
 ### Complete Example
 
-Here's a full example combining Suspense, resource, and lazy:
+Here's a full example combining Suspense, query, and lazy:
 
 ```tsx
-import { signal, mount, Suspense, resource, lazy } from "@flickjs/runtime";
+import { fx, mount, Suspense, query, lazy } from "@flickjs/runtime";
 
 // Lazy load the chart component
 const Chart = lazy(() => import("./Chart"));
 
 function Dashboard() {
-  const timeRange = signal("week");
+  const timeRange = fx("week");
 
-  // Resource that refetches when timeRange changes
-  const stats = resource(
+  // Query that refetches when timeRange changes
+  const stats = query(
     () => timeRange(),
     (range) => fetch(`/api/stats?range=${range}`).then((r) => r.json())
   );
@@ -656,16 +656,16 @@ Flick works with TypeScript out of the box. Add a `tsconfig.json`:
 }
 ```
 
-### Typing Signals
+### Typing Fx
 
 ```tsx
-import { signal } from "@flickjs/runtime";
+import { fx } from "@flickjs/runtime";
 
 // Type is inferred
-const count = signal(0); // Signal<number>
+const count = fx(0); // Fx<number>
 
 // Explicit typing
-const user = signal<{ name: string; age: number } | null>(null);
+const user = fx<{ name: string; age: number } | null>(null);
 
 // Update with type safety
 user.set({ name: "John", age: 30 });
@@ -709,9 +709,9 @@ my-flick-app/
 
 ## Tips & Best Practices
 
-1. **Keep signals at the top level** - Define signals at the beginning of your component
-2. **Use derived values for computed state** - Instead of effects that update signals
-3. **Fine-grained updates** - Flick only updates the specific DOM nodes that depend on changed signals
+1. **Keep fx at the top level** - Define fx at the beginning of your component
+2. **Use derived values for computed state** - Instead of run effects that update fx
+3. **Fine-grained updates** - Flick only updates the specific DOM nodes that depend on changed fx
 4. **No virtual DOM** - Direct DOM manipulation for maximum performance
 5. **Standard HTML attributes** - Use `class` and not `className`, `onclick` and not `onClick`
 
