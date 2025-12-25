@@ -37,8 +37,8 @@ If you want to add Flick to an existing project:
 # Install runtime (required)
 bun add @flickjs/runtime
 
-# Install compiler (required for JSX)
-bun add -D @flickjs/compiler @babel/core
+# Install vite plugin (required for JSX)
+bun add -D @flickjs/vite-plugin
 
 # Install router (optional)
 bun add @flickjs/router
@@ -50,43 +50,10 @@ Create or update `vite.config.js`:
 
 ```js
 import { defineConfig } from "vite";
-import { transformSync } from "@babel/core";
-import { createRequire } from "module";
-import { fileURLToPath } from "url";
-import { dirname, resolve } from "path";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const require = createRequire(import.meta.url);
-
-function flickPlugin() {
-  const compilerPath = resolve(
-    __dirname,
-    "node_modules/@flickjs/compiler/dist/index.js"
-  );
-  const flickCompiler = require(compilerPath).default;
-
-  return {
-    name: "vite-plugin-flick",
-    transform(code, id) {
-      if (!/\.[jt]sx$/.test(id)) return null;
-
-      const result = transformSync(code, {
-        filename: id,
-        plugins: [flickCompiler],
-        sourceMaps: true,
-      });
-
-      return {
-        code: result.code,
-        map: result.map,
-      };
-    },
-  };
-}
+import flick from "@flickjs/vite-plugin";
 
 export default defineConfig({
-  plugins: [flickPlugin()],
+  plugins: [flick()],
 });
 ```
 
@@ -336,11 +303,11 @@ bun add -D tailwindcss @tailwindcss/vite
 
 ```js
 import { defineConfig } from "vite";
+import flick from "@flickjs/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
-// ... your existing flickPlugin
 
 export default defineConfig({
-  plugins: [flickPlugin(), tailwindcss()],
+  plugins: [flick(), tailwindcss()],
 });
 ```
 
@@ -567,11 +534,11 @@ Update `vite.config.js`:
 
 ```js
 import { defineConfig } from "vite";
+import flick from "@flickjs/vite-plugin";
 import { flickRouter } from "@flickjs/router/vite";
-// ... your flickPlugin from above
 
 export default defineConfig({
-  plugins: [flickPlugin(), flickRouter({ pagesDir: "pages" })],
+  plugins: [flick(), flickRouter({ pagesDir: "pages" })],
 });
 ```
 
