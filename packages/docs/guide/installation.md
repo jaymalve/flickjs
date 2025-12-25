@@ -56,12 +56,13 @@ import { fx, mount } from "@flickjs/runtime";
 
 function App() {
   const count = fx(0);
+  const increment = () => count.set(count() + 1);
 
   return (
     <div>
       <h1>Hello Flick!</h1>
       <p>Count: {count()}</p>
-      <button onclick={() => count.set(count() + 1)}>Increment</button>
+      <button onclick={increment}>Increment</button>
     </div>
   );
 }
