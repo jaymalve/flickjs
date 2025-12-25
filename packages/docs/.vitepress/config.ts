@@ -5,7 +5,7 @@ import path from "node:path";
 export default defineConfig({
   title: "Flick",
   description: "A tiny reactive JS framework from the future",
-  base: "/flickjs/",
+  base: "/",
 
   transformPageData(pageData) {
     if (!pageData.relativePath.endsWith(".md")) return;
@@ -26,7 +26,7 @@ export default defineConfig({
   head: [
     [
       "link",
-      { rel: "icon", type: "image/svg+xml", href: "/flickjs/favicon.svg" },
+      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
     ],
   ],
 
