@@ -52,10 +52,10 @@ Create an `index.html`:
 Create `src/main.tsx`:
 
 ```tsx
-import { signal, mount } from "@flickjs/runtime";
+import { fx, mount } from "@flickjs/runtime";
 
 function App() {
-  const count = signal(0);
+  const count = fx(0);
 
   return (
     <div>

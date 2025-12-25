@@ -51,9 +51,9 @@ export default defineConfig({
         {
           text: "Core Concepts",
           items: [
-            { text: "Signals", link: "/guide/signals" },
+            { text: "Fx", link: "/guide/fx" },
             { text: "Components", link: "/guide/components" },
-            { text: "Effects", link: "/guide/effects" },
+            { text: "Run", link: "/guide/run" },
           ],
         },
         {
@@ -76,9 +76,9 @@ export default defineConfig({
         {
           text: "Core Concepts",
           items: [
-            { text: "Signals", link: "/guide/signals" },
+            { text: "Fx", link: "/guide/fx" },
             { text: "Components", link: "/guide/components" },
-            { text: "Effects", link: "/guide/effects" },
+            { text: "Run", link: "/guide/run" },
           ],
         },
         {

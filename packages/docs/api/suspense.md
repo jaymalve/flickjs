@@ -1,16 +1,16 @@
 # Suspense & Async Data
 
-Flick provides built-in support for handling asynchronous operations with `Suspense`, `resource`, and `lazy`.
+Flick provides built-in support for handling asynchronous operations with `Suspense`, `query`, and `lazy`.
 
 ## Suspense
 
 The `Suspense` component displays a fallback UI while async operations are pending.
 
 ```tsx
-import { mount, Suspense, resource } from "@flickjs/runtime";
+import { mount, Suspense, query } from "@flickjs/runtime";
 
 function UserProfile() {
-  const user = resource(() => fetch("/api/user").then((res) => res.json()));
+  const user = query(() => fetch("/api/user").then((res) => res.json()));
 
   return (
     <div>
@@ -34,21 +34,21 @@ mount(App, document.getElementById("app"));
 ### Key Points
 
 - `fallback` is displayed while any async operations inside are pending
-- Once all resources resolve, the children are shown
+- Once all queries resolve, the children are shown
 - Suspense boundaries can be nested for granular loading states
 
 ---
 
-## Resource
+## Query
 
-`resource` creates an async data fetcher that integrates with Suspense.
+`query` creates an async data fetcher that integrates with Suspense.
 
-### Simple Resource
+### Simple Query
 
 ```tsx
-import { resource, Suspense } from "@flickjs/runtime";
+import { query, Suspense } from "@flickjs/runtime";
 
-const posts = resource(() => fetch("/api/posts").then((res) => res.json()));
+const posts = query(() => fetch("/api/posts").then((res) => res.json()));
 
 function PostList() {
   return (
@@ -61,17 +61,17 @@ function PostList() {
 }
 ```
 
-### Resource with Reactive Source
+### Query with Reactive Source
 
-When the source signal changes, the resource automatically refetches:
+When the source fx changes, the query automatically refetches:
 
 ```tsx
-import { signal, resource, Suspense } from "@flickjs/runtime";
+import { fx, query, Suspense } from "@flickjs/runtime";
 
 function UserPosts() {
-  const userId = signal(1);
+  const userId = fx(1);
 
-  const posts = resource(
+  const posts = query(
     userId, // Source - refetches when this changes
     (id) => fetch(`/api/users/${id}/posts`).then((res) => res.json())
   );
@@ -93,15 +93,15 @@ function UserPosts() {
 }
 ```
 
-### Resource API
+### Query API
 
-| Method               | Returns              | Description                                   |
-| -------------------- | -------------------- | --------------------------------------------- |
-| `resource()`         | `T \| undefined`     | Current value (undefined while loading)       |
-| `resource.loading()` | `boolean`            | True while fetching                           |
-| `resource.error()`   | `Error \| undefined` | Error if fetch failed                         |
-| `resource.latest()`  | `T \| undefined`     | Last successful value (useful during refetch) |
-| `resource.refetch()` | `void`               | Manually trigger a refetch                    |
+| Method           | Returns              | Description                                   |
+| ---------------- | -------------------- | --------------------------------------------- |
+| `query()`        | `T \| undefined`     | Current value (undefined while loading)       |
+| `query.loading()`| `boolean`            | True while fetching                           |
+| `query.error()`  | `Error \| undefined` | Error if fetch failed                         |
+| `query.latest()` | `T \| undefined`     | Last successful value (useful during refetch) |
+| `query.refetch()`| `void`               | Manually trigger a refetch                    |
 
 ---
 
@@ -117,7 +117,7 @@ const HeavyChart = lazy(() => import("./components/HeavyChart"));
 const Settings = lazy(() => import("./pages/Settings"));
 
 function App() {
-  const showChart = signal(false);
+  const showChart = fx(false);
 
   return (
     <div>
@@ -167,19 +167,19 @@ function Dashboard() {
 
 ## Complete Example
 
-Here's a full example combining Suspense, resource, and lazy:
+Here's a full example combining Suspense, query, and lazy:
 
 ```tsx
-import { signal, mount, Suspense, resource, lazy } from "@flickjs/runtime";
+import { fx, mount, Suspense, query, lazy } from "@flickjs/runtime";
 
 // Lazy load the chart component
 const Chart = lazy(() => import("./Chart"));
 
 function Dashboard() {
-  const timeRange = signal("week");
+  const timeRange = fx("week");
 
-  // Resource that refetches when timeRange changes
-  const stats = resource(
+  // Query that refetches when timeRange changes
+  const stats = query(
     () => timeRange(),
     (range) => fetch(`/api/stats?range=${range}`).then((r) => r.json())
   );
@@ -215,11 +215,11 @@ mount(Dashboard, document.getElementById("app"));
 
 ## Error Handling
 
-Handle errors at the resource level:
+Handle errors at the query level:
 
 ```tsx
 function UserProfile() {
-  const user = resource(() => fetchUser());
+  const user = query(() => fetchUser());
 
   // Check error state
   if (user.error()) {
@@ -250,5 +250,5 @@ function UserProfile() {
 
 1. **Place Suspense boundaries strategically** - Too high causes everything to show loading; too low causes many loading states
 2. **Use `latest()` for better UX** - Show stale data while refetching new data
-3. **Handle errors explicitly** - Check `resource.error()` and provide retry functionality
+3. **Handle errors explicitly** - Check `query.error()` and provide retry functionality
 4. **Lazy load heavy components** - Use `lazy()` for components not needed on initial load

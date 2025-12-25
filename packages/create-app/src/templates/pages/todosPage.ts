@@ -4,7 +4,7 @@ import path from "path";
 export function createTodosPage(root: string) {
   fs.writeFileSync(
     path.join(root, "src/pages/todos.tsx"),
-    `import { signal, resource, Suspense } from "@flickjs/runtime";
+    `import { fx, query, Suspense } from "@flickjs/runtime";
 import { Link } from "@flickjs/router";
 import TodoChip from "../components/TodoChip";
 import type { Todo } from "../types/todo.interface";
@@ -18,10 +18,10 @@ export default function TodoList() {
     console.log("response", response);
     return response;
   };
-  const allTodos = resource(handleFetchAllTodos);
+  const allTodos = query(handleFetchAllTodos);
 
-  // Signal for userId filter
-  const selectedUserId = signal(1);
+  // Fx for userId filter
+  const selectedUserId = fx(1);
 
   const handleFetchUserTodos = async (userId: number) => {
     const res = await fetch(
@@ -32,7 +32,7 @@ export default function TodoList() {
     return response;
   };
 
-  const userTodos = resource(selectedUserId, handleFetchUserTodos);
+  const userTodos = query(selectedUserId, handleFetchUserTodos);
 
   return (
     <div class="min-h-screen bg-gray-100 p-8">
@@ -47,10 +47,10 @@ export default function TodoList() {
           Todo List Examples
         </h1>
 
-        {/* Simple Resource Example */}
+        {/* Simple Query Example */}
         <div class="bg-white rounded-lg shadow-md p-6 mb-6">
           <h2 class="text-2xl font-semibold mb-4">
-            Simple Resource (First 10 Todos)
+            Simple Query (First 10 Todos)
           </h2>
           <Suspense
             fallback={<div class="text-gray-500">Loading todos...</div>}
@@ -65,10 +65,10 @@ export default function TodoList() {
           </Suspense>
         </div>
 
-        {/* Source-based Resource Example */}
+        {/* Source-based Query Example */}
         <div class="bg-white rounded-lg shadow-md p-6">
           <h2 class="text-2xl font-semibold mb-4">
-            Source-based Resource (Filter by User)
+            Source-based Query (Filter by User)
           </h2>
 
           <div class="mb-4">

@@ -46,7 +46,7 @@ Use JavaScript expressions for conditional rendering:
 
 ```tsx
 function Toggle() {
-  const visible = signal(true);
+  const visible = fx(true);
 
   return (
     <div>
@@ -61,7 +61,7 @@ function Toggle() {
 
 ```tsx
 function Status() {
-  const isOnline = signal(true);
+  const isOnline = fx(true);
 
   return (
     <div>
@@ -77,7 +77,7 @@ Use `map()` to render lists:
 
 ```tsx
 function TodoList() {
-  const todos = signal([
+  const todos = fx([
     { id: 1, text: "Learn Flick" },
     { id: 2, text: "Build something" },
   ]);
@@ -98,7 +98,7 @@ Use lowercase event names (standard DOM events):
 
 ```tsx
 function Form() {
-  const value = signal("");
+  const value = fx("");
 
   return (
     <div>

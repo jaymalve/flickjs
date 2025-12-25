@@ -1,17 +1,17 @@
-# Effects
+# Run
 
-Effects run side effects when signals change. They automatically track which signals they depend on and re-run when those signals update.
+Run executes side effects when fx change. They automatically track which fx they depend on and re-run when those fx update.
 
 ## Basic Usage
 
 ```tsx
-import { signal, effect, mount } from "@flickjs/runtime";
+import { fx, run, mount } from "@flickjs/runtime";
 
 function Logger() {
-  const count = signal(0);
+  const count = fx(0);
 
   // Runs whenever count changes
-  effect(() => {
+  run(() => {
     console.log("Count changed to:", count());
   });
 
@@ -29,9 +29,9 @@ function Logger() {
 
 ```tsx
 function Debug() {
-  const data = signal(null);
+  const data = fx(null);
 
-  effect(() => {
+  run(() => {
     console.log("Data updated:", data());
   });
 
@@ -43,9 +43,9 @@ function Debug() {
 
 ```tsx
 function LocalStorageSync() {
-  const theme = signal(localStorage.getItem("theme") || "light");
+  const theme = fx(localStorage.getItem("theme") || "light");
 
-  effect(() => {
+  run(() => {
     localStorage.setItem("theme", theme());
   });
 
@@ -61,9 +61,9 @@ function LocalStorageSync() {
 
 ```tsx
 function PageTitle() {
-  const title = signal("Home");
+  const title = fx("Home");
 
-  effect(() => {
+  run(() => {
     document.title = title();
   });
 
@@ -82,10 +82,10 @@ function PageTitle() {
 
 ```tsx
 function ChartComponent() {
-  const data = signal([1, 2, 3, 4, 5]);
+  const data = fx([1, 2, 3, 4, 5]);
   let chartRef;
 
-  effect(() => {
+  run(() => {
     if (chartRef) {
       // Update external chart library when data changes
       updateChart(chartRef, data());
@@ -100,54 +100,54 @@ function ChartComponent() {
 
 ### 1. Prefer Derived Values
 
-For computed state, use derived values instead of effects that update signals:
+For computed state, use derived values instead of run that update fx:
 
 ```tsx
-// ❌ Don't do this
+// Don't do this
 function Bad() {
-  const price = signal(100);
-  const quantity = signal(2);
-  const total = signal(0);
+  const price = fx(100);
+  const quantity = fx(2);
+  const total = fx(0);
 
-  effect(() => {
+  run(() => {
     total.set(price() * quantity());
   });
 }
 
-// ✅ Do this
+// Do this
 function Good() {
-  const price = signal(100);
-  const quantity = signal(2);
+  const price = fx(100);
+  const quantity = fx(2);
   const total = () => price() * quantity(); // Derived value
 }
 ```
 
-### 2. Keep Effects Simple
+### 2. Keep Run Simple
 
-Effects should handle one specific side effect:
+Run should handle one specific side effect:
 
 ```tsx
-// ❌ Too much in one effect
-effect(() => {
+// Too much in one run
+run(() => {
   localStorage.setItem("user", user());
   document.title = user().name;
   analytics.track("user_update", user());
 });
 
-// ✅ Separate concerns
-effect(() => localStorage.setItem("user", user()));
-effect(() => document.title = user().name);
-effect(() => analytics.track("user_update", user()));
+// Separate concerns
+run(() => localStorage.setItem("user", user()));
+run(() => document.title = user().name);
+run(() => analytics.track("user_update", user()));
 ```
 
 ### 3. Avoid Circular Dependencies
 
-Don't create effects that update signals they read from:
+Don't create run that update fx they read from:
 
 ```tsx
-// ❌ This creates an infinite loop
-const count = signal(0);
-effect(() => {
+// This creates an infinite loop
+const count = fx(0);
+run(() => {
   count.set(count() + 1); // Never do this!
 });
 ```

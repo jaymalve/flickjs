@@ -6,9 +6,9 @@ export function createFeatureList(root: string) {
     path.join(root, "src/components/FeatureList.tsx"),
     `export default function FeatureList() {
   const features = [
-    { name: "signal()", description: "Fine-grained reactive state" },
-    { name: "effect()", description: "Auto-tracking side effects" },
-    { name: "resource()", description: "Async data fetching with Suspense" },
+    { name: "fx()", description: "Fine-grained reactive state" },
+    { name: "run()", description: "Auto-tracking side effects" },
+    { name: "query()", description: "Async data fetching with Suspense" },
     { name: "lazy()", description: "Code-splitting and lazy loading" },
     { name: "Suspense", description: "Loading states for async content" },
     { name: "Router", description: "File-based routing with dynamic params" },

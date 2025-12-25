@@ -1,14 +1,14 @@
-type Effect = () => void;
+type Run = () => void;
 
-export type Signal<T> = (() => T) & { set: (next: T | ((v: T) => T)) => void };
+export type Fx<T> = (() => T) & { set: (next: T | ((v: T) => T)) => void };
 
-let activeEffect: Effect | null = null;
+let activeRun: Run | null = null;
 
-export function signal<T>(value: T): Signal<T> {
-  const subs = new Set<Effect>();
+export function fx<T>(value: T): Fx<T> {
+  const subs = new Set<Run>();
 
   function read() {
-    if (activeEffect) subs.add(activeEffect);
+    if (activeRun) subs.add(activeRun);
     return value;
   }
 
@@ -20,13 +20,13 @@ export function signal<T>(value: T): Signal<T> {
   return read as (() => T) & { set: typeof read.set };
 }
 
-export function effect(fn: Effect) {
-  const run = () => {
-    activeEffect = run;
+export function run(fn: Run) {
+  const execute = () => {
+    activeRun = execute;
     fn();
-    activeEffect = null;
+    activeRun = null;
   };
-  run();
+  execute();
 }
 
 export function renderList<T>(
@@ -39,7 +39,7 @@ export function renderList<T>(
   const nodeMap = new Map<string | number, Node>();
   let currentKeys: (string | number)[] = [];
 
-  effect(() => {
+  run(() => {
     const items = getItems();
     const newKeys = items.map((item, i) => getKey(item, i));
     const newNodeMap = new Map<string | number, Node>();
@@ -130,5 +130,5 @@ declare global {
 // Users don't need to do anything - types are automatically available
 export const jsxTypes = Symbol("jsx-types");
 
-export { Suspense, getCurrentSuspense, resource, lazy } from "./suspense";
-export type { SuspenseContext, SuspenseProps, Resource } from "./suspense";
+export { Suspense, getCurrentSuspense, query, lazy } from "./suspense";
+export type { SuspenseContext, SuspenseProps, Query } from "./suspense";

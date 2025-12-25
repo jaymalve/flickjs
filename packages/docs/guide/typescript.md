@@ -21,16 +21,16 @@ Add a `tsconfig.json`:
 }
 ```
 
-## Typing Signals
+## Typing Fx
 
 ```tsx
-import { signal } from "@flickjs/runtime";
+import { fx } from "@flickjs/runtime";
 
 // Type is inferred
-const count = signal(0); // Signal<number>
+const count = fx(0); // Fx<number>
 
 // Explicit typing
-const user = signal<{ name: string; age: number } | null>(null);
+const user = fx<{ name: string; age: number } | null>(null);
 
 // Update with type safety
 user.set({ name: "John", age: 30 });
@@ -88,7 +88,7 @@ function List<T>({ items, renderItem }: ListProps<T>) {
 
 ```tsx
 function Form() {
-  const value = signal("");
+  const value = fx("");
 
   const handleInput = (e: Event) => {
     const target = e.target as HTMLInputElement;
@@ -127,10 +127,10 @@ function BlogPost() {
 }
 ```
 
-## Type Definitions for Resources
+## Type Definitions for Queries
 
 ```tsx
-import { resource } from "@flickjs/runtime";
+import { query } from "@flickjs/runtime";
 
 interface User {
   id: number;
@@ -138,7 +138,7 @@ interface User {
   email: string;
 }
 
-const user = resource<User>(() => fetch("/api/user").then((res) => res.json()));
+const user = query<User>(() => fetch("/api/user").then((res) => res.json()));
 
 // user() returns User | undefined
 // user.loading() returns boolean
@@ -150,7 +150,7 @@ const user = resource<User>(() => fetch("/api/user").then((res) => res.json()));
 With strict mode enabled, handle potential undefined values:
 
 ```tsx
-const user = resource<User>(() => fetchUser());
+const user = query<User>(() => fetchUser());
 
 function Profile() {
   // Handle loading and error states

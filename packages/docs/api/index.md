@@ -8,11 +8,11 @@ Flick consists of four main packages:
 
 The core reactive runtime. Includes:
 
-- `signal()` - Create reactive state
-- `effect()` - Run side effects
+- `fx()` - Create reactive state
+- `run()` - Run side effects
 - `mount()` - Mount components to the DOM
 - `Suspense` - Async boundary component
-- `resource()` - Async data fetching
+- `query()` - Async data fetching
 - `lazy()` - Code splitting
 
 ### [@flickjs/router](/api/router)

@@ -1,5 +1,5 @@
-import { effect, signal, Suspense } from "@flickjs/runtime";
-import { currentPath, params, query } from "./signals";
+import { run, fx, Suspense } from "@flickjs/runtime";
+import { currentPath, params, queryParams } from "./fx";
 import { matchRoute, type Route } from "./utils";
 
 /**
@@ -10,7 +10,7 @@ function updateRoutingState() {
   const searchParams = new URLSearchParams(window.location.search);
 
   currentPath.set(path);
-  query.set(searchParams);
+  queryParams.set(searchParams);
 }
 
 // Initialize routing state
@@ -39,16 +39,16 @@ export interface RouterProps {
  */
 export function Router(props: RouterProps) {
   const container = document.createElement("div");
-  const currentComponent = signal<{ fn: () => Node } | null>(null);
-  const routeError = signal<Error | null>(null);
+  const currentComponent = fx<{ fn: () => Node } | null>(null);
+  const routeError = fx<Error | null>(null);
 
   // Match route on path change
-  effect(() => {
+  run(() => {
     const path = currentPath();
     const match = matchRoute(path, props.routes);
 
     if (match) {
-      // Update params signal
+      // Update params fx
       params.set(match.params);
       routeError.set(null);
 
@@ -162,7 +162,7 @@ export function Link(props: {
     } else if (children instanceof Node) {
       anchor.appendChild(children);
     } else if (typeof children === "function") {
-      // Handle signal-based or function children
+      // Handle fx-based or function children
       try {
         const childValue = children();
         if (typeof childValue === "string") {
@@ -180,8 +180,8 @@ export function Link(props: {
           });
         }
       } catch {
-        // If calling fails, might be a render function - wrap in effect
-        effect(() => {
+        // If calling fails, might be a render function - wrap in run
+        run(() => {
           try {
             const childValue = children();
             anchor.innerHTML = "";

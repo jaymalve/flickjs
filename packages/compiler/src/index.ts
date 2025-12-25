@@ -20,7 +20,7 @@ function isListExpression(expr: t.Expression): boolean {
 }
 
 export default function flickJSX(): PluginObj {
-  let needsEffectImport = false;
+  let needsRunImport = false;
   let needsRenderListImport = false;
 
   return {
@@ -28,11 +28,11 @@ export default function flickJSX(): PluginObj {
       Program: {
         enter() {
           // Reset state for each file
-          needsEffectImport = false;
+          needsRunImport = false;
           needsRenderListImport = false;
         },
         exit(path: NodePath<t.Program>) {
-          if (!needsEffectImport && !needsRenderListImport) return;
+          if (!needsRunImport && !needsRenderListImport) return;
 
           // Find existing @flickjs/runtime import
           const existingImport = path.node.body.find(
@@ -42,11 +42,11 @@ export default function flickJSX(): PluginObj {
           );
 
           // Check which imports already exist
-          const hasEffectImport = existingImport?.specifiers.some(
+          const hasRunImport = existingImport?.specifiers.some(
             (spec) =>
               t.isImportSpecifier(spec) &&
               t.isIdentifier(spec.imported) &&
-              spec.imported.name === "effect"
+              spec.imported.name === "run"
           );
 
           const hasRenderListImport = existingImport?.specifiers.some(
@@ -59,9 +59,9 @@ export default function flickJSX(): PluginObj {
           // Build list of specifiers to add
           const specsToAdd: t.ImportSpecifier[] = [];
 
-          if (needsEffectImport && !hasEffectImport) {
+          if (needsRunImport && !hasRunImport) {
             specsToAdd.push(
-              t.importSpecifier(t.identifier("effect"), t.identifier("effect"))
+              t.importSpecifier(t.identifier("run"), t.identifier("run"))
             );
           }
 
@@ -262,7 +262,7 @@ export default function flickJSX(): PluginObj {
                 if (isListExpression(expr)) {
                   // LIST RENDERING PATH
                   needsRenderListImport = true;
-                  needsEffectImport = true;
+                  needsRunImport = true;
 
                   const anchor = path.scope.generateUidIdentifier("anchor");
 
@@ -420,7 +420,7 @@ export default function flickJSX(): PluginObj {
                   }
                 } else {
                   // TEXT NODE PATH (original behavior)
-                  needsEffectImport = true;
+                  needsRunImport = true;
 
                   const text = path.scope.generateUidIdentifier("text");
 
@@ -453,7 +453,7 @@ export default function flickJSX(): PluginObj {
 
                   statements.push(
                     t.expressionStatement(
-                      t.callExpression(t.identifier("effect"), [
+                      t.callExpression(t.identifier("run"), [
                         t.arrowFunctionExpression(
                           [],
                           t.assignmentExpression(

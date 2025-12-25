@@ -92,11 +92,9 @@ const Hero = () => {
                     <Line>
                       <Keyword>import</Keyword>
                       <Plain> {"{"} </Plain>
-                      <Variable>signal</Variable>
+                      <Variable>fx</Variable>
                       <Plain>, </Plain>
-                      <Variable>computed</Variable>
-                      <Plain>, </Plain>
-                      <Variable>effect</Variable>
+                      <Variable>run</Variable>
                       <Plain> {"}"} </Plain>
                       <Keyword>from</Keyword>
                       <String> '@flickjs/runtime'</String>
@@ -106,24 +104,20 @@ const Hero = () => {
                     <Line>
                       <Keyword>const</Keyword>
                       <Plain> count = </Plain>
-                      <Function>signal</Function>
+                      <Function>fx</Function>
                       <Plain>(</Plain>
                       <Number>0</Number>
                       <Plain>);</Plain>
                     </Line>
                     <Line>
                       <Keyword>const</Keyword>
-                      <Plain> doubled = </Plain>
-                      <Function>computed</Function>
-                      <Plain>(() =&gt; count.</Plain>
-                      <Property>value</Property>
-                      <Plain> * </Plain>
+                      <Plain> doubled = () =&gt; count() * </Plain>
                       <Number>2</Number>
-                      <Plain>);</Plain>
+                      <Plain>;</Plain>
                     </Line>
                     <Line />
                     <Line>
-                      <Function>effect</Function>
+                      <Function>run</Function>
                       <Plain>(() =&gt; {"{"}</Plain>
                     </Line>
                     <Line indent={2}>

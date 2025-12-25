@@ -1,10 +1,10 @@
-declare type Effect = () => void;
+declare type Run = () => void;
 
-export declare function signal<T>(value: T): (() => T) & {
+export declare function fx<T>(value: T): (() => T) & {
   set: (next: T | ((v: T) => T)) => void;
 };
 
-export declare function effect(fn: Effect): void;
+export declare function run(fn: Run): void;
 
 export declare function mount(App: () => Node, el: HTMLElement): void;
 
@@ -18,11 +18,11 @@ export interface SuspenseProps {
   children?: Node | (() => Node);
 }
 
-export declare function resource<T>(fetcher: () => Promise<T>): Resource<T>;
-export declare function resource<S, T>(
+export declare function query<T>(fetcher: () => Promise<T>): Query<T>;
+export declare function query<S, T>(
   source: () => S,
   fetcher: (source: S) => Promise<T>
-): Resource<T>;
+): Query<T>;
 
 // JSX Type Definitions for Flick Framework - automatically available when imported
 declare global {
