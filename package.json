@@ -17,6 +17,8 @@
     "docs:dev": "cd packages/docs && bun run dev",
     "docs:build": "cd packages/docs && bun run build",
     "docs:preview": "cd packages/docs && bun run preview",
+    "build:landing": "cd packages/landing && bun run build",
+    "build:deploy": "bun run build:landing && bun run docs:build && rm -rf dist && mkdir -p dist/docs && cp -r packages/landing/dist/* dist/ && cp -r packages/docs/.vitepress/dist/* dist/docs/",
     "publish:all": "bun run build && cd packages/runtime && npm publish --tag beta && cd ../compiler && npm publish --tag beta && cd ../router && npm publish --tag beta && cd ../vite-plugin && npm publish --tag beta && cd ../create-app && npm publish --tag beta",
     "publish:dry": "bun run build && cd packages/runtime && npm publish --dry-run --tag beta && cd ../compiler && npm publish --dry-run --tag beta && cd ../router && npm publish --dry-run --tag beta && cd ../vite-plugin && npm publish --dry-run --tag beta && cd ../create-app && npm publish --dry-run --tag beta",
     "version:update": "node -e \"const fs = require('fs'); const version = process.argv[1]; ['runtime', 'compiler', 'router', 'vite-plugin', 'create-app'].forEach(pkg => { const path = './packages/' + pkg + '/package.json'; const json = JSON.parse(fs.readFileSync(path)); json.version = version; fs.writeFileSync(path, JSON.stringify(json, null, 2) + '\\\\n'); });\""

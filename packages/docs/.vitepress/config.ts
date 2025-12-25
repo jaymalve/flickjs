@@ -5,7 +5,7 @@ import path from "node:path";
 export default defineConfig({
   title: "Flick",
   description: "A tiny reactive JS framework from the future",
-  base: "/",
+  base: "/docs/",
 
   transformPageData(pageData) {
     if (!pageData.relativePath.endsWith(".md")) return;
