@@ -19,9 +19,18 @@ const Navigation = () => {
         {/* Logo */}
         <a
           href="/"
-          className="text-lg font-semibold tracking-tight text-foreground"
+          className="flex items-center"
         >
-          Flick
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 32 32"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="text-foreground"
+          >
+            <path d="M4 4H20V12H28V28H4V4Z" fill="currentColor" />
+          </svg>
         </a>
 
         {/* Desktop Navigation */}

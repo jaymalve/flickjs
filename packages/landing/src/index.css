@@ -4,42 +4,42 @@
 
 @layer base {
   :root {
-    /* Flick Design System - Dark Mode Only */
-    --background: 35 20% 9%;
-    --foreground: 0 0% 100%;
+    /* Flick Design System - Dark Mode Only (Zinc Theme) */
+    --background: 0 0% 0%;
+    --foreground: 0 0% 98%;
 
-    --card: 35 15% 11%;
-    --card-foreground: 0 0% 100%;
+    --card: 240 6% 3%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 35 15% 11%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 240 6% 3%;
+    --popover-foreground: 0 0% 98%;
 
     --primary: 0 0% 100%;
-    --primary-foreground: 35 20% 9%;
+    --primary-foreground: 0 0% 0%;
 
-    --secondary: 35 10% 15%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 240 4% 10%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 35 10% 18%;
-    --muted-foreground: 240 4% 66%;
+    --muted: 240 4% 16%;
+    --muted-foreground: 240 5% 65%;
 
-    --accent: 45 100% 50%;
-    --accent-foreground: 35 20% 9%;
+    --accent: 0 0% 100%;
+    --accent-foreground: 0 0% 0%;
 
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 100% / 0.08;
-    --input: 0 0% 100% / 0.08;
-    --ring: 45 100% 50%;
+    --border: 240 4% 16%;
+    --input: 240 4% 16%;
+    --ring: 0 0% 100%;
 
     --radius: 0.25rem;
 
     /* Custom tokens */
-    --glow-gold: 0 0 60px hsl(45 100% 50% / 0.15);
-    --glow-subtle: 0 0 80px hsl(35 20% 20% / 0.5);
-    --gradient-radial: radial-gradient(ellipse at 50% 0%, hsl(35 15% 15%) 0%, hsl(35 20% 9%) 70%);
-    --gradient-code: linear-gradient(180deg, hsl(35 12% 12%) 0%, hsl(35 15% 10%) 100%);
+    --glow-gold: 0 0 60px hsl(0 0% 100% / 0.08);
+    --glow-subtle: 0 0 80px hsl(0 0% 0% / 0.5);
+    --gradient-radial: radial-gradient(ellipse at 50% 0%, hsl(240 6% 6%) 0%, hsl(0 0% 0%) 70%);
+    --gradient-code: linear-gradient(180deg, hsl(240 6% 4%) 0%, hsl(240 6% 3%) 100%);
   }
 }
 

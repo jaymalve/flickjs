@@ -208,31 +208,31 @@ const Line = ({
 );
 
 const Keyword = ({ children }: { children: React.ReactNode }) => (
-  <span className="text-[#c678dd]">{children}</span>
+  <span className="text-[#E4E4E7]">{children}</span>
 );
 
 const Function = ({ children }: { children: React.ReactNode }) => (
-  <span className="text-[#61afef]">{children}</span>
+  <span className="text-[#FAFAFA]">{children}</span>
 );
 
 const Variable = ({ children }: { children: React.ReactNode }) => (
-  <span className="text-[#e5c07b]">{children}</span>
+  <span className="text-[#A1A1AA]">{children}</span>
 );
 
 const String = ({ children }: { children: React.ReactNode }) => (
-  <span className="text-[#98c379]">{children}</span>
+  <span className="text-[#D1D5DB]">{children}</span>
 );
 
 const Number = ({ children }: { children: React.ReactNode }) => (
-  <span className="text-[#d19a66]">{children}</span>
+  <span className="text-[#A1A1AA]">{children}</span>
 );
 
 const Property = ({ children }: { children: React.ReactNode }) => (
-  <span className="text-[#e06c75]">{children}</span>
+  <span className="text-[#D4D4D8]">{children}</span>
 );
 
 const Plain = ({ children }: { children: React.ReactNode }) => (
-  <span className="text-[#abb2bf]">{children}</span>
+  <span className="text-[#71717A]">{children}</span>
 );
 
 export default Hero;
