@@ -80,7 +80,7 @@ const Hero = () => {
 
           {/* Right side - Code block */}
           <div className="animate-fade-up-delay-2 lg:animate-fade-up-delay-1">
-            <div className="code-block rounded overflow-hidden">
+            <div className="code-block rounded overflow-hidden max-w-[90vw] md:max-w-none">
               {/* Window header */}
               <div className="flex items-center gap-2 px-4 py-3 border-b border-input">
                 <div className="flex gap-1.5">
