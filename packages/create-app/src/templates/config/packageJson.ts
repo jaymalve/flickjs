@@ -15,11 +15,11 @@ export function createPackageJson(root: string, name: string) {
           preview: "bunx --bun vite preview",
         },
         dependencies: {
-          "@flickjs/runtime": "^0.0.1-beta.2",
-          "@flickjs/router": "^0.0.1-beta.1",
+          "@flickjs/runtime": "^0.0.1-beta.3",
+          "@flickjs/router": "^0.0.1-beta.3",
         },
         devDependencies: {
-          "@flickjs/vite-plugin": "^0.0.1-beta.1",
+          "@flickjs/vite-plugin": "^0.0.1-beta.3",
           "@tailwindcss/vite": "^4.1.18",
           tailwindcss: "^4",
           vite: "^5.0.0",

@@ -1,6 +1,6 @@
 {
   "name": "@flickjs/runtime",
-  "version": "0.0.1-beta.2",
+  "version": "0.0.1-beta.3",
   "description": "A tiny reactive runtime library with fine-grained reactivity",
   "type": "module",
   "main": "dist/index.js",

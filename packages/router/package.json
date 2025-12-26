@@ -1,6 +1,6 @@
 {
   "name": "@flickjs/router",
-  "version": "0.0.1-beta.1",
+  "version": "0.0.1-beta.3",
   "description": "File-based router for Flick framework",
   "type": "module",
   "main": "dist/index.js",

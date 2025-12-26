@@ -1,6 +1,6 @@
 {
   "name": "@flickjs/compiler",
-  "version": "0.0.1-beta.2",
+  "version": "0.0.1-beta.3",
   "description": "JSX compiler for Flick framework",
   "type": "module",
   "main": "dist/index.js",
