@@ -19,18 +19,54 @@ const Navigation = () => {
         {/* Logo */}
         <a
           href="/"
-          className="text-lg font-semibold tracking-tight text-foreground"
+          className="flex items-center"
         >
-          Flick
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 32 32"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="text-foreground"
+          >
+            <defs>
+              <linearGradient id="cubeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="currentColor" stopOpacity="1"/>
+                <stop offset="100%" stopColor="currentColor" stopOpacity="0.4"/>
+              </linearGradient>
+              <linearGradient id="topFaceNav" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="currentColor" stopOpacity="0.15"/>
+                <stop offset="100%" stopColor="currentColor" stopOpacity="0.08"/>
+              </linearGradient>
+              <linearGradient id="rightFaceNav" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="currentColor" stopOpacity="0.08"/>
+                <stop offset="100%" stopColor="currentColor" stopOpacity="0.04"/>
+              </linearGradient>
+              <linearGradient id="leftFaceNav" x1="100%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="currentColor" stopOpacity="0.05"/>
+                <stop offset="100%" stopColor="currentColor" stopOpacity="0.02"/>
+              </linearGradient>
+            </defs>
+            {/* Cube faces with gradient fills */}
+            <path d="M16 4L26 10L16 16L6 10Z" fill="url(#topFaceNav)"/>
+            <path d="M16 16L26 10L26 22L16 28Z" fill="url(#rightFaceNav)"/>
+            <path d="M6 10L16 16L16 28L6 22Z" fill="url(#leftFaceNav)"/>
+            {/* Cube outline */}
+            <path d="M16 4L6 10V22L16 28L26 22V10L16 4Z" stroke="url(#cubeGrad)" strokeWidth="1.5" strokeLinejoin="round" fill="none"/>
+            <path d="M6 10L16 16L26 10" stroke="url(#cubeGrad)" strokeWidth="1.5" strokeLinejoin="round"/>
+            <line x1="16" y1="16" x2="16" y2="28" stroke="url(#cubeGrad)" strokeWidth="1.5"/>
+            {/* Enhanced chevron - larger and bolder */}
+            <path d="M20 6L26 10L20 14" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" fill="none"/>
+          </svg>
         </a>
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-6">
-          <a href="#docs" className="nav-link text-sm">
+          <a href="/docs" className="nav-link text-sm">
             Docs
           </a>
           <a
-            href="https://github.com"
+            href="https://github.com/jaymalve/flickjs"
             target="_blank"
             rel="noopener noreferrer"
             className="nav-link text-sm"
@@ -38,7 +74,7 @@ const Navigation = () => {
             GitHub
           </a>
           <a
-            href="https://npmjs.com"
+            href="https://www.npmjs.com/package/@flickjs/runtime"
             target="_blank"
             rel="noopener noreferrer"
             className="nav-link text-sm"
@@ -80,11 +116,11 @@ const Navigation = () => {
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-input bg-background/95 backdrop-blur-md">
           <div className="container py-4 flex flex-col gap-4">
-            <a href="#docs" className="nav-link text-sm py-2">
+            <a href="/docs" className="nav-link text-sm py-2">
               Docs
             </a>
             <a
-              href="https://github.com"
+              href="https://github.com/jaymalve/flickjs"
               target="_blank"
               rel="noopener noreferrer"
               className="nav-link text-sm py-2"
@@ -92,7 +128,7 @@ const Navigation = () => {
               GitHub
             </a>
             <a
-              href="https://npmjs.com"
+              href="https://www.npmjs.com/package/@flickjs/runtime"
               target="_blank"
               rel="noopener noreferrer"
               className="nav-link text-sm py-2"

@@ -1,3 +1,30 @@
 <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M18 2L6 18H15L14 30L26 14H17L18 2Z" fill="#3B82F6" stroke="#1D4ED8" stroke-width="1.5" stroke-linejoin="round"/>
+  <defs>
+    <linearGradient id="cubeGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FAFAFA"/>
+      <stop offset="100%" stop-color="#71717A"/>
+    </linearGradient>
+    <linearGradient id="topFace" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FAFAFA" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#FAFAFA" stop-opacity="0.08"/>
+    </linearGradient>
+    <linearGradient id="rightFace" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FAFAFA" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#FAFAFA" stop-opacity="0.04"/>
+    </linearGradient>
+    <linearGradient id="leftFace" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FAFAFA" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#FAFAFA" stop-opacity="0.02"/>
+    </linearGradient>
+  </defs>
+  <!-- Cube faces with gradient fills -->
+  <path d="M16 4L26 10L16 16L6 10Z" fill="url(#topFace)"/>
+  <path d="M16 16L26 10L26 22L16 28Z" fill="url(#rightFace)"/>
+  <path d="M6 10L16 16L16 28L6 22Z" fill="url(#leftFace)"/>
+  <!-- Cube outline -->
+  <path d="M16 4L6 10V22L16 28L26 22V10L16 4Z" stroke="url(#cubeGradient)" stroke-width="1.5" stroke-linejoin="round" fill="none"/>
+  <path d="M6 10L16 16L26 10" stroke="url(#cubeGradient)" stroke-width="1.5" stroke-linejoin="round"/>
+  <line x1="16" y1="16" x2="16" y2="28" stroke="url(#cubeGradient)" stroke-width="1.5"/>
+  <!-- Enhanced chevron - larger and bolder -->
+  <path d="M20 6L26 10L20 14" stroke="#FFFFFF" stroke-width="2.5" stroke-linejoin="round" fill="none"/>
 </svg>
