@@ -34,11 +34,29 @@ const Navigation = () => {
                 <stop offset="0%" stopColor="currentColor" stopOpacity="1"/>
                 <stop offset="100%" stopColor="currentColor" stopOpacity="0.4"/>
               </linearGradient>
+              <linearGradient id="topFaceNav" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="currentColor" stopOpacity="0.15"/>
+                <stop offset="100%" stopColor="currentColor" stopOpacity="0.08"/>
+              </linearGradient>
+              <linearGradient id="rightFaceNav" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="currentColor" stopOpacity="0.08"/>
+                <stop offset="100%" stopColor="currentColor" stopOpacity="0.04"/>
+              </linearGradient>
+              <linearGradient id="leftFaceNav" x1="100%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="currentColor" stopOpacity="0.05"/>
+                <stop offset="100%" stopColor="currentColor" stopOpacity="0.02"/>
+              </linearGradient>
             </defs>
+            {/* Cube faces with gradient fills */}
+            <path d="M16 4L26 10L16 16L6 10Z" fill="url(#topFaceNav)"/>
+            <path d="M16 16L26 10L26 22L16 28Z" fill="url(#rightFaceNav)"/>
+            <path d="M6 10L16 16L16 28L6 22Z" fill="url(#leftFaceNav)"/>
+            {/* Cube outline */}
             <path d="M16 4L6 10V22L16 28L26 22V10L16 4Z" stroke="url(#cubeGrad)" strokeWidth="1.5" strokeLinejoin="round" fill="none"/>
             <path d="M6 10L16 16L26 10" stroke="url(#cubeGrad)" strokeWidth="1.5" strokeLinejoin="round"/>
             <line x1="16" y1="16" x2="16" y2="28" stroke="url(#cubeGrad)" strokeWidth="1.5"/>
-            <path d="M21 7L26 10L21 13" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" fill="none"/>
+            {/* Enhanced chevron - larger and bolder */}
+            <path d="M20 6L26 10L20 14" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" fill="none"/>
           </svg>
         </a>
 

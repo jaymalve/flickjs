@@ -12,15 +12,15 @@ const Hero = () => {
           {/* Left side - Text content */}
           <div className="text-left">
             {/* Badge */}
-            <div className="animate-fade-up inline-flex items-center gap-2 px-3 py-1 mb-8 text-xs font-medium text-muted-foreground border border-input rounded-full">
+            {/* <div className="animate-fade-up inline-flex items-center gap-2 px-3 py-1 mb-8 text-xs font-medium text-muted-foreground border border-input rounded-full">
               <span className="w-1.5 h-1.5 rounded-full bg-accent" />
               Now available on NPM
-            </div>
+            </div> */}
 
             {/* Headline */}
-            <h1 className="animate-fade-up-delay-1 text-4xl md:text-5xl lg:text-6xl font-bold tracking-tighter text-foreground leading-[1.1] mb-6">
-              Your AI's favorite <br />{" "}
-              <span className="text-accent">UI framework</span>.
+            <h1 className="animate-fade-up-delay-1 text-2xl md:text-5xl lg:text-3xl font-bold tracking-tighter text-foreground leading-[1.1] mb-6">
+              Deterministic Reactivity at Scale.
+              <br /> {/* <span className="text-accent">UI framework</span>. */}
             </h1>
 
             {/* Sub-headline */}
@@ -37,7 +37,11 @@ const Hero = () => {
                 </a>
               </Button>
               <Button variant="heroOutline" size="default" asChild>
-                <a href="https://github.com/jaymalve/flickjs" target="_blank" rel="noopener noreferrer">
+                <a
+                  href="https://github.com/jaymalve/flickjs"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   View on GitHub
                 </a>
               </Button>
@@ -85,15 +89,80 @@ const Hero = () => {
                   <div className="w-3 h-3 rounded-full bg-muted-foreground/20" />
                 </div>
                 <span className="ml-2 text-xs text-muted-foreground font-mono">
-                  App.jsx
+                  Counter.jsx
                 </span>
+                {/* <span className="ml-auto text-xs font-mono">
+                  <span className="text-green-400/70">+6</span>
+                  <span className="text-muted-foreground mx-1">/</span>
+                  <span className="text-red-400/70">-12</span>
+                </span> */}
               </div>
 
               {/* Code content */}
-              <div className="p-3 md:p-4 overflow-x-auto">
+              <div className="py-3 md:py-4 overflow-x-auto">
                 <pre className="text-xs font-mono leading-relaxed">
                   <code>
-                    <Line>
+                    {/* React code - removed */}
+                    <RemovedLine>
+                      <Keyword>import</Keyword>
+                      <Plain> {"{"} </Plain>
+                      <Variable>useState</Variable>
+                      <Plain>, </Plain>
+                      <Variable>useEffect</Variable>
+                      <Plain>, </Plain>
+                      <Variable>useMemo</Variable>
+                      <Plain> {"}"} </Plain>
+                      <Keyword>from</Keyword>
+                      <String> 'react'</String>
+                      <Plain>;</Plain>
+                    </RemovedLine>
+                    <RemovedLine />
+                    <RemovedLine>
+                      <Keyword>const</Keyword>
+                      <Plain> [count, setCount] = </Plain>
+                      <Function>useState</Function>
+                      <Plain>(</Plain>
+                      <Number>0</Number>
+                      <Plain>);</Plain>
+                    </RemovedLine>
+                    <RemovedLine>
+                      <Keyword>const</Keyword>
+                      <Plain> doubled = </Plain>
+                      <Function>useMemo</Function>
+                      <Plain>{"(() => count * 2, [count]);"}</Plain>
+                    </RemovedLine>
+                    <RemovedLine />
+                    <RemovedLine>
+                      <Function>useEffect</Function>
+                      <Plain>{"(() => {"}</Plain>
+                    </RemovedLine>
+                    <RemovedLine>
+                      <Plain>console.</Plain>
+                      <Function>log</Function>
+                      <Plain>(</Plain>
+                      <String>'Count:'</String>
+                      <Plain>, count);</Plain>
+                    </RemovedLine>
+                    <RemovedLine>
+                      <Plain>{"}, [count]);"}</Plain>
+                    </RemovedLine>
+                    <RemovedLine />
+                    <RemovedLine>
+                      <Keyword>const</Keyword>
+                      <Plain> increment = </Plain>
+                      <Function>useCallback</Function>
+                      <Plain>{"(() => {"}</Plain>
+                    </RemovedLine>
+                    <RemovedLine>
+                      <Function>setCount</Function>
+                      <Plain>{"(prev => prev + 1);"}</Plain>
+                    </RemovedLine>
+                    <RemovedLine>
+                      <Plain>{"}, []);"}</Plain>
+                    </RemovedLine>
+
+                    {/* FlickJS code - added */}
+                    <AddedLine>
                       <Keyword>import</Keyword>
                       <Plain> {"{"} </Plain>
                       <Variable>fx</Variable>
@@ -103,87 +172,31 @@ const Hero = () => {
                       <Keyword>from</Keyword>
                       <String> '@flickjs/runtime'</String>
                       <Plain>;</Plain>
-                    </Line>
-                    <Line />
-                    <Line>
+                    </AddedLine>
+                    <AddedLine />
+                    <AddedLine>
                       <Keyword>const</Keyword>
                       <Plain> count = </Plain>
                       <Function>fx</Function>
                       <Plain>(</Plain>
                       <Number>0</Number>
                       <Plain>);</Plain>
-                    </Line>
-                    <Line>
+                    </AddedLine>
+                    <AddedLine>
                       <Keyword>const</Keyword>
-                      <Plain> doubled = () =&gt; count() * </Plain>
+                      <Plain> doubled = {"() => count() * "}</Plain>
                       <Number>2</Number>
                       <Plain>;</Plain>
-                    </Line>
-                    <Line />
-                    <Line>
+                    </AddedLine>
+                    <AddedLine />
+                    <AddedLine>
                       <Function>run</Function>
-                      <Plain>(() =&gt; {"{"}</Plain>
-                    </Line>
-                    <Line indent={2}>
-                      <Plain>console.</Plain>
+                      <Plain>{"(() => console."}</Plain>
                       <Function>log</Function>
                       <Plain>(</Plain>
                       <String>'Count:'</String>
-                      <Plain>, count()</Plain>
-                      <Plain>);</Plain>
-                    </Line>
-                    <Line>
-                      <Plain>{"}"});</Plain>
-                    </Line>
-                    <Line />
-                    <Line>
-                      <Keyword>return</Keyword>
-                      <Plain> (</Plain>
-                    </Line>
-                    <Line indent={2}>
-                      <Plain>&lt;</Plain>
-                      <Variable>div</Variable>
-                      <Plain>&gt;</Plain>
-                    </Line>
-                    <Line indent={4}>
-                      <Plain>&lt;</Plain>
-                      <Variable>div</Variable>
-                      <Plain>&gt;</Plain>
-                      <Plain>
-                        {"{"}count(){"}"}
-                      </Plain>
-                      <Plain>&lt;/</Plain>
-                      <Variable>div</Variable>
-                      <Plain>&gt;</Plain>
-                    </Line>
-                    <Line indent={4}>
-                      <Plain>&lt;</Plain>
-                      <Variable>button</Variable>
-                      <Plain> </Plain>
-                      <Property>onClick</Property>
-                      <Plain>=</Plain>
-                      <Plain>{"{"}() =&gt; count.</Plain>
-                      <Function>set</Function>
-                      <Plain>((prev) =&gt; prev + </Plain>
-                      <Number>1</Number>
-                      <Plain>){"}"}&gt;</Plain>
-                    </Line>
-                    <Line indent={6}>
-                      <Plain>Increment</Plain>
-                    </Line>
-                    <Line indent={4}>
-                      <Plain>&lt;/</Plain>
-                      <Variable>button</Variable>
-                      <Plain>&gt;</Plain>
-                    </Line>
-                    <Line indent={2}>
-                      <Plain>&lt;/</Plain>
-                      <Variable>div</Variable>
-                      <Plain>&gt;</Plain>
-                    </Line>
-                    <Line>
-                      <Plain>);</Plain>
-                    </Line>
+                      <Plain>, count()));</Plain>
+                    </AddedLine>
                   </code>
                 </pre>
               </div>
@@ -196,21 +209,6 @@ const Hero = () => {
 };
 
 // Syntax highlighting components
-const Line = ({
-  children,
-  indent = 0,
-}: {
-  children?: React.ReactNode;
-  indent?: number;
-}) => (
-  <div
-    className="min-h-[1.25rem]"
-    style={{ paddingLeft: `${indent * 0.5}rem` }}
-  >
-    {children}
-  </div>
-);
-
 const Keyword = ({ children }: { children: React.ReactNode }) => (
   <span className="text-[#E4E4E7]">{children}</span>
 );
@@ -231,12 +229,41 @@ const Number = ({ children }: { children: React.ReactNode }) => (
   <span className="text-[#A1A1AA]">{children}</span>
 );
 
-const Property = ({ children }: { children: React.ReactNode }) => (
-  <span className="text-[#D4D4D8]">{children}</span>
-);
-
 const Plain = ({ children }: { children: React.ReactNode }) => (
   <span className="text-[#71717A]">{children}</span>
+);
+
+// Diff line components
+const RemovedLine = ({
+  children,
+  indent = 0,
+}: {
+  children?: React.ReactNode;
+  indent?: number;
+}) => (
+  <div
+    className="min-h-[1.25rem] bg-red-500/10 -mx-3 md:-mx-4 px-3 md:px-4"
+    style={{ paddingLeft: `calc(${indent * 0.1}rem + 1rem)` }}
+  >
+    <span className="text-red-400/70 mr-2">-</span>
+    {children}
+  </div>
+);
+
+const AddedLine = ({
+  children,
+  indent = 0,
+}: {
+  children?: React.ReactNode;
+  indent?: number;
+}) => (
+  <div
+    className="min-h-[1.25rem] bg-green-500/10 -mx-3 md:-mx-4 px-3 md:px-4"
+    style={{ paddingLeft: `calc(${indent * 0.5}rem + 1rem)` }}
+  >
+    <span className="text-green-400/70 mr-2">+</span>
+    {children}
+  </div>
 );
 
 export default Hero;
