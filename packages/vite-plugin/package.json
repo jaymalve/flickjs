@@ -1,6 +1,6 @@
 {
   "name": "@flickjs/vite-plugin",
-  "version": "0.0.1-beta.1",
+  "version": "0.0.1-beta.3",
   "description": "Vite plugin for Flick framework",
   "type": "module",
   "main": "dist/index.js",
@@ -37,7 +37,7 @@
   },
   "dependencies": {
     "@babel/core": "^7.24.0",
-    "@flickjs/compiler": "^0.0.1-beta.2"
+    "@flickjs/compiler": "^0.0.1-beta.3"
   },
   "devDependencies": {
     "@types/babel__core": "^7.20.0",
