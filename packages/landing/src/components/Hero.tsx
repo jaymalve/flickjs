@@ -19,8 +19,8 @@ const Hero = () => {
 
             {/* Headline */}
             <h1 className="animate-fade-up-delay-1 text-4xl md:text-5xl lg:text-6xl font-bold tracking-tighter text-foreground leading-[1.1] mb-6">
-              Less framework, <br />{" "}
-              <span className="text-accent">more app</span>.
+              Your AI's favorite <br />{" "}
+              <span className="text-accent">UI framework</span>.
             </h1>
 
             {/* Sub-headline */}
@@ -30,12 +30,16 @@ const Hero = () => {
 
             {/* CTAs */}
             <div className="animate-fade-up-delay-3 flex flex-col sm:flex-row items-start gap-4">
-              <Button variant="hero" size="default" className="group">
-                Get Started
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              <Button variant="hero" size="default" className="group" asChild>
+                <a href="/docs">
+                  Get Started
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </a>
               </Button>
-              <Button variant="heroOutline" size="default">
-                View on GitHub
+              <Button variant="heroOutline" size="default" asChild>
+                <a href="https://github.com/jaymalve/flickjs" target="_blank" rel="noopener noreferrer">
+                  View on GitHub
+                </a>
               </Button>
             </div>
 

@@ -1,3 +1,12 @@
 <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M4 4H20V12H28V28H4V4Z" fill="#FAFAFA"/>
+  <defs>
+    <linearGradient id="cubeGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FAFAFA"/>
+      <stop offset="100%" stop-color="#71717A"/>
+    </linearGradient>
+  </defs>
+  <path d="M16 4L6 10V22L16 28L26 22V10L16 4Z" stroke="url(#cubeGradient)" stroke-width="1.5" stroke-linejoin="round" fill="none"/>
+  <path d="M6 10L16 16L26 10" stroke="url(#cubeGradient)" stroke-width="1.5" stroke-linejoin="round"/>
+  <line x1="16" y1="16" x2="16" y2="28" stroke="url(#cubeGradient)" stroke-width="1.5"/>
+  <path d="M21 7L26 10L21 13" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round" fill="none"/>
 </svg>

@@ -5,11 +5,11 @@ const Footer = () => {
         <div className="flex flex-col md:flex-row items-center justify-center gap-4">
           {/* Links */}
           <div className="flex items-center gap-6">
-            <a href="https://docs.flickjs.com" className="nav-link text-xs">
+            <a href="/docs" className="nav-link text-xs">
               Docs
             </a>
             <a
-              href="https://github.com/jaymalve/flick"
+              href="https://github.com/jaymalve/flickjs"
               target="_blank"
               rel="noopener noreferrer"
               className="nav-link text-xs"

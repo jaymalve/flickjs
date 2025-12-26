@@ -29,17 +29,26 @@ const Navigation = () => {
             xmlns="http://www.w3.org/2000/svg"
             className="text-foreground"
           >
-            <path d="M4 4H20V12H28V28H4V4Z" fill="currentColor" />
+            <defs>
+              <linearGradient id="cubeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="currentColor" stopOpacity="1"/>
+                <stop offset="100%" stopColor="currentColor" stopOpacity="0.4"/>
+              </linearGradient>
+            </defs>
+            <path d="M16 4L6 10V22L16 28L26 22V10L16 4Z" stroke="url(#cubeGrad)" strokeWidth="1.5" strokeLinejoin="round" fill="none"/>
+            <path d="M6 10L16 16L26 10" stroke="url(#cubeGrad)" strokeWidth="1.5" strokeLinejoin="round"/>
+            <line x1="16" y1="16" x2="16" y2="28" stroke="url(#cubeGrad)" strokeWidth="1.5"/>
+            <path d="M21 7L26 10L21 13" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" fill="none"/>
           </svg>
         </a>
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-6">
-          <a href="#docs" className="nav-link text-sm">
+          <a href="/docs" className="nav-link text-sm">
             Docs
           </a>
           <a
-            href="https://github.com"
+            href="https://github.com/jaymalve/flickjs"
             target="_blank"
             rel="noopener noreferrer"
             className="nav-link text-sm"
@@ -47,7 +56,7 @@ const Navigation = () => {
             GitHub
           </a>
           <a
-            href="https://npmjs.com"
+            href="https://www.npmjs.com/package/@flickjs/runtime"
             target="_blank"
             rel="noopener noreferrer"
             className="nav-link text-sm"
@@ -89,11 +98,11 @@ const Navigation = () => {
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-input bg-background/95 backdrop-blur-md">
           <div className="container py-4 flex flex-col gap-4">
-            <a href="#docs" className="nav-link text-sm py-2">
+            <a href="/docs" className="nav-link text-sm py-2">
               Docs
             </a>
             <a
-              href="https://github.com"
+              href="https://github.com/jaymalve/flickjs"
               target="_blank"
               rel="noopener noreferrer"
               className="nav-link text-sm py-2"
@@ -101,7 +110,7 @@ const Navigation = () => {
               GitHub
             </a>
             <a
-              href="https://npmjs.com"
+              href="https://www.npmjs.com/package/@flickjs/runtime"
               target="_blank"
               rel="noopener noreferrer"
               className="nav-link text-sm py-2"
