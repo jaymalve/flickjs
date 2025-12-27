@@ -128,8 +128,16 @@ const Benchmarks = ({
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold mb-4">Benchmarks</h1>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Official js-framework-benchmark results {comparisonText}.<br />{" "}
-              Lower is better for all metrics.
+              Official{" "}
+              <a
+                href="https://github.com/krausest/js-framework-benchmark"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-foreground underline underline-offset-2 hover:text-emerald-500"
+              >
+                js-framework-benchmark
+              </a>{" "}
+              results {comparisonText}.<br /> Lower is better for all metrics.
             </p>
             <p className="text-sm text-muted-foreground mt-4">
               Last updated: 27th December, 2025
