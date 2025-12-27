@@ -10,6 +10,25 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
+// Enum for standardized framework names
+export enum CompareFramework {
+  SolidJS = "solid",
+}
+
+// Framework display config
+const frameworkConfig = {
+  solid: {
+    name: "SolidJS",
+    color: "bg-blue-500",
+    textColor: "text-blue-500",
+    borderColor: "border-blue-500/30",
+  },
+} as const;
+
+interface BenchmarksProps {
+  compareFrameworks?: CompareFramework[];
+}
+
 // Benchmark data - update these when you run new benchmarks
 const performanceData = [
   { benchmark: "Create 1,000 rows", flick: 58.1, solid: 52.5, react: 64.3 },
@@ -41,14 +60,33 @@ const startupData = [
   { framework: "React", time: 503.8, color: "bg-purple-500" },
 ];
 
-function getWinner(row: { flick: number; solid: number; react: number }) {
-  const min = Math.min(row.flick, row.solid, row.react);
-  if (row.flick === min) return "flick";
-  if (row.solid === min) return "solid";
-  return "react";
+function getWinner(
+  row: { flick: number; solid: number; react: number },
+  frameworks: CompareFramework[]
+) {
+  const values: { key: string; value: number }[] = [
+    { key: "flick", value: row.flick },
+    { key: "react", value: row.react },
+  ];
+
+  // Add other frameworks if included
+  if (frameworks.includes(CompareFramework.SolidJS)) {
+    values.push({ key: "solid", value: row.solid });
+  }
+
+  const min = Math.min(...values.map((v) => v.value));
+  return values.find((v) => v.value === min)?.key || "flick";
 }
 
-function getCompetitiveStatus(row: { flick: number; solid: number; react: number }) {
+function getCompetitiveStatus(
+  row: { flick: number; solid: number; react: number },
+  frameworks: CompareFramework[]
+) {
+  // Only show "Near best" when comparing against SolidJS
+  if (!frameworks.includes(CompareFramework.SolidJS)) {
+    return { isCompetitive: false };
+  }
+
   const flickVsSolid = ((row.flick - row.solid) / row.solid) * 100;
   const flickVsReact = ((row.react - row.flick) / row.flick) * 100;
 
@@ -97,7 +135,26 @@ function BarChart({
   );
 }
 
-const Benchmarks = () => {
+const Benchmarks = ({
+  compareFrameworks = [CompareFramework.SolidJS],
+}: BenchmarksProps) => {
+  const showSolid = compareFrameworks.includes(CompareFramework.SolidJS);
+
+  // Filter bar chart data based on compareFrameworks
+  const filterChartData = <T extends { framework: string }>(data: T[]) =>
+    data.filter(
+      (d) =>
+        d.framework === "Flick" ||
+        d.framework === "React" ||
+        (d.framework === "SolidJS" && showSolid)
+    );
+
+  // Generate comparison text for header
+  const comparisonText =
+    compareFrameworks.length > 0
+      ? `comparing Flick against ${compareFrameworks.map((f) => frameworkConfig[f].name).join(", ")} and React`
+      : "comparing Flick against React";
+
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
       <Navigation />
@@ -107,8 +164,8 @@ const Benchmarks = () => {
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold mb-4">Benchmarks</h1>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Official js-framework-benchmark results comparing Flick against
-              SolidJS and React. Lower is better for all metrics.
+              Official js-framework-benchmark results {comparisonText}. Lower
+              is better for all metrics.
             </p>
             <p className="text-sm text-muted-foreground mt-2">
               Last updated: December 2024
@@ -153,7 +210,7 @@ const Benchmarks = () => {
             </h2>
             <div className="bg-card border border-border rounded-lg p-6">
               <BarChart
-                data={bundleSizeData}
+                data={filterChartData(bundleSizeData)}
                 valueKey="size"
                 unit="KB"
                 maxValue={60}
@@ -168,7 +225,7 @@ const Benchmarks = () => {
               Heap memory after creating 1,000 rows
             </p>
             <div className="bg-card border border-border rounded-lg p-6">
-              <BarChart data={memoryData} valueKey="memory" unit="MB" />
+              <BarChart data={filterChartData(memoryData)} valueKey="memory" unit="MB" />
             </div>
           </div>
 
@@ -179,7 +236,7 @@ const Benchmarks = () => {
               Time to first meaningful paint
             </p>
             <div className="bg-card border border-border rounded-lg p-6">
-              <BarChart data={startupData} valueKey="time" unit="ms" />
+              <BarChart data={filterChartData(startupData)} valueKey="time" unit="ms" />
             </div>
           </div>
 
@@ -197,14 +254,19 @@ const Benchmarks = () => {
                   <TableRow>
                     <TableHead className="w-[200px]">Benchmark</TableHead>
                     <TableHead className="text-right">FlickJS</TableHead>
-                    <TableHead className="text-right">SolidJS</TableHead>
+                    {showSolid && (
+                      <TableHead className="text-right">SolidJS</TableHead>
+                    )}
                     <TableHead className="text-right">React</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {performanceData.map((row) => {
-                    const winner = getWinner(row);
-                    const { isCompetitive } = getCompetitiveStatus(row);
+                    const winner = getWinner(row, compareFrameworks);
+                    const { isCompetitive } = getCompetitiveStatus(
+                      row,
+                      compareFrameworks
+                    );
                     return (
                       <TableRow key={row.benchmark}>
                         <TableCell className="font-medium">
@@ -220,7 +282,7 @@ const Benchmarks = () => {
                           >
                             {row.flick} ms
                           </span>
-                          {winner === "flick" && (
+                          {winner === "flick" && compareFrameworks.length > 0 && (
                             <Badge
                               variant="outline"
                               className="ml-2 text-emerald-500 border-emerald-500/30"
@@ -237,25 +299,27 @@ const Benchmarks = () => {
                             </Badge>
                           )}
                         </TableCell>
-                        <TableCell className="text-right font-mono">
-                          <span
-                            className={
-                              winner === "solid"
-                                ? "text-blue-500 font-semibold"
-                                : ""
-                            }
-                          >
-                            {row.solid} ms
-                          </span>
-                          {winner === "solid" && (
-                            <Badge
-                              variant="outline"
-                              className="ml-2 text-blue-500 border-blue-500/30"
+                        {showSolid && (
+                          <TableCell className="text-right font-mono">
+                            <span
+                              className={
+                                winner === "solid"
+                                  ? "text-blue-500 font-semibold"
+                                  : ""
+                              }
                             >
-                              Best
-                            </Badge>
-                          )}
-                        </TableCell>
+                              {row.solid} ms
+                            </span>
+                            {winner === "solid" && (
+                              <Badge
+                                variant="outline"
+                                className="ml-2 text-blue-500 border-blue-500/30"
+                              >
+                                Best
+                              </Badge>
+                            )}
+                          </TableCell>
+                        )}
                         <TableCell className="text-right font-mono">
                           <span
                             className={
