@@ -60,6 +60,11 @@ pids/
 *.seed
 *.pid.lock
 
+# Benchmarks
+benchmarks/
+
+# Development notes
 .notes/
 
+# Test projects
 packages/create-app/test-project/
