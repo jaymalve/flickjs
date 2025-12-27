@@ -120,6 +120,9 @@ const Navigation = () => {
           <a href="/docs" className="nav-link text-sm">
             Docs
           </a>
+          <a href="/benchmarks" className="nav-link text-sm">
+            Benchmarks
+          </a>
           <a
             href="https://github.com/jaymalve/flickjs"
             target="_blank"
@@ -174,6 +177,9 @@ const Navigation = () => {
           <div className="container py-4 flex flex-col gap-4">
             <a href="/docs" className="nav-link text-sm py-2">
               Docs
+            </a>
+            <a href="/benchmarks" className="nav-link text-sm py-2">
+              Benchmarks
             </a>
             <a
               href="https://github.com/jaymalve/flickjs"
