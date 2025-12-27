@@ -9,56 +9,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-
-// Enum for standardized framework names
-export enum CompareFramework {
-  SolidJS = "solid",
-}
-
-// Framework display config
-const frameworkConfig = {
-  solid: {
-    name: "SolidJS",
-    color: "bg-blue-500",
-    textColor: "text-blue-500",
-    borderColor: "border-blue-500/30",
-  },
-} as const;
+import { CompareFramework, frameworkConfig } from "@/lib/frameworks";
+import {
+  performanceData,
+  bundleSizeData,
+  memoryData,
+  startupData,
+} from "@/lib/data/benchmarks";
 
 interface BenchmarksProps {
   compareFrameworks?: CompareFramework[];
 }
-
-// Benchmark data - update these when you run new benchmarks
-const performanceData = [
-  { benchmark: "Create 1,000 rows", flick: 58.1, solid: 52.5, react: 64.3 },
-  { benchmark: "Replace 1,000 rows", flick: 65.6, solid: 61.0, react: 76.4 },
-  { benchmark: "Partial update", flick: 30.7, solid: 30.9, react: 37.7 },
-  { benchmark: "Select row", flick: 7.7, solid: 6.5, react: 8.2 },
-  { benchmark: "Swap rows", flick: 233.2, solid: 36.3, react: 250.4 },
-  { benchmark: "Remove row", flick: 27.8, solid: 26.1, react: 30.5 },
-  { benchmark: "Create 10,000 rows", flick: 611.2, solid: 548.7, react: 680.3 },
-  { benchmark: "Append rows", flick: 65.9, solid: 62.3, react: 78.1 },
-  { benchmark: "Clear rows", flick: 34.4, solid: 28.9, react: 42.1 },
-];
-
-const bundleSizeData = [
-  { framework: "Flick", size: 1.9, color: "bg-emerald-500" },
-  { framework: "SolidJS", size: 4.5, color: "bg-blue-500" },
-  { framework: "React", size: 51.4, color: "bg-purple-500" },
-];
-
-const memoryData = [
-  { framework: "Flick", memory: 2.43, color: "bg-emerald-500" },
-  { framework: "SolidJS", memory: 2.78, color: "bg-blue-500" },
-  { framework: "React", memory: 4.61, color: "bg-purple-500" },
-];
-
-const startupData = [
-  { framework: "Flick", time: 91.8, color: "bg-emerald-500" },
-  { framework: "SolidJS", time: 94.2, color: "bg-blue-500" },
-  { framework: "React", time: 503.8, color: "bg-purple-500" },
-];
 
 function getWinner(
   row: { flick: number; solid: number; react: number },
@@ -91,7 +52,8 @@ function getCompetitiveStatus(
   const flickVsReact = ((row.react - row.flick) / row.flick) * 100;
 
   // Flick is within 20% of Solid and faster than React (>5%)
-  const isCompetitive = flickVsSolid <= 20 && flickVsSolid > 0 && flickVsReact > 5;
+  const isCompetitive =
+    flickVsSolid <= 20 && flickVsSolid > 0 && flickVsReact > 5;
 
   return { isCompetitive };
 }
@@ -152,7 +114,9 @@ const Benchmarks = ({
   // Generate comparison text for header
   const comparisonText =
     compareFrameworks.length > 0
-      ? `comparing Flick against ${compareFrameworks.map((f) => frameworkConfig[f].name).join(", ")} and React`
+      ? `comparing Flick against ${compareFrameworks
+          .map((f) => frameworkConfig[f].name)
+          .join(", ")} and React`
       : "comparing Flick against React";
 
   return (
@@ -164,11 +128,11 @@ const Benchmarks = ({
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold mb-4">Benchmarks</h1>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Official js-framework-benchmark results {comparisonText}. Lower
-              is better for all metrics.
+              Official js-framework-benchmark results {comparisonText}.<br />{" "}
+              Lower is better for all metrics.
             </p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Last updated: December 2024
+            <p className="text-sm text-muted-foreground mt-4">
+              Last updated: 27th December, 2025
             </p>
           </div>
 
@@ -225,7 +189,11 @@ const Benchmarks = ({
               Heap memory after creating 1,000 rows
             </p>
             <div className="bg-card border border-border rounded-lg p-6">
-              <BarChart data={filterChartData(memoryData)} valueKey="memory" unit="MB" />
+              <BarChart
+                data={filterChartData(memoryData)}
+                valueKey="memory"
+                unit="MB"
+              />
             </div>
           </div>
 
@@ -236,17 +204,21 @@ const Benchmarks = ({
               Time to first meaningful paint
             </p>
             <div className="bg-card border border-border rounded-lg p-6">
-              <BarChart data={filterChartData(startupData)} valueKey="time" unit="ms" />
+              <BarChart
+                data={filterChartData(startupData)}
+                valueKey="time"
+                unit="ms"
+              />
             </div>
           </div>
 
           {/* Performance Table */}
           <div className="mb-12">
-            <h2 className="text-2xl font-semibold mb-4">
-              Runtime Performance
-            </h2>
+            <h2 className="text-2xl font-semibold mb-4">Runtime Performance</h2>
             <p className="text-muted-foreground text-sm mb-4">
-              Median time in milliseconds (15 runs each). Lower is better.
+              Median time in milliseconds (15 runs each).
+              <br />
+              Lower is better.
             </p>
             <div className="bg-card border border-border rounded-lg overflow-hidden">
               <Table>
@@ -282,14 +254,15 @@ const Benchmarks = ({
                           >
                             {row.flick} ms
                           </span>
-                          {winner === "flick" && compareFrameworks.length > 0 && (
-                            <Badge
-                              variant="outline"
-                              className="ml-2 text-emerald-500 border-emerald-500/30"
-                            >
-                              Best
-                            </Badge>
-                          )}
+                          {winner === "flick" &&
+                            compareFrameworks.length > 0 && (
+                              <Badge
+                                variant="outline"
+                                className="ml-2 text-emerald-500 border-emerald-500/30"
+                              >
+                                Best
+                              </Badge>
+                            )}
                           {winner !== "flick" && isCompetitive && (
                             <Badge
                               variant="outline"
@@ -369,7 +342,9 @@ const Benchmarks = ({
                 Flick v0.0.1-beta.3, SolidJS v1.9.3, React v19.2.0 (hooks)
               </li>
               <li>
-                Note: Swap rows performance is an area of active optimization
+                Note: I have been working on optimizations for the swap rows
+                benchmark by optimizing the renderList algorithm that I am
+                writing for Flick Compiler.
               </li>
             </ul>
           </div>
