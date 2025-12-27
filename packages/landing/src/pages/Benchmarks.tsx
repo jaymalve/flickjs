@@ -339,7 +339,8 @@ const Benchmarks = ({
                 Tested on: macOS, Chrome, Node.js 24, 15 warm-up runs per test
               </li>
               <li>
-                Flick v0.0.1-beta.3, SolidJS v1.9.3, React v19.2.0 (hooks)
+                Flick v0.0.1-beta.3
+                {showSolid && ", SolidJS v1.9.3"}, React v19.2.0 (hooks)
               </li>
               <li>
                 Note: I have been working on optimizations for the swap rows
