@@ -24,6 +24,14 @@ export declare function query<S, T>(
   fetcher: (source: S) => Promise<T>
 ): Query<T>;
 
+export declare function renderList<T>(
+  parent: Node,
+  anchor: Node,
+  getItems: () => T[],
+  mapFn: (item: T, index: number) => Node,
+  getKey: (item: T, index: number) => string | number = (_, i) => i
+): void;
+
 // JSX Type Definitions for Flick Framework - automatically available when imported
 declare global {
   namespace JSX {

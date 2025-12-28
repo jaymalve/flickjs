@@ -5,7 +5,7 @@ export const performanceData = [
   { benchmark: "Replace 1,000 rows", flick: 65.6, solid: 61.0, react: 76.4 },
   { benchmark: "Partial update", flick: 30.7, solid: 30.9, react: 37.7 },
   { benchmark: "Select row", flick: 7.7, solid: 6.5, react: 8.2 },
-  { benchmark: "Swap rows", flick: 233.2, solid: 36.3, react: 250.4 },
+  { benchmark: "Swap rows", flick: 23.0, solid: 33.3, react: 251.3 },
   { benchmark: "Remove row", flick: 27.8, solid: 26.1, react: 30.5 },
   { benchmark: "Create 10,000 rows", flick: 611.2, solid: 548.7, react: 680.3 },
   { benchmark: "Append rows", flick: 65.9, solid: 62.3, react: 78.1 },

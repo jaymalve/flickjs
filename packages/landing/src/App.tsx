@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Benchmarks from "./pages/Benchmarks";
 import NotFound from "./pages/NotFound";
+import { CompareFramework } from "@/lib/frameworks";
 
 const queryClient = new QueryClient();
 

@@ -29,6 +29,45 @@ export function run(fn: Run) {
   execute();
 }
 
+/**
+ * Compute Longest Increasing Subsequence using binary search.
+ * Returns indices into the input array representing the LIS.
+ * Time: O(n log n), Space: O(n)
+ */
+function longestIncreasingSubsequence(arr: number[]): number[] {
+  const n = arr.length;
+  if (n === 0) return [];
+
+  const tails: number[] = [];
+  const predecessors: number[] = new Array(n);
+
+  for (let i = 0; i < n; i++) {
+    const val = arr[i];
+    let lo = 0,
+      hi = tails.length;
+
+    while (lo < hi) {
+      const mid = (lo + hi) >>> 1;
+      if (arr[tails[mid]] < val) lo = mid + 1;
+      else hi = mid;
+    }
+
+    if (lo === tails.length) tails.push(i);
+    else tails[lo] = i;
+
+    predecessors[i] = lo > 0 ? tails[lo - 1] : -1;
+  }
+
+  const result: number[] = new Array(tails.length);
+  let k = tails[tails.length - 1];
+  for (let i = tails.length - 1; i >= 0; i--) {
+    result[i] = k;
+    k = predecessors[k];
+  }
+
+  return result;
+}
+
 export function renderList<T>(
   parent: Node,
   anchor: Node,
@@ -41,41 +80,116 @@ export function renderList<T>(
 
   run(() => {
     const items = getItems();
-    const newKeys = items.map((item, i) => getKey(item, i));
-    const newNodeMap = new Map<string | number, Node>();
+    const newLen = items.length;
+    const oldLen = currentKeys.length;
 
-    // Build new nodes, reusing existing where possible
-    const newNodes = items.map((item, i) => {
+    // Fast path: empty new list - remove all nodes
+    if (newLen === 0) {
+      for (const key of currentKeys) {
+        const node = nodeMap.get(key);
+        if (node?.parentNode) node.parentNode.removeChild(node);
+      }
+      nodeMap.clear();
+      currentKeys = [];
+      return;
+    }
+
+    const newKeys = items.map((item, i) => getKey(item, i));
+
+    // Fast path: empty old list (first render) - batch insert
+    if (oldLen === 0) {
+      const fragment = document.createDocumentFragment();
+      for (let i = 0; i < newLen; i++) {
+        const key = newKeys[i];
+        const node = mapFn(items[i], i);
+        nodeMap.set(key, node);
+        fragment.appendChild(node);
+      }
+      parent.insertBefore(fragment, anchor);
+      currentKeys = newKeys;
+      return;
+    }
+
+    // Build old key -> old index map for O(1) position lookup
+    const oldKeyToIdx = new Map<string | number, number>();
+    for (let i = 0; i < oldLen; i++) {
+      oldKeyToIdx.set(currentKeys[i], i);
+    }
+
+    // Build new nodes, track sources (old indices), detect if moves needed
+    const newNodeMap = new Map<string | number, Node>();
+    const newNodes: Node[] = new Array(newLen);
+    const sources: number[] = new Array(newLen).fill(-1); // -1 = new node
+    let moved = false;
+    let maxOldIdx = -1;
+
+    for (let i = 0; i < newLen; i++) {
       const key = newKeys[i];
       let node = nodeMap.get(key);
 
-      if (!node) {
-        // Create new node for this key
-        node = mapFn(item, i);
+      if (node) {
+        // Reuse existing node - track its old position
+        const oldIdx = oldKeyToIdx.get(key)!;
+        sources[i] = oldIdx;
+        // If old index is less than max seen, elements are out of order
+        if (oldIdx < maxOldIdx) moved = true;
+        else maxOldIdx = oldIdx;
+      } else {
+        // Create new node
+        node = mapFn(items[i], i);
       }
 
+      newNodes[i] = node;
       newNodeMap.set(key, node);
-      return node;
-    });
+    }
 
-    // Remove nodes that are no longer in the list
-    currentKeys.forEach((key) => {
+    // Remove nodes no longer in list
+    for (const key of currentKeys) {
       if (!newNodeMap.has(key)) {
         const node = nodeMap.get(key);
-        if (node && node.parentNode) {
-          node.parentNode.removeChild(node);
+        if (node?.parentNode) node.parentNode.removeChild(node);
+      }
+    }
+
+    // Position nodes in DOM
+    if (!moved) {
+      // Fast path: no reordering needed - only insert new nodes
+      let nextSibling: Node | null = anchor;
+      for (let i = newLen - 1; i >= 0; i--) {
+        const node = newNodes[i];
+        if (sources[i] === -1) {
+          // New node - insert it
+          parent.insertBefore(node, nextSibling);
+        }
+        nextSibling = node;
+      }
+    } else {
+      // Use LIS to minimize DOM moves
+      // Build array of old indices for existing nodes only
+      const toMove: number[] = [];
+      const toMoveNewIdx: number[] = [];
+
+      for (let i = 0; i < newLen; i++) {
+        if (sources[i] !== -1) {
+          toMove.push(sources[i]);
+          toMoveNewIdx.push(i);
         }
       }
-    });
 
-    // Insert nodes in correct order
-    let nextSibling: Node | null = anchor;
-    for (let i = newNodes.length - 1; i >= 0; i--) {
-      const node = newNodes[i];
-      if (node.nextSibling !== nextSibling) {
-        parent.insertBefore(node, nextSibling);
+      // Find LIS - these nodes don't need to move
+      const lisIndices = longestIncreasingSubsequence(toMove);
+      const inLIS = new Set(lisIndices.map((idx) => toMoveNewIdx[idx]));
+
+      // Insert from end to start, only moving nodes not in LIS
+      let nextSibling: Node | null = anchor;
+      for (let i = newLen - 1; i >= 0; i--) {
+        const node = newNodes[i];
+        if (sources[i] === -1 || !inLIS.has(i)) {
+          // New node or node not in LIS - needs insertion
+          parent.insertBefore(node, nextSibling);
+        }
+        nextSibling = node;
       }
-      nextSibling = node;
     }
 
     // Update state
