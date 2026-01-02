@@ -62,10 +62,24 @@ export async function createTextStream(
         }
       : undefined,
     onFinish: onFinish
-      ? (result: { text: string; finishReason: string; usage?: { promptTokens: number; completionTokens: number; totalTokens: number } }) => {
+      ? (result: {
+          text: string;
+          finishReason: string;
+          usage?: {
+            promptTokens: number;
+            completionTokens: number;
+            totalTokens: number;
+          };
+        }) => {
           onFinish({
             text: result.text,
-            finishReason: result.finishReason as "stop" | "length" | "content-filter" | "tool-calls" | "error" | "other",
+            finishReason: result.finishReason as
+              | "stop"
+              | "length"
+              | "content-filter"
+              | "tool-calls"
+              | "error"
+              | "other",
             usage: result.usage
               ? {
                   promptTokens: result.usage.promptTokens,
@@ -80,7 +94,7 @@ export async function createTextStream(
 
   onStart?.();
 
-  return result.toDataStreamResponse({
+  return (await result).toDataStreamResponse({
     headers: headers ? Object.fromEntries(new Headers(headers)) : undefined,
   });
 }

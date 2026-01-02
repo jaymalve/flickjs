@@ -1,7 +1,7 @@
 {
   "name": "@flickjs/ai",
   "version": "0.0.1-beta.1",
-  "description": "AI SDK wrapper for Flick framework with reactive primitives",
+  "description": "AI SDK wrapper for FlickJS",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -27,16 +27,16 @@
     "reactive",
     "vercel-ai-sdk"
   ],
-  "author": "Jay Malave",
+  "author": "Jay Malve",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jaymalave/flick.git",
+    "url": "git+https://github.com/jaymalve/flickjs.git",
     "directory": "packages/ai"
   },
-  "homepage": "https://github.com/jaymalave/flick#readme",
+  "homepage": "https://github.com/jaymalve/flickjs#readme",
   "bugs": {
-    "url": "https://github.com/jaymalave/flick/issues"
+    "url": "https://github.com/jaymalve/flickjs/issues"
   },
   "publishConfig": {
     "access": "public"

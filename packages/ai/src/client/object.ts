@@ -1,5 +1,4 @@
 import { fx, getCurrentSuspense } from "@flickjs/runtime";
-import type { Fx } from "@flickjs/runtime";
 import type { AiObject, AiObjectOptions } from "./types";
 import { parseStream } from "../utils/stream-parser";
 
@@ -42,10 +41,10 @@ export function aiObject<T>(options: AiObjectOptions<T>): AiObject<T> {
   } = options;
 
   // Reactive state
-  const object: Fx<Partial<T> | undefined> = fx<Partial<T> | undefined>(
+  const object = fx<Partial<T> | undefined>(
     undefined
   );
-  const error: Fx<Error | undefined> = fx<Error | undefined>(undefined);
+  const error = fx<Error | undefined>(undefined);
   const loading = fx<boolean>(false);
 
   // Track current abort controller for cancellation
@@ -59,7 +58,9 @@ export function aiObject<T>(options: AiObjectOptions<T>): AiObject<T> {
   /**
    * Submit input to generate the object
    */
-  const submit = async (input: string | Record<string, unknown>): Promise<void> => {
+  const submit = async (
+    input: string | Record<string, unknown>
+  ): Promise<void> => {
     // Reset state
     object.set(undefined);
     error.set(undefined);

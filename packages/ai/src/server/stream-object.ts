@@ -56,15 +56,29 @@ export async function createObjectStream<T>(
     temperature,
     abortSignal,
     onFinish: onFinish
-      ? (result: { object: unknown; finishReason: string; usage?: { promptTokens: number; completionTokens: number; totalTokens: number } }) => {
+      ? (event) => {
+          // temporary fix for the finishReason type
+          let finishReason:
+            | "stop"
+            | "length"
+            | "content-filter"
+            | "tool-calls"
+            | "error"
+            | "other" = "stop";
+
+          if (event.error) {
+            finishReason = "error";
+          } else if (event.object === undefined) {
+            finishReason = "other";
+          }
           onFinish({
-            object: result.object as T,
-            finishReason: result.finishReason as "stop" | "length" | "content-filter" | "tool-calls" | "error" | "other",
-            usage: result.usage
+            object: event.object as T,
+            finishReason: finishReason,
+            usage: event.usage
               ? {
-                  promptTokens: result.usage.promptTokens,
-                  completionTokens: result.usage.completionTokens,
-                  totalTokens: result.usage.totalTokens,
+                  promptTokens: event.usage.promptTokens,
+                  completionTokens: event.usage.completionTokens,
+                  totalTokens: event.usage.totalTokens,
                 }
               : undefined,
           });
@@ -72,7 +86,7 @@ export async function createObjectStream<T>(
       : undefined,
   });
 
-  return result.toTextStreamResponse({
+  return (await result).toTextStreamResponse({
     headers: headers ? Object.fromEntries(new Headers(headers)) : undefined,
   });
 }
