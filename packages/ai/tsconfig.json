@@ -10,7 +10,7 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "lib": ["DOM", "DOM.Iterable", "ES2018"],
+    "lib": ["DOM", "DOM.Iterable", "ES2020"],
     "types": ["node"]
   },
   "include": ["src/**/*"]
