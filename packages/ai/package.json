@@ -1,0 +1,56 @@
+{
+  "name": "@flickjs/ai",
+  "version": "0.0.1-beta.1",
+  "description": "AI SDK wrapper for Flick framework with reactive primitives",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "import": "./dist/server/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "ai",
+    "llm",
+    "streaming",
+    "chat",
+    "flick",
+    "reactive",
+    "vercel-ai-sdk"
+  ],
+  "author": "Jay Malave",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jaymalave/flick.git",
+    "directory": "packages/ai"
+  },
+  "homepage": "https://github.com/jaymalave/flick#readme",
+  "bugs": {
+    "url": "https://github.com/jaymalave/flick/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "@flickjs/runtime": "^0.0.1-beta.3",
+    "ai": "^3.0.0",
+    "zod": "^3.0.0"
+  },
+  "devDependencies": {
+    "@flickjs/runtime": "^0.0.1-beta.3",
+    "@types/node": "^20.0.0",
+    "ai": "^3.0.0",
+    "typescript": "^5.0.0",
+    "zod": "^3.0.0"
+  }
+}
