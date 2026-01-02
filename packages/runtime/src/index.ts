@@ -199,6 +199,38 @@ export function renderList<T>(
   });
 }
 
+export function renderConditional(
+  parent: Node,
+  anchor: Node,
+  condition: () => unknown,
+  consequent: () => Node,
+  alternate?: () => Node
+) {
+  let currentNode: Node | null = null;
+
+  run(() => {
+    const shouldShow = !!condition();
+
+    // Remove old node if exists
+    if (currentNode && currentNode.parentNode) {
+      currentNode.parentNode.removeChild(currentNode);
+    }
+
+    // Create and insert new node based on condition
+    if (shouldShow) {
+      currentNode = consequent();
+    } else if (alternate) {
+      currentNode = alternate();
+    } else {
+      currentNode = null;
+    }
+
+    if (currentNode) {
+      parent.insertBefore(currentNode, anchor);
+    }
+  });
+}
+
 export function mount(App: () => Node, el: HTMLElement) {
   el.appendChild(App());
 }

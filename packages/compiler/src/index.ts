@@ -19,9 +19,36 @@ function isListExpression(expr: t.Expression): boolean {
   return isMapCallExpression(expr) || isArrayLiteral(expr);
 }
 
+// Detection utilities for conditional expressions
+function isConditionalExpression(expr: t.Expression): boolean {
+  return t.isConditionalExpression(expr);
+}
+
+function isLogicalAndExpression(expr: t.Expression): boolean {
+  return t.isLogicalExpression(expr) && expr.operator === "&&";
+}
+
+// Check if an expression might return JSX (heuristic)
+function mightReturnJSX(expr: t.Expression): boolean {
+  return t.isJSXElement(expr) || t.isCallExpression(expr);
+}
+
+function isConditionalWithJSX(expr: t.Expression): boolean {
+  if (isConditionalExpression(expr)) {
+    const condExpr = expr as t.ConditionalExpression;
+    return mightReturnJSX(condExpr.consequent) || mightReturnJSX(condExpr.alternate);
+  }
+  if (isLogicalAndExpression(expr)) {
+    const logicalExpr = expr as t.LogicalExpression;
+    return mightReturnJSX(logicalExpr.right);
+  }
+  return false;
+}
+
 export default function flickJSX(): PluginObj {
   let needsRunImport = false;
   let needsRenderListImport = false;
+  let needsRenderConditionalImport = false;
 
   return {
     visitor: {
@@ -30,9 +57,10 @@ export default function flickJSX(): PluginObj {
           // Reset state for each file
           needsRunImport = false;
           needsRenderListImport = false;
+          needsRenderConditionalImport = false;
         },
         exit(path: NodePath<t.Program>) {
-          if (!needsRunImport && !needsRenderListImport) return;
+          if (!needsRunImport && !needsRenderListImport && !needsRenderConditionalImport) return;
 
           // Find existing @flickjs/runtime import
           const existingImport = path.node.body.find(
@@ -56,6 +84,13 @@ export default function flickJSX(): PluginObj {
               spec.imported.name === "renderList"
           );
 
+          const hasRenderConditionalImport = existingImport?.specifiers.some(
+            (spec) =>
+              t.isImportSpecifier(spec) &&
+              t.isIdentifier(spec.imported) &&
+              spec.imported.name === "renderConditional"
+          );
+
           // Build list of specifiers to add
           const specsToAdd: t.ImportSpecifier[] = [];
 
@@ -70,6 +105,15 @@ export default function flickJSX(): PluginObj {
               t.importSpecifier(
                 t.identifier("renderList"),
                 t.identifier("renderList")
+              )
+            );
+          }
+
+          if (needsRenderConditionalImport && !hasRenderConditionalImport) {
+            specsToAdd.push(
+              t.importSpecifier(
+                t.identifier("renderConditional"),
+                t.identifier("renderConditional")
               )
             );
           }
@@ -414,6 +458,75 @@ export default function flickJSX(): PluginObj {
                             [t.identifier("item")],
                             t.identifier("item")
                           ),
+                        ])
+                      )
+                    );
+                  }
+                } else if (isConditionalWithJSX(expr)) {
+                  // CONDITIONAL RENDERING PATH
+                  needsRenderConditionalImport = true;
+                  needsRunImport = true;
+
+                  const anchor = path.scope.generateUidIdentifier("anchor");
+
+                  // Create anchor comment: const _anchor = document.createComment("cond")
+                  statements.push(
+                    t.variableDeclaration("const", [
+                      t.variableDeclarator(
+                        anchor,
+                        t.callExpression(
+                          t.memberExpression(
+                            t.identifier("document"),
+                            t.identifier("createComment")
+                          ),
+                          [t.stringLiteral("cond")]
+                        )
+                      ),
+                    ])
+                  );
+
+                  // Append anchor to parent: el.append(_anchor)
+                  statements.push(
+                    t.expressionStatement(
+                      t.callExpression(
+                        t.memberExpression(
+                          t.cloneNode(el),
+                          t.identifier("append")
+                        ),
+                        [t.cloneNode(anchor)]
+                      )
+                    )
+                  );
+
+                  if (isConditionalExpression(expr)) {
+                    // Ternary: condition ? consequent : alternate
+                    const condExpr = expr as t.ConditionalExpression;
+
+                    // renderConditional(el, anchor, () => condition, () => consequent, () => alternate)
+                    statements.push(
+                      t.expressionStatement(
+                        t.callExpression(t.identifier("renderConditional"), [
+                          t.cloneNode(el),
+                          t.cloneNode(anchor),
+                          t.arrowFunctionExpression([], t.cloneNode(condExpr.test)),
+                          t.arrowFunctionExpression([], t.cloneNode(condExpr.consequent)),
+                          t.arrowFunctionExpression([], t.cloneNode(condExpr.alternate)),
+                        ])
+                      )
+                    );
+                  } else if (isLogicalAndExpression(expr)) {
+                    // Logical AND: condition && element
+                    const logicalExpr = expr as t.LogicalExpression;
+
+                    // renderConditional(el, anchor, () => condition, () => element)
+                    // No alternate provided - will render nothing when false
+                    statements.push(
+                      t.expressionStatement(
+                        t.callExpression(t.identifier("renderConditional"), [
+                          t.cloneNode(el),
+                          t.cloneNode(anchor),
+                          t.arrowFunctionExpression([], t.cloneNode(logicalExpr.left)),
+                          t.arrowFunctionExpression([], t.cloneNode(logicalExpr.right)),
                         ])
                       )
                     );
