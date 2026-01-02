@@ -7,6 +7,7 @@
 
 export type StreamPartType =
   | "text"
+  | "object"
   | "data"
   | "error"
   | "tool_call"
@@ -27,8 +28,10 @@ const LEGACY_PREFIX_MAP: Record<string, StreamPartType> = {
   "0": "text", // Text content
   "2": "data", // Custom data
   "3": "error", // Error
+  "5": "object", // Partial object (streamObject)
   "9": "tool_call", // Tool call
   "a": "tool_result", // Tool result (hex for 10)
+  "c": "object", // Object chunk (hex for 12)
   "e": "finish", // Finish event
   "d": "finish", // Done signal (alternative finish)
   "f": "message_id", // Message ID
@@ -82,6 +85,10 @@ function parseSSELine(line: string): StreamPart | null {
       case "text-start":
       case "text-end":
         return { type: "text", value: "" };
+      case "object":
+      case "object-delta":
+        // Object streams send partial objects already parsed
+        return { type: "object", value: parsed.object ?? parsed.delta };
       case "error":
         return { type: "error", value: parsed.errorText || parsed.error };
       case "finish":
@@ -163,6 +170,7 @@ export async function* parseStream(
  */
 export interface StreamParserCallbacks {
   onText?: (text: string) => void;
+  onObject?: (object: unknown) => void;
   onData?: (data: unknown) => void;
   onError?: (error: string) => void;
   onFinish?: (reason: string) => void;
@@ -178,6 +186,9 @@ export async function parseStreamWithCallbacks(
     switch (part.type) {
       case "text":
         callbacks.onText?.(String(part.value));
+        break;
+      case "object":
+        callbacks.onObject?.(part.value);
         break;
       case "data":
         callbacks.onData?.(part.value);
