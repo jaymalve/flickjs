@@ -1,8 +1,10 @@
 declare type Run = () => void;
 
-export declare function fx<T>(value: T): (() => T) & {
+export declare type Fx<T> = (() => T) & {
   set: (next: T | ((v: T) => T)) => void;
 };
+
+export declare function fx<T>(value: T): Fx<T>;
 
 export declare function run(fn: Run): void;
 
@@ -31,6 +33,8 @@ export declare function renderList<T>(
   mapFn: (item: T, index: number) => Node,
   getKey: (item: T, index: number) => string | number = (_, i) => i
 ): void;
+
+export declare function getCurrentSuspense(): Suspense | null;
 
 // JSX Type Definitions for Flick Framework - automatically available when imported
 declare global {
