@@ -203,30 +203,41 @@ export function renderConditional(
   parent: Node,
   anchor: Node,
   condition: () => unknown,
-  consequent: () => Node,
-  alternate?: () => Node
+  consequent: () => Node | Node[],
+  alternate?: () => Node | Node[]
 ) {
-  let currentNode: Node | null = null;
+  let currentNodes: Node[] = [];
 
   run(() => {
     const shouldShow = !!condition();
 
-    // Remove old node if exists
-    if (currentNode && currentNode.parentNode) {
-      currentNode.parentNode.removeChild(currentNode);
+    // Remove all current nodes
+    for (const node of currentNodes) {
+      if (node.parentNode) {
+        node.parentNode.removeChild(node);
+      }
     }
+    currentNodes = [];
 
-    // Create and insert new node based on condition
+    // Get new node(s) based on condition
+    let result: Node | Node[] | null = null;
     if (shouldShow) {
-      currentNode = consequent();
+      result = consequent();
     } else if (alternate) {
-      currentNode = alternate();
-    } else {
-      currentNode = null;
+      result = alternate();
     }
 
-    if (currentNode) {
-      parent.insertBefore(currentNode, anchor);
+    // Handle result (single node or array from .map())
+    if (result) {
+      if (Array.isArray(result)) {
+        for (const node of result) {
+          parent.insertBefore(node, anchor);
+          currentNodes.push(node);
+        }
+      } else {
+        parent.insertBefore(result, anchor);
+        currentNodes.push(result);
+      }
     }
   });
 }
