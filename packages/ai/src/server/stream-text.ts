@@ -29,6 +29,7 @@ export async function createTextStream(
     system,
     messages,
     maxTokens,
+    maxOutputTokens,
     temperature,
     topP,
     topK,
@@ -37,16 +38,31 @@ export async function createTextStream(
     stopSequences,
     abortSignal,
     headers,
+    tools,
+    toolChoice,
+    maxSteps,
     onStart,
     onText,
     onFinish,
+    onError,
   } = options;
 
-  const result = streamText({
+  console.log("[createTextStream] Starting with options:", {
+    hasModel: !!model,
+    hasSystem: !!system,
+    messagesCount: messages?.length,
+    hasTools: !!tools,
+    toolNames: tools ? Object.keys(tools) : [],
+    toolChoice,
+    maxSteps,
+  });
+
+  const result = (streamText as any)({
     model,
     system,
     messages,
     maxTokens,
+    maxOutputTokens,
     temperature,
     topP,
     topK,
@@ -54,6 +70,18 @@ export async function createTextStream(
     frequencyPenalty,
     stopSequences,
     abortSignal,
+    tools,
+    toolChoice,
+    maxSteps,
+    onStepFinish: (step: any) => {
+      console.log("[createTextStream] Step finished:", {
+        stepType: step.stepType,
+        text: step.text?.substring(0, 100),
+        toolCalls: step.toolCalls,
+        toolResults: step.toolResults,
+        finishReason: step.finishReason,
+      });
+    },
     onChunk: onText
       ? ({ chunk }: { chunk: { type: string; textDelta?: string } }) => {
           if (chunk.type === "text-delta" && chunk.textDelta) {
@@ -62,29 +90,27 @@ export async function createTextStream(
         }
       : undefined,
     onFinish: onFinish
-      ? (result: {
-          text: string;
-          finishReason: string;
-          usage?: {
-            promptTokens: number;
-            completionTokens: number;
-            totalTokens: number;
-          };
-        }) => {
+      ? (event: any) => {
           onFinish({
-            text: result.text,
-            finishReason: result.finishReason as
+            text: event.text,
+            finishReason: event.finishReason as
               | "stop"
               | "length"
               | "content-filter"
               | "tool-calls"
               | "error"
               | "other",
-            usage: result.usage
+            usage: event.usage
               ? {
-                  promptTokens: result.usage.promptTokens,
-                  completionTokens: result.usage.completionTokens,
-                  totalTokens: result.usage.totalTokens,
+                  promptTokens:
+                    (event.usage as any).promptTokens ??
+                    (event.usage as any).inputTokens ??
+                    0,
+                  completionTokens:
+                    (event.usage as any).completionTokens ??
+                    (event.usage as any).outputTokens ??
+                    0,
+                  totalTokens: (event.usage as any).totalTokens ?? 0,
                 }
               : undefined,
           });
@@ -94,7 +120,14 @@ export async function createTextStream(
 
   onStart?.();
 
-  return (await result).toDataStreamResponse({
-    headers: headers ? Object.fromEntries(new Headers(headers)) : undefined,
-  });
+  try {
+    const awaited = await result;
+    console.log("[createTextStream] Stream awaited successfully");
+    return awaited.toDataStreamResponse({
+      headers: headers ? Object.fromEntries(new Headers(headers)) : undefined,
+    });
+  } catch (error) {
+    console.error("[createTextStream] Error:", error);
+    throw error;
+  }
 }

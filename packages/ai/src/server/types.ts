@@ -13,8 +13,11 @@ export interface TextStreamOptions {
   /** Messages to send to the model */
   messages: CoreMessage[];
 
-  /** Maximum tokens to generate */
+  /** Maximum tokens to generate (AI SDK v4) */
   maxTokens?: number;
+
+  /** Maximum tokens to generate (AI SDK v5) */
+  maxOutputTokens?: number;
 
   /** Temperature for generation */
   temperature?: number;
@@ -40,6 +43,19 @@ export interface TextStreamOptions {
   /** Additional headers for the response */
   headers?: HeadersInit;
 
+  /** Tools available to the model - use tool() from 'ai' package to define */
+  tools?: Record<string, unknown>;
+
+  /** How the model should choose tools: 'auto', 'none', 'required', or { type: 'tool', toolName: string } */
+  toolChoice?:
+    | "auto"
+    | "none"
+    | "required"
+    | { type: "tool"; toolName: string };
+
+  /** Maximum number of steps for multi-step tool execution */
+  maxSteps?: number;
+
   /** Called when generation starts */
   onStart?: () => void;
 
@@ -48,6 +64,9 @@ export interface TextStreamOptions {
 
   /** Called when generation finishes */
   onFinish?: (result: TextStreamResult) => void;
+
+  /** Called when an error occurs */
+  onError?: (error: Error) => void;
 }
 
 /**
@@ -58,7 +77,13 @@ export interface TextStreamResult {
   text: string;
 
   /** Reason why generation stopped */
-  finishReason: "stop" | "length" | "content-filter" | "tool-calls" | "error" | "other";
+  finishReason:
+    | "stop"
+    | "length"
+    | "content-filter"
+    | "tool-calls"
+    | "error"
+    | "other";
 
   /** Token usage statistics */
   usage?: {
@@ -88,8 +113,11 @@ export interface ObjectStreamOptions<T> {
   /** Schema mode - 'auto' lets the model decide */
   mode?: "auto" | "json" | "tool";
 
-  /** Maximum tokens to generate */
+  /** Maximum tokens to generate (AI SDK v4) */
   maxTokens?: number;
+
+  /** Maximum tokens to generate (AI SDK v5) */
+  maxOutputTokens?: number;
 
   /** Temperature for generation */
   temperature?: number;
@@ -112,7 +140,13 @@ export interface ObjectStreamResult<T> {
   object: T;
 
   /** Reason why generation stopped */
-  finishReason: "stop" | "length" | "content-filter" | "tool-calls" | "error" | "other";
+  finishReason:
+    | "stop"
+    | "length"
+    | "content-filter"
+    | "tool-calls"
+    | "error"
+    | "other";
 
   /** Token usage statistics */
   usage?: {

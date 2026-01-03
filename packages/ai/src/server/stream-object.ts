@@ -39,13 +39,14 @@ export async function createObjectStream<T>(
     messages,
     mode,
     maxTokens,
+    maxOutputTokens,
     temperature,
     abortSignal,
     headers,
     onFinish,
   } = options;
 
-  const result = streamObject({
+  const result = (streamObject as any)({
     model,
     schema,
     system,
@@ -53,10 +54,11 @@ export async function createObjectStream<T>(
     messages,
     mode,
     maxTokens,
+    maxOutputTokens,
     temperature,
     abortSignal,
     onFinish: onFinish
-      ? (event) => {
+      ? (event: any) => {
           // temporary fix for the finishReason type
           let finishReason:
             | "stop"
@@ -76,9 +78,9 @@ export async function createObjectStream<T>(
             finishReason: finishReason,
             usage: event.usage
               ? {
-                  promptTokens: event.usage.promptTokens,
-                  completionTokens: event.usage.completionTokens,
-                  totalTokens: event.usage.totalTokens,
+                  promptTokens: (event.usage as any).promptTokens ?? (event.usage as any).inputTokens ?? 0,
+                  completionTokens: (event.usage as any).completionTokens ?? (event.usage as any).outputTokens ?? 0,
+                  totalTokens: (event.usage as any).totalTokens ?? 0,
                 }
               : undefined,
           });
@@ -86,7 +88,7 @@ export async function createObjectStream<T>(
       : undefined,
   });
 
-  return (await result).toTextStreamResponse({
+  return (await result).toDataStreamResponse({
     headers: headers ? Object.fromEntries(new Headers(headers)) : undefined,
   });
 }
