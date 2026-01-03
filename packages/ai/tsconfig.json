@@ -11,10 +11,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "lib": ["DOM", "DOM.Iterable", "ES2020"],
-    "types": []
+    "types": ["node"]
   },
   "include": ["src/**/*"]
 }
-
-
-
