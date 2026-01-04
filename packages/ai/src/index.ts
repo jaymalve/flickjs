@@ -48,7 +48,7 @@ export type {
 // ============================================
 // Router exports
 // ============================================
-export { agentRouter, createHandler } from "./router";
+export { agentRouter, createHandler, createExpressHandler } from "./router";
 export type { AgentRouter, InferAgentRouter, HandlerOptions, CorsOptions } from "./router";
 
 // ============================================
