@@ -8,25 +8,8 @@ export type {
   ObjectStreamResult,
 } from "./types";
 
-// Provider re-exports
-export {
-  openai,
-  createOpenAI,
-  anthropic,
-  createAnthropic,
-  google,
-  createGoogleGenerativeAI,
-  groq,
-  createGroq,
-  cerebras,
-  createCerebras,
-  createOpenRouter,
-  resolveModel,
-  registerProvider,
-  registerAlias,
-  getProviders,
-  getAliases,
-} from "./providers";
+// Model resolution (used internally by agent, also exported for convenience)
+export { resolveModel } from "./providers";
 
 // Tool helpers
 export { tool, convertSchema, isZodSchema } from "./tools";
