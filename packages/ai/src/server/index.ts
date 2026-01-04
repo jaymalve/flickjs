@@ -12,15 +12,8 @@ export type {
 export { resolveModel } from "./providers";
 
 // Tool helpers
-export { tool, convertSchema, isZodSchema } from "./tools";
-export type {
-  SimpleSchema,
-  SimpleSchemaType,
-  SimpleToolOptions,
-  ZodToolOptions,
-  ToolOptions,
-  InferSimpleSchema,
-} from "./tools";
+export { tool } from "./tools";
+export type { ToolOptions } from "./tools";
 
 // Agent API
 export { agent } from "./agent";
