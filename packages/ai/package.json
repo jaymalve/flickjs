@@ -41,6 +41,14 @@
   "publishConfig": {
     "access": "public"
   },
+  "dependencies": {
+    "@ai-sdk/openai": "^1.0.0",
+    "@ai-sdk/anthropic": "^1.0.0",
+    "@ai-sdk/google": "^1.0.0",
+    "@ai-sdk/groq": "^1.0.0",
+    "@ai-sdk/cerebras": "^1.0.0",
+    "@openrouter/ai-sdk-provider": "^1.0.0"
+  },
   "peerDependencies": {
     "@flickjs/runtime": "^0.0.1-beta.3",
     "ai": ">=4.0.0",
