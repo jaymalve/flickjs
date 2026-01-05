@@ -60,22 +60,21 @@ export class CanvasOverlay {
       position: "fixed",
       top: "0",
       left: "0",
-      width: "100vw",
-      height: "100vh",
       pointerEvents: "none",
       zIndex: "999999",
     });
 
-    this.updateCanvasSize();
-
-    // Handle window resize
-    window.addEventListener("resize", this.handleResize);
-
-    // Append to body
+    // Append to body first
     document.body.appendChild(this.canvas);
 
     // Get 2D context with alpha
     this.ctx = this.canvas.getContext("2d", { alpha: true });
+
+    // Now update size (which applies DPR scaling to context)
+    this.updateCanvasSize();
+
+    // Handle window resize
+    window.addEventListener("resize", this.handleResize);
   }
 
   /**

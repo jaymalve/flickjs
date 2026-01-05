@@ -26,13 +26,13 @@ const ANIMATION_CONFIGS: Record<AnimationSpeed, AnimationConfig> = {
     easing: () => 0,
   },
   fast: {
-    fadeDuration: 400,
-    holdDuration: 100,
+    fadeDuration: 1800,
+    holdDuration: 1000,
     easing: easeOutCubic,
   },
   slow: {
     fadeDuration: 1500,
-    holdDuration: 500,
+    holdDuration: 2000,
     easing: easeOutCubic,
   },
 };
