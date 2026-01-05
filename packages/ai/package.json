@@ -1,0 +1,64 @@
+{
+  "name": "@flickjs/ai",
+  "version": "0.0.1-beta.1",
+  "description": "AI SDK wrapper for FlickJS",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./providers": {
+      "types": "./dist/providers/index.d.ts",
+      "import": "./dist/providers/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "ai",
+    "llm",
+    "streaming",
+    "chat",
+    "flick",
+    "reactive",
+    "vercel-ai-sdk"
+  ],
+  "author": "Jay Malve",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jaymalve/flickjs.git",
+    "directory": "packages/ai"
+  },
+  "homepage": "https://github.com/jaymalve/flickjs#readme",
+  "bugs": {
+    "url": "https://github.com/jaymalve/flickjs/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^1.0.0",
+    "@ai-sdk/anthropic": "^1.0.0",
+    "@ai-sdk/google": "^1.0.0",
+    "@ai-sdk/groq": "^1.0.0",
+    "@ai-sdk/cerebras": "^1.0.0",
+    "@openrouter/ai-sdk-provider": "^1.0.0"
+  },
+  "peerDependencies": {
+    "@flickjs/runtime": "^0.0.1-beta.3",
+    "ai": ">=4.0.0",
+    "zod": "^3.0.0"
+  },
+  "devDependencies": {
+    "@flickjs/runtime": "^0.0.1-beta.3",
+    "@types/node": "^20.0.0",
+    "ai": ">=4.0.0",
+    "typescript": "^5.0.0",
+    "zod": "^3.0.0"
+  }
+}
