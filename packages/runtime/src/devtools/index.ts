@@ -29,6 +29,10 @@ import {
   setInstrumentationCallbacks,
   type Fx,
 } from "./instrumentation";
+import {
+  overlayManager,
+  type AnimationSpeed as OverlayAnimationSpeed,
+} from "./overlay";
 
 /*
  * Type Definitions
@@ -62,6 +66,10 @@ export interface FlickDevTools {
   getDependencyGraph(): GraphJSON;
   /** Check if paused */
   isPaused(): boolean;
+  /** Enable/disable overlays */
+  setOverlayEnabled(enabled: boolean): void;
+  /** Set overlay animation speed */
+  setAnimationSpeed(speed: AnimationSpeed): void;
   /** Destroy devtools and clean up */
   destroy(): void;
 }
@@ -108,29 +116,44 @@ export function enableDevTools(options: DevToolsOptions = {}): FlickDevTools {
 
   devtoolsEnabled = true;
 
+  // Initialize overlay system
+  if (config.overlay) {
+    overlayManager.initialize(config.animationSpeed as OverlayAnimationSpeed);
+  }
+
   // Set up instrumentation callbacks
-  if (config.logToConsole) {
-    setInstrumentationCallbacks({
-      onEffectStart: (runId, name) => {
-        console.log(`[Flick] Effect start: ${name || `#${runId}`}`);
-      },
-      onEffectEnd: (runId, duration, domNodes, name) => {
+  setInstrumentationCallbacks({
+    onEffectStart: config.logToConsole
+      ? (runId, name) => {
+          console.log(`[Flick] Effect start: ${name || `#${runId}`}`);
+        }
+      : undefined,
+
+    onEffectEnd: (runId, duration, domNodes, name) => {
+      // Log to console if enabled
+      if (config.logToConsole) {
         console.log(
           `[Flick] Effect end: ${name || `#${runId}`} - ${duration.toFixed(
             2
           )}ms, ${domNodes.size} DOM nodes`
         );
-      },
-      onSignalUpdate: (fxId, name) => {
-        console.log(`[Flick] Signal update: ${name || `#${fxId}`}`);
-      },
-    });
-  }
+      }
 
-  // TODO: Initialize overlay system (Phase 2)
-  // if (config.overlay) {
-  //   overlayManager.initialize(config.animationSpeed);
-  // }
+      // Show overlay for affected DOM nodes
+      if (config.overlay && domNodes.size > 0) {
+        overlayManager.showUpdates(domNodes, {
+          duration,
+          signalName: name,
+        });
+      }
+    },
+
+    onSignalUpdate: config.logToConsole
+      ? (fxId, name) => {
+          console.log(`[Flick] Signal update: ${name || `#${fxId}`}`);
+        }
+      : undefined,
+  });
 
   // TODO: Initialize toolbar (Phase 3)
   // if (config.toolbar) {
@@ -152,6 +175,7 @@ export function enableDevTools(options: DevToolsOptions = {}): FlickDevTools {
     clear() {
       metricsStore.clear();
       depGraph.clear();
+      overlayManager.clearAll();
       console.log("[Flick DevTools] Cleared");
     },
 
@@ -171,9 +195,21 @@ export function enableDevTools(options: DevToolsOptions = {}): FlickDevTools {
       return metricsStore.paused;
     },
 
+    setOverlayEnabled(enabled: boolean) {
+      overlayManager.setEnabled(enabled);
+      console.log(`[Flick DevTools] Overlay ${enabled ? "enabled" : "disabled"}`);
+    },
+
+    setAnimationSpeed(speed: AnimationSpeed) {
+      overlayManager.setAnimationSpeed(speed as OverlayAnimationSpeed);
+      console.log(`[Flick DevTools] Animation speed set to: ${speed}`);
+    },
+
     destroy() {
-      // TODO: Clean up overlay and toolbar
-      // overlayManager.destroy();
+      // Clean up overlay
+      overlayManager.destroy();
+
+      // TODO: Clean up toolbar (Phase 3)
       // toolbar.detach();
 
       metricsStore.clear();
