@@ -4,8 +4,41 @@ export type Fx<T> = (() => T) & { set: (next: T | ((v: T) => T)) => void };
 
 let activeRun: Run | null = null;
 
+/*
+ * Instrumentation Hooks (used by DevTools)
+ */
+
+interface RuntimeHooks {
+  onEffectStart?: (runId: number) => void;
+  onEffectEnd?: (runId: number, duration: number, domNodes: Set<Node>) => void;
+  onSignalUpdate?: (fxId: number, prevValue: unknown, nextValue: unknown) => void;
+}
+
+let hooks: RuntimeHooks = {};
+let fxIdCounter = 0;
+let runIdCounter = 0;
+
+// Maps to track metadata
+const fxIdMap = new WeakMap<Function, number>();
+const runIdMap = new WeakMap<Function, number>();
+
+/**
+ * Register instrumentation hooks (called by DevTools)
+ */
+export function __registerHooks(newHooks: RuntimeHooks): void {
+  hooks = newHooks;
+}
+
+/**
+ * Unregister instrumentation hooks
+ */
+export function __unregisterHooks(): void {
+  hooks = {};
+}
+
 export function fx<T>(value: T): Fx<T> {
   const subs = new Set<Run>();
+  const fxId = fxIdCounter++;
 
   function read() {
     if (activeRun) subs.add(activeRun);
@@ -13,19 +46,83 @@ export function fx<T>(value: T): Fx<T> {
   }
 
   read.set = (next: T | ((v: T) => T)) => {
+    const prevValue = value;
     value = typeof next === "function" ? (next as any)(value) : next;
+
+    // Notify devtools hook
+    if (hooks.onSignalUpdate) {
+      hooks.onSignalUpdate(fxId, prevValue, value);
+    }
+
     subs.forEach((fn) => fn());
   };
+
+  // Store fxId for devtools lookup
+  fxIdMap.set(read, fxId);
 
   return read as (() => T) & { set: typeof read.set };
 }
 
 export function run(fn: Run) {
+  const runId = runIdCounter++;
+
   const execute = () => {
+    const startTime = performance.now();
+    const domNodes = new Set<Node>();
+
+    // Set up DOM mutation observer if hooks are registered
+    let observer: MutationObserver | null = null;
+    if (hooks.onEffectEnd && typeof MutationObserver !== "undefined") {
+      observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          domNodes.add(mutation.target);
+          mutation.addedNodes.forEach((node) => domNodes.add(node));
+        }
+      });
+      try {
+        if (document.body) {
+          observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            characterData: true,
+          });
+        }
+      } catch {
+        // Ignore if DOM not ready
+      }
+    }
+
+    // Notify start
+    if (hooks.onEffectStart) {
+      hooks.onEffectStart(runId);
+    }
+
     activeRun = execute;
     fn();
     activeRun = null;
+
+    // Stop observing and collect any pending mutations
+    if (observer) {
+      // takeRecords() synchronously returns pending mutations before they're delivered async
+      const pendingMutations = observer.takeRecords();
+      for (const mutation of pendingMutations) {
+        domNodes.add(mutation.target);
+        mutation.addedNodes.forEach((node) => domNodes.add(node));
+      }
+      observer.disconnect();
+    }
+
+    // Notify end with timing and DOM nodes
+    if (hooks.onEffectEnd) {
+      const duration = performance.now() - startTime;
+      hooks.onEffectEnd(runId, duration, domNodes);
+    }
   };
+
+  // Store runId for devtools lookup
+  runIdMap.set(execute, runId);
+
   execute();
 }
 
@@ -289,3 +386,18 @@ export const jsxTypes = Symbol("jsx-types");
 
 export { Suspense, getCurrentSuspense, query, lazy } from "./suspense";
 export type { SuspenseContext, SuspenseProps, Query } from "./suspense";
+
+// DevTools exports
+export {
+  enableDevTools,
+  isDevToolsEnabled,
+  getDevToolsInstance,
+} from "./devtools";
+export type {
+  DevToolsOptions,
+  FlickDevTools,
+  AnimationSpeed,
+  TimelineEntry,
+  RenderStats,
+  GraphJSON,
+} from "./devtools";

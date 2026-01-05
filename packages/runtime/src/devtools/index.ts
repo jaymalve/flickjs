@@ -24,15 +24,11 @@
 import { metricsStore, type TimelineEntry, type RenderStats } from "./metrics";
 import { depGraph, type GraphJSON } from "./dependency-graph";
 import {
-  instrumentedFx,
-  instrumentedRun,
-  setInstrumentationCallbacks,
-  type Fx,
-} from "./instrumentation";
-import {
   overlayManager,
   type AnimationSpeed as OverlayAnimationSpeed,
 } from "./overlay";
+import { toolbar } from "./toolbar";
+import { __registerHooks, __unregisterHooks } from "../index";
 
 /*
  * Type Definitions
@@ -121,44 +117,62 @@ export function enableDevTools(options: DevToolsOptions = {}): FlickDevTools {
     overlayManager.initialize(config.animationSpeed as OverlayAnimationSpeed);
   }
 
-  // Set up instrumentation callbacks
-  setInstrumentationCallbacks({
-    onEffectStart: config.logToConsole
-      ? (runId, name) => {
-          console.log(`[Flick] Effect start: ${name || `#${runId}`}`);
-        }
-      : undefined,
+  // Register hooks with the runtime
+  __registerHooks({
+    onEffectStart: (runId: number) => {
+      console.log(`[Flick DevTools] Effect START: #${runId}`);
+    },
 
-    onEffectEnd: (runId, duration, domNodes, name) => {
-      // Log to console if enabled
-      if (config.logToConsole) {
-        console.log(
-          `[Flick] Effect end: ${name || `#${runId}`} - ${duration.toFixed(
-            2
-          )}ms, ${domNodes.size} DOM nodes`
-        );
+    onEffectEnd: (runId: number, duration: number, domNodes: Set<Node>) => {
+      console.log(`[Flick DevTools] Effect END: #${runId} - ${duration.toFixed(2)}ms, ${domNodes.size} DOM nodes`);
+
+      // Debug: log each DOM node
+      for (const node of domNodes) {
+        console.log(`[Flick DevTools]   Node:`, node, node instanceof Element ? node.tagName : 'TEXT');
+      }
+
+      // Record in metrics store
+      metricsStore.recordEffectExecution({
+        runId,
+        duration,
+        timestamp: performance.now(),
+        domNodesAffected: domNodes.size,
+        dependencies: [],
+      });
+
+      // Record stats for each DOM node
+      for (const node of domNodes) {
+        metricsStore.recordDOMNodeUpdate(node, runId, duration);
       }
 
       // Show overlay for affected DOM nodes
       if (config.overlay && domNodes.size > 0) {
+        console.log(`[Flick DevTools] Calling overlayManager.showUpdates with ${domNodes.size} nodes`);
         overlayManager.showUpdates(domNodes, {
           duration,
-          signalName: name,
         });
+      } else {
+        console.log(`[Flick DevTools] Skipping overlay: overlay=${config.overlay}, domNodes.size=${domNodes.size}`);
       }
     },
 
-    onSignalUpdate: config.logToConsole
-      ? (fxId, name) => {
-          console.log(`[Flick] Signal update: ${name || `#${fxId}`}`);
-        }
-      : undefined,
+    onSignalUpdate: (fxId: number, prevValue: unknown, nextValue: unknown) => {
+      console.log(`[Flick DevTools] Signal UPDATE: #${fxId}`, prevValue, '->', nextValue);
+
+      // Record in metrics store
+      metricsStore.recordSignalUpdate({
+        fxId,
+        prevValue,
+        nextValue,
+        timestamp: performance.now(),
+      });
+    },
   });
 
-  // TODO: Initialize toolbar (Phase 3)
-  // if (config.toolbar) {
-  //   toolbar.attach();
-  // }
+  // Initialize toolbar
+  if (config.toolbar) {
+    toolbar.attach();
+  }
 
   // Create the devtools instance
   devtoolsInstance = {
@@ -206,11 +220,14 @@ export function enableDevTools(options: DevToolsOptions = {}): FlickDevTools {
     },
 
     destroy() {
+      // Unregister hooks from runtime
+      __unregisterHooks();
+
       // Clean up overlay
       overlayManager.destroy();
 
-      // TODO: Clean up toolbar (Phase 3)
-      // toolbar.detach();
+      // Clean up toolbar
+      toolbar.detach();
 
       metricsStore.clear();
       depGraph.clear();
@@ -244,25 +261,8 @@ export function getDevToolsInstance(): FlickDevTools | null {
 }
 
 /*
- * Instrumented Runtime Exports
- */
-
-/**
- * Instrumented version of fx() that tracks metrics when DevTools is enabled.
- * This should replace the original fx() when DevTools is active.
- */
-export const fx = instrumentedFx;
-
-/**
- * Instrumented version of run() that tracks metrics when DevTools is enabled.
- * This should replace the original run() when DevTools is active.
- */
-export const run = instrumentedRun;
-
-/*
  * Re-exports
  */
 
 export type { TimelineEntry, RenderStats } from "./metrics";
 export type { GraphJSON, GraphNode, GraphEdge } from "./dependency-graph";
-export type { Fx, FxMetadata, RunMetadata } from "./instrumentation";

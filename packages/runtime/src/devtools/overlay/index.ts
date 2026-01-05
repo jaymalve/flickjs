@@ -163,11 +163,22 @@ class OverlayManager {
       signalName?: string;
     }
   ): void {
-    if (!this.config.enabled) return;
-    if (!this.animationController.isEnabled()) return;
+    if (!this.config.enabled) {
+      console.log(`[Flick Overlay] showUpdate: config.enabled is false`);
+      return;
+    }
+    if (!this.animationController.isEnabled()) {
+      console.log(`[Flick Overlay] showUpdate: animation not enabled`);
+      return;
+    }
 
     const rect = this.getNodeRect(node);
-    if (!rect) return;
+    if (!rect) {
+      console.log(`[Flick Overlay] showUpdate: no rect for node`, node);
+      return;
+    }
+
+    console.log(`[Flick Overlay] showUpdate: adding overlay for node`, node, `rect:`, rect.x, rect.y, rect.width, rect.height);
 
     // Determine color based on performance
     const color = getPerformanceColor(
@@ -213,6 +224,8 @@ class OverlayManager {
       signalName?: string;
     }
   ): void {
+    console.log(`[Flick Overlay] showUpdates called with ${nodes.size} nodes, enabled=${this.config.enabled}, animEnabled=${this.animationController.isEnabled()}`);
+
     for (const node of nodes) {
       // Get existing render count or start at 1
       const existing = this.activeOverlays.get(node);
@@ -224,6 +237,8 @@ class OverlayManager {
         signalName: metadata.signalName,
       });
     }
+
+    console.log(`[Flick Overlay] Active overlays after update: ${this.activeOverlays.size}`);
   }
 
   /**
@@ -284,6 +299,11 @@ class OverlayManager {
 
     const now = performance.now();
     const toRemove: Node[] = [];
+
+    // Debug: log if we have active overlays
+    if (this.activeOverlays.size > 0) {
+      console.log(`[Flick Overlay] renderFrame: drawing ${this.activeOverlays.size} overlays`);
+    }
 
     // Update and draw each overlay
     for (const [node, state] of this.activeOverlays) {
