@@ -52,6 +52,25 @@ export default function flickJSX(): PluginObj {
 
   return {
     visitor: {
+      // Auto-inject variable names into fx() calls for devtools
+      CallExpression(path: NodePath<t.CallExpression>) {
+        const { callee, arguments: args } = path.node;
+
+        // Only handle fx() calls
+        if (!t.isIdentifier(callee) || callee.name !== "fx") return;
+
+        // Skip if name already provided
+        if (args.length >= 2) return;
+
+        // Must be assigned to a simple variable
+        const parent = path.parent;
+        if (!t.isVariableDeclarator(parent)) return;
+        if (!t.isIdentifier(parent.id)) return;
+
+        // Inject variable name as second argument
+        args.push(t.stringLiteral(parent.id.name));
+      },
+
       Program: {
         enter() {
           // Reset state for each file

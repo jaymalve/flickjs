@@ -11,7 +11,7 @@ let activeRun: Run | null = null;
 interface RuntimeHooks {
   onEffectStart?: (runId: number) => void;
   onEffectEnd?: (runId: number, duration: number, domNodes: Set<Node>) => void;
-  onSignalUpdate?: (fxId: number, prevValue: unknown, nextValue: unknown) => void;
+  onSignalUpdate?: (fxId: number, prevValue: unknown, nextValue: unknown, name?: string) => void;
 }
 
 let hooks: RuntimeHooks = {};
@@ -20,6 +20,7 @@ let runIdCounter = 0;
 
 // Maps to track metadata
 const fxIdMap = new WeakMap<Function, number>();
+const fxNameMap = new WeakMap<Function, string>();
 const runIdMap = new WeakMap<Function, number>();
 
 /**
@@ -36,7 +37,14 @@ export function __unregisterHooks(): void {
   hooks = {};
 }
 
-export function fx<T>(value: T): Fx<T> {
+/**
+ * Get signal name (for devtools)
+ */
+export function __getFxName(fx: Function): string | undefined {
+  return fxNameMap.get(fx);
+}
+
+export function fx<T>(value: T, name?: string): Fx<T> {
   const subs = new Set<Run>();
   const fxId = fxIdCounter++;
 
@@ -51,14 +59,17 @@ export function fx<T>(value: T): Fx<T> {
 
     // Notify devtools hook
     if (hooks.onSignalUpdate) {
-      hooks.onSignalUpdate(fxId, prevValue, value);
+      hooks.onSignalUpdate(fxId, prevValue, value, name);
     }
 
     subs.forEach((fn) => fn());
   };
 
-  // Store fxId for devtools lookup
+  // Store fxId and name for devtools lookup
   fxIdMap.set(read, fxId);
+  if (name) {
+    fxNameMap.set(read, name);
+  }
 
   return read as (() => T) & { set: typeof read.set };
 }
