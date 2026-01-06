@@ -6,7 +6,7 @@
  *
  * @example
  * ```ts
- * import { enableDevTools } from '@flickjs/runtime';
+ * import { enableDevTools } from '@flickjs/runtime/devtools';
  *
  * const devtools = enableDevTools({
  *   overlay: true,

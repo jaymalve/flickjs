@@ -407,18 +407,3 @@ export const jsxTypes = Symbol("jsx-types");
 
 export { Suspense, getCurrentSuspense, query, lazy } from "./suspense";
 export type { SuspenseContext, SuspenseProps, Query } from "./suspense";
-
-// DevTools exports
-export {
-  enableDevTools,
-  isDevToolsEnabled,
-  getDevToolsInstance,
-} from "./devtools";
-export type {
-  DevToolsOptions,
-  FlickDevTools,
-  AnimationSpeed,
-  TimelineEntry,
-  RenderStats,
-  GraphJSON,
-} from "./devtools";
