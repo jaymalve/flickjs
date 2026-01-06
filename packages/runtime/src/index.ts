@@ -10,8 +10,18 @@ let activeRun: Run | null = null;
 
 interface RuntimeHooks {
   onEffectStart?: (runId: number) => void;
-  onEffectEnd?: (runId: number, duration: number, domNodes: Set<Node>) => void;
-  onSignalUpdate?: (fxId: number, prevValue: unknown, nextValue: unknown, name?: string) => void;
+  onEffectEnd?: (
+    runId: number,
+    duration: number,
+    domNodes: Set<Node>,
+    componentName?: string
+  ) => void;
+  onSignalUpdate?: (
+    fxId: number,
+    prevValue: unknown,
+    nextValue: unknown,
+    name?: string
+  ) => void;
 }
 
 let hooks: RuntimeHooks = {};
@@ -74,7 +84,7 @@ export function fx<T>(value: T, name?: string): Fx<T> {
   return read as (() => T) & { set: typeof read.set };
 }
 
-export function run(fn: Run) {
+export function run(fn: Run, componentName?: string) {
   const runId = runIdCounter++;
 
   const execute = () => {
@@ -124,10 +134,10 @@ export function run(fn: Run) {
       observer.disconnect();
     }
 
-    // Notify end with timing and DOM nodes
+    // Notify end with timing, DOM nodes, and component name
     if (hooks.onEffectEnd) {
       const duration = performance.now() - startTime;
-      hooks.onEffectEnd(runId, duration, domNodes);
+      hooks.onEffectEnd(runId, duration, domNodes, componentName);
     }
   };
 

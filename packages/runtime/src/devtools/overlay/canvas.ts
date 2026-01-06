@@ -18,6 +18,7 @@ export interface OverlayDrawData {
   renderCount: number;
   lastDuration: number;
   signalName?: string;
+  componentName?: string;
 }
 
 export interface LabelConfig {
@@ -125,8 +126,15 @@ export class CanvasOverlay {
   drawOverlay(data: OverlayDrawData): void {
     if (!this.ctx) return;
 
-    const { rect, opacity, color, renderCount, lastDuration, signalName } =
-      data;
+    const {
+      rect,
+      opacity,
+      color,
+      renderCount,
+      lastDuration,
+      signalName,
+      componentName,
+    } = data;
 
     // Skip if fully transparent
     if (opacity <= 0) return;
@@ -140,7 +148,14 @@ export class CanvasOverlay {
     this.drawBorder(rect, colorWithOpacity);
 
     // Draw label
-    this.drawLabel(rect, opacity, renderCount, lastDuration, signalName);
+    this.drawLabel(
+      rect,
+      opacity,
+      renderCount,
+      lastDuration,
+      signalName,
+      componentName
+    );
   }
 
   /**
@@ -172,12 +187,18 @@ export class CanvasOverlay {
     opacity: number,
     renderCount: number,
     duration: number,
-    signalName?: string
+    signalName?: string,
+    componentName?: string
   ): void {
     if (!this.ctx) return;
 
     const ctx = this.ctx;
-    const labelText = this.buildLabelText(renderCount, duration, signalName);
+    const labelText = this.buildLabelText(
+      renderCount,
+      duration,
+      signalName,
+      componentName
+    );
 
     if (!labelText) return;
 
@@ -220,15 +241,23 @@ export class CanvasOverlay {
   private buildLabelText(
     renderCount: number,
     duration: number,
-    signalName?: string
+    signalName?: string,
+    componentName?: string
   ): string {
     const parts: string[] = [];
 
-    if (this.labelConfig.showName && signalName) {
+    console.log(
+      `[Canvas] buildLabelText: signalName=${signalName}, componentName=${componentName}, showName=${this.labelConfig.showName}`
+    );
+
+    // Prefer component name over signal name for display
+    const displayName = componentName || signalName;
+    if (this.labelConfig.showName && displayName) {
       // Truncate long names
-      const name = signalName.length > 15
-        ? signalName.slice(0, 12) + "..."
-        : signalName;
+      const name =
+        displayName.length > 15
+          ? displayName.slice(0, 12) + "..."
+          : displayName;
       parts.push(name);
     }
 

@@ -112,6 +112,9 @@ export function enableDevTools(options: DevToolsOptions = {}): FlickDevTools {
 
   devtoolsEnabled = true;
 
+  // Track the last signal name that triggered an update
+  let lastSignalName: string | undefined;
+
   // Initialize overlay system
   if (config.overlay) {
     overlayManager.initialize(config.animationSpeed as OverlayAnimationSpeed);
@@ -123,12 +126,25 @@ export function enableDevTools(options: DevToolsOptions = {}): FlickDevTools {
       console.log(`[Flick DevTools] Effect START: #${runId}`);
     },
 
-    onEffectEnd: (runId: number, duration: number, domNodes: Set<Node>) => {
-      console.log(`[Flick DevTools] Effect END: #${runId} - ${duration.toFixed(2)}ms, ${domNodes.size} DOM nodes`);
+    onEffectEnd: (
+      runId: number,
+      duration: number,
+      domNodes: Set<Node>,
+      componentName?: string
+    ) => {
+      console.log(
+        `[Flick DevTools] Effect END: #${runId} - ${duration.toFixed(2)}ms, ${
+          domNodes.size
+        } DOM nodes${componentName ? `, component: ${componentName}` : ""}`
+      );
 
       // Debug: log each DOM node
       for (const node of domNodes) {
-        console.log(`[Flick DevTools]   Node:`, node, node instanceof Element ? node.tagName : 'TEXT');
+        console.log(
+          `[Flick DevTools]   Node:`,
+          node,
+          node instanceof Element ? node.tagName : "TEXT"
+        );
       }
 
       // Record in metrics store
@@ -147,21 +163,41 @@ export function enableDevTools(options: DevToolsOptions = {}): FlickDevTools {
 
       // Show overlay for affected DOM nodes
       if (config.overlay && domNodes.size > 0) {
-        console.log(`[Flick DevTools] Calling overlayManager.showUpdates with ${domNodes.size} nodes`);
+        console.log(
+          `[Flick DevTools] Calling overlayManager.showUpdates with ${domNodes.size} nodes, signal: ${lastSignalName}, component: ${componentName}`
+        );
         overlayManager.showUpdates(domNodes, {
           duration,
+          signalName: lastSignalName,
+          componentName,
         });
       } else {
-        console.log(`[Flick DevTools] Skipping overlay: overlay=${config.overlay}, domNodes.size=${domNodes.size}`);
+        console.log(
+          `[Flick DevTools] Skipping overlay: overlay=${config.overlay}, domNodes.size=${domNodes.size}`
+        );
       }
     },
 
-    onSignalUpdate: (fxId: number, prevValue: unknown, nextValue: unknown) => {
-      console.log(`[Flick DevTools] Signal UPDATE: #${fxId}`, prevValue, '->', nextValue);
+    onSignalUpdate: (
+      fxId: number,
+      prevValue: unknown,
+      nextValue: unknown,
+      name?: string
+    ) => {
+      console.log(
+        `[Flick DevTools] Signal UPDATE: #${fxId}${name ? ` (${name})` : ""}`,
+        prevValue,
+        "->",
+        nextValue
+      );
+
+      // Track the signal name for the overlay
+      lastSignalName = name;
 
       // Record in metrics store
       metricsStore.recordSignalUpdate({
         fxId,
+        name,
         prevValue,
         nextValue,
         timestamp: performance.now(),
@@ -211,7 +247,9 @@ export function enableDevTools(options: DevToolsOptions = {}): FlickDevTools {
 
     setOverlayEnabled(enabled: boolean) {
       overlayManager.setEnabled(enabled);
-      console.log(`[Flick DevTools] Overlay ${enabled ? "enabled" : "disabled"}`);
+      console.log(
+        `[Flick DevTools] Overlay ${enabled ? "enabled" : "disabled"}`
+      );
     },
 
     setAnimationSpeed(speed: AnimationSpeed) {
