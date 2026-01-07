@@ -1,0 +1,62 @@
+{
+  "name": "@flickjs/api",
+  "version": "0.0.1-beta.1",
+  "description": "Type-safe API client/server for FlickJS with reactive responses",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "import": "./dist/server/index.js"
+    },
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "import": "./dist/client/index.js"
+    },
+    "./router": {
+      "types": "./dist/router/index.d.ts",
+      "import": "./dist/router/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "api",
+    "trpc",
+    "typescript",
+    "flick",
+    "reactive",
+    "end-to-end-types"
+  ],
+  "author": "Jay Malve",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jaymalve/flickjs.git",
+    "directory": "packages/api"
+  },
+  "homepage": "https://github.com/jaymalve/flickjs#readme",
+  "bugs": {
+    "url": "https://github.com/jaymalve/flickjs/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "@flickjs/runtime": "^0.0.1-beta.3",
+    "zod": "^3.0.0"
+  },
+  "devDependencies": {
+    "@flickjs/runtime": "^0.0.1-beta.3",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "zod": "^3.0.0"
+  }
+}
+

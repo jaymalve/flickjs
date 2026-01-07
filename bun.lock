@@ -31,6 +31,20 @@
         "zod": "^3.0.0",
       },
     },
+    "packages/api": {
+      "name": "@flickjs/api",
+      "version": "0.0.1-beta.1",
+      "devDependencies": {
+        "@flickjs/runtime": "^0.0.1-beta.3",
+        "@types/node": "^20.0.0",
+        "typescript": "^5.0.0",
+        "zod": "^3.0.0",
+      },
+      "peerDependencies": {
+        "@flickjs/runtime": "^0.0.1-beta.3",
+        "zod": "^3.0.0",
+      },
+    },
     "packages/compiler": {
       "name": "@flickjs/compiler",
       "version": "0.0.1-beta.3",
@@ -340,6 +354,8 @@
     "@eslint/plugin-kit": ["@eslint/plugin-kit@0.4.1", "", { "dependencies": { "@eslint/core": "^0.17.0", "levn": "^0.4.1" } }, "sha512-43/qtrDUokr7LJqoF2c3+RInu/t4zfrpYdoSDfYyhg52rwLV6TnOvdG4fXm7IkSB3wErkcmJS9iEhjVtOSEjjA=="],
 
     "@flickjs/ai": ["@flickjs/ai@workspace:packages/ai"],
+
+    "@flickjs/api": ["@flickjs/api@workspace:packages/api"],
 
     "@flickjs/compiler": ["@flickjs/compiler@workspace:packages/compiler"],
 

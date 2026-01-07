@@ -6,13 +6,14 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "bun run build:runtime && bun run build:compiler && bun run build:router && bun run build:vite-plugin && bun run build:create-app && bun run build:ai",
+    "build": "bun run build:runtime && bun run build:compiler && bun run build:router && bun run build:vite-plugin && bun run build:create-app && bun run build:ai && bun run build:api",
     "build:runtime": "cd packages/runtime && bunx tsc && bun build src/index.ts --outdir dist --minify --target browser",
     "build:compiler": "cd packages/compiler && bun build src/index.ts --outfile dist/index.js --target node",
     "build:router": "cd packages/router && bunx tsc",
     "build:vite-plugin": "cd packages/vite-plugin && bun build src/index.ts --outfile dist/index.js --target node --external @babel/core --external @flickjs/compiler",
     "build:create-app": "cd packages/create-app && bun build src/index.ts --outfile dist/index.js --target node",
     "build:ai": "cd packages/ai && bunx tsc",
+    "build:api": "cd packages/api && bunx tsc",
     "clean": "rm -rf packages/*/dist",
     "docs:dev": "cd packages/docs && bun run dev",
     "docs:build": "cd packages/docs && bun run build",
