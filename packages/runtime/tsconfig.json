@@ -13,8 +13,6 @@
     "lib": ["DOM", "DOM.Iterable", "ES2020"],
     "types": []
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "../../node_modules"]
 }
-
-
-

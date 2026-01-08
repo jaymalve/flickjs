@@ -7,7 +7,7 @@ import type { z } from "zod";
  *
  * @example
  * ```ts
- * import { router, endpoint } from "@flickjs/api/server";
+ * import { router, endpoint } from "@flickjs/api";
  * import { z } from "zod";
  *
  * const getUser = endpoint({
@@ -30,9 +30,9 @@ import type { z } from "zod";
  * export type Api = typeof api;
  * ```
  */
-export function router<T extends Record<string, Endpoint<any, any> | Record<string, any>>>(
-  endpoints: T
-): ApiRouter<T> {
+export function router<
+  T extends Record<string, Endpoint<any, any> | Record<string, any>>
+>(endpoints: T): ApiRouter<T> {
   return {
     _endpoints: endpoints,
     _type: "apiRouter" as const,
@@ -43,4 +43,3 @@ export function router<T extends Record<string, Endpoint<any, any> | Record<stri
  * Infer the router type
  */
 export type InferApiRouter<T> = InferRouter<T>;
-

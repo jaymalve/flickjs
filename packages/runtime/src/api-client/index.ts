@@ -6,4 +6,3 @@ export type {
   MutationResponse,
   ApiClientOptions,
 } from "./types";
-

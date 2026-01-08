@@ -25,7 +25,8 @@
     "version:update": "node -e \"const fs = require('fs'); const version = process.argv[1]; ['runtime', 'compiler', 'router', 'vite-plugin', 'create-app'].forEach(pkg => { const path = './packages/' + pkg + '/package.json'; const json = JSON.parse(fs.readFileSync(path)); json.version = version; fs.writeFileSync(path, JSON.stringify(json, null, 2) + '\\\\n'); });\""
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/node": "^25.0.3"
   },
   "description": "Flick - A tiny reactive UI framework with fine-grained reactivity",
   "repository": {

@@ -5,9 +5,15 @@ Type-safe API client/server for FlickJS with reactive responses.
 ## Installation
 
 ```bash
-bun add @flickjs/api zod @flickjs/runtime
+# For server-side usage (no runtime needed)
+bun add @flickjs/api zod
 # or
-npm install @flickjs/api zod @flickjs/runtime
+npm install @flickjs/api zod
+
+# For client-side usage (includes runtime)
+bun add @flickjs/runtime zod
+# or
+npm install @flickjs/runtime zod
 ```
 
 ## Features
@@ -24,7 +30,7 @@ npm install @flickjs/api zod @flickjs/runtime
 
 ```typescript
 // server/api.ts
-import { endpoint, router } from "@flickjs/api/server";
+import { endpoint, router } from "@flickjs/api";
 import { z } from "zod";
 
 const getUser = endpoint({
@@ -55,7 +61,7 @@ export type Api = typeof api;
 
 ```typescript
 // server/index.ts
-import { createApiHandler } from "@flickjs/api/router";
+import { createApiHandler } from "@flickjs/api";
 import { api } from "./api";
 
 const handler = createApiHandler(api, {
@@ -89,7 +95,8 @@ export default handler;
 
 ```typescript
 // client/api.ts
-import { createApiClient } from "@flickjs/api/client";
+import { createApiClient } from "@flickjs/api";
+// Alternative: import { createApiClient } from "@flickjs/runtime/api-client";
 import type { Api } from "../server/api";
 
 export const api = createApiClient<Api>({

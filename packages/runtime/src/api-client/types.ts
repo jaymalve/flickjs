@@ -1,5 +1,5 @@
-import type { Fx } from "@flickjs/runtime";
-import type { ApiRouter } from "../router/types";
+import type { Fx } from "../index";
+import type { ApiRouter } from "@flickjs/api";
 
 /**
  * Reactive API response
@@ -42,3 +42,4 @@ export interface ApiClientOptions {
   /** Router instance to access endpoint metadata */
   router?: ApiRouter<any>;
 }
+

@@ -1,6 +1,5 @@
-import { fx } from "@flickjs/runtime";
-import type { ApiRouter } from "../router/types";
-import type { Endpoint } from "../server/types";
+import { fx } from "../index";
+import type { ApiRouter, Endpoint } from "@flickjs/api";
 import type {
   QueryResponse,
   MutationResponse,
@@ -28,10 +27,8 @@ function getBaseUrl(options: ApiClientOptions): string {
   try {
     if (
       typeof import.meta !== "undefined" &&
-      // @ts-expect-error - import.meta.env is Vite-specific
       import.meta.env?.VITE_FLICK_API_URL
     ) {
-      // @ts-expect-error - import.meta.env is Vite-specific
       return import.meta.env.VITE_FLICK_API_URL;
     }
   } catch {
@@ -128,7 +125,7 @@ function createApiResponse<T>(
  * @example
  * ```ts
  * // On the server (server/api.ts)
- * import { router, endpoint } from "@flickjs/api/server";
+ * import { router, endpoint } from "@flickjs/api";
  *
  * export const api = router({
  *   users: {
@@ -139,7 +136,7 @@ function createApiResponse<T>(
  * export type Api = typeof api;
  *
  * // On the client (client/api.ts)
- * import { createApiClient } from "@flickjs/api/client";
+ * import { createApiClient } from "@flickjs/api";
  * import type { Api } from "../server/api";
  * import { api as serverApi } from "../server/api";
  *

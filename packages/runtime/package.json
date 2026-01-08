@@ -17,6 +17,10 @@
     "./devtools": {
       "types": "./dist/devtools/index.d.ts",
       "import": "./dist/devtools/index.js"
+    },
+    "./api-client": {
+      "types": "./dist/api-client/index.d.ts",
+      "import": "./dist/api-client/index.js"
     }
   },
   "files": [
@@ -45,5 +49,9 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "peerDependencies": {
+    "@flickjs/api": "^0.0.1-beta.1",
+    "zod": "^3.0.0"
   }
 }

@@ -14,10 +14,6 @@
       "types": "./dist/server/index.d.ts",
       "import": "./dist/server/index.js"
     },
-    "./client": {
-      "types": "./dist/client/index.d.ts",
-      "import": "./dist/client/index.js"
-    },
     "./router": {
       "types": "./dist/router/index.d.ts",
       "import": "./dist/router/index.js"
@@ -49,8 +45,10 @@
     "access": "public"
   },
   "peerDependencies": {
-    "@flickjs/runtime": "^0.0.1-beta.3",
     "zod": "^3.0.0"
+  },
+  "dependencies": {
+    "@flickjs/runtime": "^0.0.1-beta.3"
   },
   "devDependencies": {
     "@flickjs/runtime": "^0.0.1-beta.3",
