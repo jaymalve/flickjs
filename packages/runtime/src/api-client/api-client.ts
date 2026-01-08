@@ -151,13 +151,19 @@ function createApiResponse<T>(
  * // user.error() - Fx<string | null>
  * ```
  */
+export function createApiClient<TRouter extends ApiRouter<any>>(
+  options: Omit<ApiClientOptions, "router"> & { router: TRouter }
+): ApiClient<TRouter>;
+export function createApiClient<T extends ApiRouter<any>>(
+  options?: ApiClientOptions
+): ApiClient<T>;
 export function createApiClient<T extends ApiRouter<any>>(
   options: ApiClientOptions = {}
 ): ApiClient<T> {
   const baseUrl = getBaseUrl(options);
 
   // Use a Proxy to dynamically create endpoint accessors
-  return new Proxy({} as ApiClient<T>, {
+  return new Proxy({} as any, {
     get(_, prop: string) {
       // Skip internal properties
       if (typeof prop !== "string" || prop.startsWith("_")) {
@@ -322,17 +328,24 @@ function createNestedProxy(
  * Type helper for API client - maps router structure to client methods
  */
 export type ApiClient<T> = T extends ApiRouter<infer E>
-  ? {
-      [K in keyof E]: E[K] extends Endpoint<infer I, infer O>
-        ? I extends z.ZodTypeAny
-          ? (
-              input: z.infer<I>
-            ) => E[K]["_type"] extends "query"
-              ? QueryResponse<O>
-              : MutationResponse<O>
-          : never
-        : E[K] extends ApiRouter<any>
-        ? ApiClient<E[K]>
-        : never;
-    }
+  ? ApiClientEndpoints<E>
   : never;
+
+/**
+ * Recursively map endpoints to client methods
+ */
+type ApiClientEndpoints<E> = {
+  [K in keyof E]: E[K] extends Endpoint<infer I, infer O>
+    ? I extends z.ZodTypeAny
+      ? (
+          input: z.infer<I>
+        ) => E[K]["_type"] extends "query"
+          ? QueryResponse<O>
+          : MutationResponse<O>
+      : never
+    : E[K] extends ApiRouter<any>
+    ? ApiClient<E[K]>
+    : E[K] extends Record<string, any>
+    ? ApiClientEndpoints<E[K]>  // Handle nested plain objects
+    : never;
+};
