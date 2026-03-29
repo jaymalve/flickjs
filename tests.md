@@ -67,6 +67,12 @@ Why: proves catch bindings are included now.
 - `keeps_type_only_imports_used_in_type_positions`
 Why: proves TypeScript type-only import semantics are handled correctly.
 
+- `keeps_normal_imports_used_in_generic_type_arguments`
+Why: proves imported symbols referenced in generic type arguments are treated as used.
+
+- `keeps_normal_imports_used_in_type_positions`
+Why: proves normal imports used only in TypeScript type positions are not falsely flagged.
+
 ## Test Helper
 
 Defined in [src/rules/mod.rs](/Users/jaymalave/Desktop/ZarcDev/cova/src/rules/mod.rs).

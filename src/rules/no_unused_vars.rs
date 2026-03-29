@@ -28,6 +28,9 @@ impl LintRule for NoUnusedVars {
                     return None;
                 }
                 let declaration_id = scoping.symbol_declaration(symbol_id);
+                if is_exported_declaration(ctx, declaration_id) {
+                    return None;
+                }
                 if !is_supported_unused_var_declaration(ctx, declaration_id) {
                     return None;
                 }
@@ -64,6 +67,13 @@ fn is_supported_unused_var_declaration(
     false
 }
 
+fn is_exported_declaration(ctx: &LintContext, declaration_id: oxc_syntax::node::NodeId) -> bool {
+    ctx.semantic
+        .nodes()
+        .ancestor_kinds(declaration_id)
+        .any(|kind| matches!(kind, AstKind::ExportNamedDeclaration(_) | AstKind::ExportDefaultDeclaration(_)))
+}
+
 fn should_check_symbol(flags: SymbolFlags) -> bool {
     flags.is_variable() || flags.is_catch_variable() || flags.is_import()
 }
@@ -76,7 +86,7 @@ fn has_meaningful_usage(
     ctx.semantic
         .scoping()
         .get_resolved_references(symbol_id)
-        .any(|reference| reference.is_read() || (flags.is_type_import() && reference.is_type()))
+        .any(|reference| reference.is_read() || (flags.is_import() && reference.is_type()))
 }
 
 #[cfg(test)]
@@ -122,6 +132,45 @@ mod tests {
             "test.ts",
             "import type { Foo } from './types';\ntype Bar = Foo;\n",
         );
+        assert!(messages.is_empty());
+    }
+
+    #[test]
+    fn keeps_normal_imports_used_in_generic_type_arguments() {
+        let messages = unused_var_messages(
+            "test.ts",
+            "import { AppStore, AppStorePersist } from './types';\ncreate<AppStore>();\ncreate<AppStorePersist>();\n",
+        );
+        assert!(messages.is_empty());
+    }
+
+    #[test]
+    fn keeps_normal_imports_used_in_type_positions() {
+        let messages = unused_var_messages(
+            "test.ts",
+            "import { Foo } from './types';\ntype Bar = Foo;\n",
+        );
+        assert!(messages.is_empty());
+    }
+
+    #[test]
+    fn ignores_exported_variable_declarations() {
+        let messages = unused_var_messages(
+            "test.ts",
+            "export const usePersistStore = createStore();\n",
+        );
+        assert!(messages.is_empty());
+    }
+
+    #[test]
+    fn keeps_exported_local_bindings_used_via_specifiers() {
+        let messages = unused_var_messages("test.ts", "const foo = 1;\nexport { foo };\n");
+        assert!(messages.is_empty());
+    }
+
+    #[test]
+    fn keeps_aliased_exported_local_bindings_used_via_specifiers() {
+        let messages = unused_var_messages("test.ts", "const foo = 1;\nexport { foo as bar };\n");
         assert!(messages.is_empty());
     }
 }

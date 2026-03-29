@@ -25,8 +25,7 @@ type Bar = Foo;
 
 and later you decide this policy:
 
-- type-only imports used in type positions should count as used
-- normal value imports used only in type positions should still be considered unused
+- imported symbols used in type positions should count as used, regardless of `import` vs `import type`
 - catch variables named `error` should be ignored by policy
 - `_`-prefixed names should still be ignored
 
@@ -41,7 +40,9 @@ Before touching the rule code, define the behavior clearly.
 - `import type { Foo } ...` and later `type X = Foo`:
   - no diagnostic
 - `import { Foo } ...` and later `type X = Foo`:
-  - diagnostic, because the value import is unused at runtime
+  - no diagnostic
+- `import { Foo } ...` and later `create<Foo>()`:
+  - no diagnostic
 - `catch (error) { ... }` with no read of `error`:
   - no diagnostic if Zarc chooses to exempt `error`
 - `function run(_unused) {}`:
@@ -64,12 +65,21 @@ fn keeps_type_only_imports_used_in_type_positions() {
 }
 
 #[test]
-fn flags_value_imports_used_only_in_type_positions() {
+fn keeps_value_imports_used_only_in_type_positions() {
     let messages = unused_var_messages(
         "test.ts",
         "import { Foo } from './types';\ntype Bar = Foo;\n",
     );
-    assert_eq!(messages, vec!["`Foo` is declared but never used"]);
+    assert!(messages.is_empty());
+}
+
+#[test]
+fn keeps_value_imports_used_in_generic_type_arguments() {
+    let messages = unused_var_messages(
+        "test.ts",
+        "import { Foo } from './types';\nconst value = create<Foo>();\n",
+    );
+    assert!(messages.is_empty());
 }
 
 #[test]
@@ -97,11 +107,11 @@ fn has_meaningful_usage(
     ctx.semantic
         .scoping()
         .get_resolved_references(symbol_id)
-        .any(|reference| reference.is_read() || (flags.is_type_import() && reference.is_type()))
+        .any(|reference| reference.is_read() || (flags.is_import() && reference.is_type()))
 }
 ```
 
-If the policy becomes stricter, you refine it into something more explicit:
+If the policy becomes more explicit, you refine it into something like:
 
 ```rust
 fn has_meaningful_usage(
@@ -113,8 +123,8 @@ fn has_meaningful_usage(
         .scoping()
         .get_resolved_references(symbol_id)
         .any(|reference| {
-            if flags.is_type_import() {
-                reference.is_type() || (reference.is_read() && reference.is_value())
+            if flags.is_import() {
+                reference.is_type() || reference.is_read()
             } else {
                 reference.is_read() && reference.is_value()
             }
