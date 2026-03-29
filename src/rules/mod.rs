@@ -123,21 +123,24 @@ fn builtin_rules() -> Vec<Box<dyn LintRule>> {
 pub fn lint_file(path: &Path) -> Result<LintResult> {
     let source = std::fs::read_to_string(path)
         .map_err(|e| miette::miette!("Failed to read {}: {}", path.display(), e))?;
+    Ok(lint_source_at_path(path, &source))
+}
 
+fn lint_source_at_path(path: &Path, source: &str) -> LintResult {
     let source_type = SourceType::from_path(path).unwrap_or_default();
 
     let allocator = Allocator::default();
-    let parsed = Parser::new(&allocator, &source, source_type).parse();
+    let parsed = Parser::new(&allocator, source, source_type).parse();
     let semantic = SemanticBuilder::new()
         .with_check_syntax_error(true)
         .build(&parsed.program);
 
-    let ctx = LintContext::new(&source, path, &semantic.semantic);
+    let ctx = LintContext::new(source, path, &semantic.semantic);
 
     let rules = builtin_rules();
     let mut diagnostics = parser_diagnostics_to_lints(&source, &parsed.errors);
     diagnostics.extend(semantic_diagnostics_to_lints(
-        &source,
+        source,
         &semantic.errors,
         path,
     ));
@@ -146,10 +149,10 @@ pub fn lint_file(path: &Path) -> Result<LintResult> {
         .flat_map(|rule| rule.run(&ctx))
         .collect::<Vec<_>>());
 
-    Ok(LintResult {
+    LintResult {
         file: path.to_path_buf(),
         diagnostics,
-    })
+    }
 }
 
 fn parser_diagnostics_to_lints(source: &str, errors: &[OxcDiagnostic]) -> Vec<LintDiagnostic> {
@@ -208,6 +211,11 @@ fn offset_to_line_col(source: &str, offset: usize) -> (usize, usize) {
         }
     }
     (line, col)
+}
+
+#[cfg(test)]
+pub(crate) fn lint_source_for_test(path: &str, source: &str) -> LintResult {
+    lint_source_at_path(Path::new(path), source)
 }
 
 pub fn apply_severity_overrides(

@@ -52,3 +52,31 @@ fn is_shadowed_console(ctx: &LintContext, ident: &IdentifierReference) -> bool {
         .and_then(|reference_id| ctx.semantic.scoping().get_reference(reference_id).symbol_id())
         .is_some()
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::rules::lint_source_for_test;
+
+    fn console_spans(source: &str) -> Vec<String> {
+        lint_source_for_test("test.js", source)
+            .diagnostics
+            .into_iter()
+            .filter(|diagnostic| diagnostic.rule_name == "no-console")
+            .map(|diagnostic| diagnostic.span)
+            .collect()
+    }
+
+    #[test]
+    fn flags_console_calls() {
+        let spans = console_spans("console.log('hello');\nconsole.table(data);\n");
+        assert_eq!(spans, vec!["1:1", "2:1"]);
+    }
+
+    #[test]
+    fn ignores_shadowed_console() {
+        let spans = console_spans(
+            "function run(console) {\n  console.log('local');\n}\nconsole.log('global');\n",
+        );
+        assert_eq!(spans, vec!["4:1"]);
+    }
+}

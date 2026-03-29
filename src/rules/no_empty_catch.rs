@@ -25,3 +25,29 @@ impl LintRule for NoEmptyCatch {
             .collect()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::rules::lint_source_for_test;
+
+    fn empty_catch_spans(source: &str) -> Vec<String> {
+        lint_source_for_test("test.js", source)
+            .diagnostics
+            .into_iter()
+            .filter(|diagnostic| diagnostic.rule_name == "no-empty-catch")
+            .map(|diagnostic| diagnostic.span)
+            .collect()
+    }
+
+    #[test]
+    fn flags_empty_catch_blocks() {
+        let spans = empty_catch_spans("try { work(); } catch (error) {}\n");
+        assert_eq!(spans, vec!["1:17"]);
+    }
+
+    #[test]
+    fn ignores_non_empty_catch_blocks() {
+        let spans = empty_catch_spans("try { work(); } catch (error) { recover(error); }\n");
+        assert!(spans.is_empty());
+    }
+}
