@@ -47,9 +47,15 @@ fn root_identifier<'a>(member: &'a MemberExpression<'a>) -> Option<&'a Identifie
 }
 
 fn is_shadowed_console(ctx: &LintContext, ident: &IdentifierReference) -> bool {
-    ident.reference_id
+    ident
+        .reference_id
         .get()
-        .and_then(|reference_id| ctx.semantic.scoping().get_reference(reference_id).symbol_id())
+        .and_then(|reference_id| {
+            ctx.semantic
+                .scoping()
+                .get_reference(reference_id)
+                .symbol_id()
+        })
         .is_some()
 }
 

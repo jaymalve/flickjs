@@ -28,9 +28,11 @@ zarc check ./src
 # Print JSON output
 zarc check . --format json
 
-# Skip the cache for a cold-run measurement
+# Skip the adaptive cache for a cold-run measurement
 zarc check . --no-cache --timing
 ```
+
+By default, `zarc check` uses an adaptive cache. It reuses cached results when that is predicted to beat a cold run and bypasses the cache when the cache overhead would likely lose.
 
 ## Configuration
 
@@ -90,7 +92,7 @@ zarc/
 - one parse per file
 - file-level parallelism
 - minimal config surface
-- optional cache
+- adaptive cache
 - no non-lint product overhead in the MVP
 
 ## Roadmap

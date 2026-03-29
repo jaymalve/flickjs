@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand};
 use miette::{IntoDiagnostic, Result};
 use serde::Deserialize;
+use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
@@ -28,7 +29,7 @@ pub enum Command {
     Init,
 }
 
-#[derive(clap::Args)]
+#[derive(clap::Args, Clone)]
 pub struct CheckArgs {
     /// Path to lint (file or directory)
     #[arg(default_value = ".")]
@@ -78,6 +79,20 @@ pub struct FilesConfig {
     pub exclude: Vec<String>,
 }
 
+pub struct LoadedConfig {
+    pub config: Config,
+    pub fingerprint: String,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            lint: LintConfig::default(),
+            files: FilesConfig::default(),
+        }
+    }
+}
+
 impl Default for FilesConfig {
     fn default() -> Self {
         Self {
@@ -96,17 +111,26 @@ fn default_excludes() -> Vec<String> {
 }
 
 pub fn load_config() -> Result<Config> {
+    Ok(load_config_with_fingerprint()?.config)
+}
+
+pub fn load_config_with_fingerprint() -> Result<LoadedConfig> {
     let path = Path::new("zarc.toml");
     if !path.exists() {
-        return Ok(Config {
-            lint: LintConfig::default(),
-            files: FilesConfig::default(),
+        return Ok(LoadedConfig {
+            config: Config::default(),
+            fingerprint: hash_string("__default__"),
         });
     }
 
     let raw = std::fs::read_to_string(path).into_diagnostic()?;
     let normalized = normalize_inline_tables(&raw);
-    toml::from_str(&normalized).into_diagnostic()
+    let config = toml::from_str(&normalized).into_diagnostic()?;
+
+    Ok(LoadedConfig {
+        config,
+        fingerprint: hash_string(&normalized),
+    })
 }
 
 fn normalize_inline_tables(raw: &str) -> String {
@@ -157,8 +181,18 @@ fn normalize_inline_tables(raw: &str) -> String {
     normalized
 }
 
+fn hash_string(value: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(value.as_bytes());
+    format!("{:x}", hasher.finalize())
+}
+
 /// Discover all JS/TS files in a path, respecting .gitignore
-pub fn discover_files(path: &Path, excludes: &[String], extra_ignores: &[String]) -> Result<Vec<PathBuf>> {
+pub fn discover_files(
+    path: &Path,
+    excludes: &[String],
+    extra_ignores: &[String],
+) -> Result<Vec<PathBuf>> {
     use ignore::WalkBuilder;
 
     let mut builder = WalkBuilder::new(path);
@@ -172,9 +206,7 @@ pub fn discover_files(path: &Path, excludes: &[String], extra_ignores: &[String]
     let files: Vec<PathBuf> = builder
         .build()
         .filter_map(|entry| entry.ok())
-        .filter(|entry| {
-            entry.file_type().map(|ft| ft.is_file()).unwrap_or(false)
-        })
+        .filter(|entry| entry.file_type().map(|ft| ft.is_file()).unwrap_or(false))
         .filter(|entry| !is_ignored_path(entry.path(), &ignore_patterns))
         .filter(|entry| {
             let path = entry.path();
@@ -192,7 +224,9 @@ pub fn discover_files(path: &Path, excludes: &[String], extra_ignores: &[String]
 fn is_ignored_path(path: &Path, patterns: &[&str]) -> bool {
     let path_str = path.to_string_lossy();
     patterns.iter().any(|pattern| {
-        path.components().any(|component| component.as_os_str() == *pattern) || path_str.contains(pattern)
+        path.components()
+            .any(|component| component.as_os_str() == *pattern)
+            || path_str.contains(pattern)
     })
 }
 
@@ -218,7 +252,10 @@ exclude = ["node_modules", "dist", "build", ".git"]
 
     std::fs::write(path, config).into_diagnostic()?;
     println!("{} Created zarc.toml", "✓".green().bold());
-    println!("  Edit the config and run {} to start linting", "zarc check".cyan());
+    println!(
+        "  Edit the config and run {} to start linting",
+        "zarc check".cyan()
+    );
 
     Ok(())
 }

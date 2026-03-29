@@ -14,12 +14,14 @@ impl LintRule for NoEmptyCatch {
             .nodes()
             .iter()
             .filter_map(|node| match node.kind() {
-                AstKind::CatchClause(clause) if clause.body.body.is_empty() => Some(ctx.diagnostic(
-                    self.name(),
-                    "Empty catch block — handle or rethrow the error",
-                    clause.span,
-                    Severity::Error,
-                )),
+                AstKind::CatchClause(clause) if clause.body.body.is_empty() => {
+                    Some(ctx.diagnostic(
+                        self.name(),
+                        "Empty catch block — handle or rethrow the error",
+                        clause.span,
+                        Severity::Error,
+                    ))
+                }
                 _ => None,
             })
             .collect()

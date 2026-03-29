@@ -1,5 +1,5 @@
-use oxc_ast::AstKind;
 use oxc_ast::ast::VariableDeclarationKind;
+use oxc_ast::AstKind;
 use oxc_span::GetSpan;
 
 use super::{LintContext, LintDiagnostic, LintRule, Severity};
@@ -49,9 +49,7 @@ impl LintRule for PreferConst {
                         .map(|binding| binding.name.as_str())
                         .collect::<Vec<_>>()
                         .join(", ");
-                    format!(
-                        "Bindings `{names}` are never reassigned; use `const` instead"
-                    )
+                    format!("Bindings `{names}` are never reassigned; use `const` instead")
                 };
 
                 Some(ctx.diagnostic(

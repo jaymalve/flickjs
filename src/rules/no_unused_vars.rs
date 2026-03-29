@@ -71,7 +71,12 @@ fn is_exported_declaration(ctx: &LintContext, declaration_id: oxc_syntax::node::
     ctx.semantic
         .nodes()
         .ancestor_kinds(declaration_id)
-        .any(|kind| matches!(kind, AstKind::ExportNamedDeclaration(_) | AstKind::ExportDefaultDeclaration(_)))
+        .any(|kind| {
+            matches!(
+                kind,
+                AstKind::ExportNamedDeclaration(_) | AstKind::ExportDefaultDeclaration(_)
+            )
+        })
 }
 
 fn should_check_symbol(flags: SymbolFlags) -> bool {
@@ -104,25 +109,33 @@ mod tests {
 
     #[test]
     fn flags_unused_destructured_binding() {
-        let messages = unused_var_messages("test.js", "const { used, unused } = props;\nconsole.log(used);\n");
+        let messages = unused_var_messages(
+            "test.js",
+            "const { used, unused } = props;\nconsole.log(used);\n",
+        );
         assert_eq!(messages, vec!["`unused` is declared but never used"]);
     }
 
     #[test]
     fn flags_unused_parameter() {
-        let messages = unused_var_messages("test.js", "function greet(name, unused) { return name; }\n");
+        let messages =
+            unused_var_messages("test.js", "function greet(name, unused) { return name; }\n");
         assert_eq!(messages, vec!["`unused` is declared but never used"]);
     }
 
     #[test]
     fn ignores_underscore_prefixed_parameter() {
-        let messages = unused_var_messages("test.js", "function greet(name, _unused) { return name; }\n");
+        let messages = unused_var_messages(
+            "test.js",
+            "function greet(name, _unused) { return name; }\n",
+        );
         assert!(messages.is_empty());
     }
 
     #[test]
     fn flags_unused_catch_binding() {
-        let messages = unused_var_messages("test.js", "try { work(); } catch (error) { recover(); }\n");
+        let messages =
+            unused_var_messages("test.js", "try { work(); } catch (error) { recover(); }\n");
         assert_eq!(messages, vec!["`error` is declared but never used"]);
     }
 
@@ -155,10 +168,8 @@ mod tests {
 
     #[test]
     fn ignores_exported_variable_declarations() {
-        let messages = unused_var_messages(
-            "test.ts",
-            "export const usePersistStore = createStore();\n",
-        );
+        let messages =
+            unused_var_messages("test.ts", "export const usePersistStore = createStore();\n");
         assert!(messages.is_empty());
     }
 
