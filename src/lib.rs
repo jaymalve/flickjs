@@ -199,6 +199,7 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
     let loaded_config = cli::load_config_with_fingerprint()?;
     let compiled_english_rules = rules::english::load_or_compile(
         &loaded_config.config.lint.english_rules,
+        &loaded_config.config.lint.rules,
         &loaded_config.fingerprint,
         &args.cache_path,
     )?;

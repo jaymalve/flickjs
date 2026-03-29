@@ -82,6 +82,8 @@ Supported forms today:
 - `function names should end with service`
 - `no file should have more than 400 lines`
 
+Each English rule compiles to an ID like `english/<kind>/<hash>`; place that ID in `[lint].rules` to enable/disable the rule and choose `warn`/`error`. By default the rule uses the severity declared in the `[[lint.english_rules]]` block.
+
 Unsupported or ambiguous English rules fail fast during compilation instead of being approximated.
 
 ## File Support

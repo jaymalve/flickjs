@@ -8,6 +8,7 @@ use oxc_ast::ast::{
 use oxc_ast::AstKind;
 use oxc_span::{GetSpan, Span};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -111,6 +112,7 @@ pub fn compiled_rules_cache_path(cache_path: &Path) -> PathBuf {
 
 pub fn load_or_compile(
     definitions: &[EnglishRuleConfig],
+    overrides: &HashMap<String, String>,
     config_fingerprint: &str,
     cache_path: &Path,
 ) -> Result<Vec<CompiledEnglishRule>> {
@@ -123,7 +125,7 @@ pub fn load_or_compile(
         return Ok(artifact.rules);
     }
 
-    let compiled = compile_rules(definitions)?;
+    let compiled = compile_rules(definitions, overrides)?;
     let artifact = EnglishRulesArtifact {
         header: EnglishRulesArtifactHeader::new(config_fingerprint),
         rules: compiled.clone(),
@@ -132,18 +134,60 @@ pub fn load_or_compile(
     Ok(compiled)
 }
 
-pub fn compile_rules(definitions: &[EnglishRuleConfig]) -> Result<Vec<CompiledEnglishRule>> {
-    definitions
-        .iter()
-        .enumerate()
-        .filter_map(
-            |(index, definition)| match parse_severity(&definition.severity) {
-                Ok(None) => None,
-                Ok(Some(severity)) => Some(compile_rule(index, &definition.text, severity)),
-                Err(error) => Some(Err(error)),
-            },
+pub fn compile_rules(
+    definitions: &[EnglishRuleConfig],
+    overrides: &HashMap<String, String>,
+) -> Result<Vec<CompiledEnglishRule>> {
+    let mut compiled = Vec::new();
+
+    for (index, definition) in definitions.iter().enumerate() {
+        if let Some(rule) = compile_definition(index, definition, overrides)? {
+            compiled.push(rule);
+        }
+    }
+
+    Ok(compiled)
+}
+
+fn compile_definition(
+    index: usize,
+    definition: &EnglishRuleConfig,
+    overrides: &HashMap<String, String>,
+) -> Result<Option<CompiledEnglishRule>> {
+    let default_severity = parse_severity(&definition.severity)?;
+    let predicate = parse_rule(&definition.text).ok_or_else(|| {
+        miette::miette!(
+            "Unsupported english rule at lint.english_rules[{}]: {:?}. Supported forms: {}",
+            index,
+            definition.text,
+            SUPPORTED_FORMS.join("; ")
         )
-        .collect()
+    })?;
+    let normalized = normalize_rule_text(&definition.text);
+    let id = rule_id(&predicate, &normalized);
+
+    let override_entry = overrides
+        .get(&id)
+        .map(|value| parse_severity(value))
+        .transpose()?;
+    let severity = match override_entry {
+        Some(Some(level)) => Some(level),
+        Some(None) => None,
+        None => default_severity,
+    };
+
+    if let Some(severity) = severity {
+        let message = default_message(&predicate);
+        Ok(Some(CompiledEnglishRule {
+            id,
+            source_text: definition.text.trim().to_string(),
+            severity,
+            message,
+            predicate,
+        }))
+    } else {
+        Ok(None)
+    }
 }
 
 pub fn run_compiled_rules(
@@ -352,28 +396,6 @@ fn run_max_file_lines_rule(
 
 fn parameter_count(params: &oxc_ast::ast::FormalParameters<'_>) -> usize {
     params.items.len() + usize::from(params.rest.is_some())
-}
-
-fn compile_rule(index: usize, text: &str, severity: Severity) -> Result<CompiledEnglishRule> {
-    let predicate = parse_rule(text).ok_or_else(|| {
-        miette::miette!(
-            "Unsupported english rule at lint.english_rules[{}]: {:?}. Supported forms: {}",
-            index,
-            text,
-            SUPPORTED_FORMS.join("; ")
-        )
-    })?;
-    let normalized = normalize_rule_text(text);
-    let id = rule_id(&predicate, &normalized);
-    let message = default_message(&predicate);
-
-    Ok(CompiledEnglishRule {
-        id,
-        source_text: text.trim().to_string(),
-        severity,
-        message,
-        predicate,
-    })
 }
 
 fn parse_rule(text: &str) -> Option<EnglishPredicate> {
@@ -689,6 +711,7 @@ fn persist_artifact(path: &Path, artifact: &EnglishRulesArtifact) -> Result<()> 
 mod tests {
     use super::*;
     use crate::rules::lint_source_for_test_with_english_rules;
+    use std::collections::HashMap;
     use tempfile::tempdir;
 
     fn english_rule(text: &str, severity: &str) -> EnglishRuleConfig {
@@ -696,6 +719,14 @@ mod tests {
             text: text.to_string(),
             severity: severity.to_string(),
         }
+    }
+
+    fn english_overrides(map: Vec<(&str, &str)>) -> HashMap<String, String> {
+        let mut overrides = HashMap::new();
+        for (key, value) in map {
+            overrides.insert(key.to_string(), value.to_string());
+        }
+        overrides
     }
 
     fn english_diagnostics<'a>(result: &'a crate::rules::LintResult) -> Vec<&'a LintDiagnostic> {
@@ -708,10 +739,13 @@ mod tests {
 
     #[test]
     fn compiles_max_function_params_rule() {
-        let rules = compile_rules(&[english_rule(
-            "no function should have more than 3 params",
-            "error",
-        )])
+        let rules = compile_rules(
+            &[english_rule(
+                "no function should have more than 3 params",
+                "error",
+            )],
+            &HashMap::new(),
+        )
         .unwrap();
 
         assert_eq!(rules.len(), 1);
@@ -724,10 +758,13 @@ mod tests {
 
     #[test]
     fn rejects_unsupported_english_rule() {
-        let error = compile_rules(&[english_rule(
-            "all reducers should stay tiny and elegant",
-            "warn",
-        )])
+        let error = compile_rules(
+            &[english_rule(
+                "all reducers should stay tiny and elegant",
+                "warn",
+            )],
+            &HashMap::new(),
+        )
         .unwrap_err();
 
         assert!(error.to_string().contains("Unsupported english rule"));
@@ -742,7 +779,8 @@ mod tests {
             "warn",
         )];
 
-        let first = load_or_compile(&definitions, "fingerprint-a", &cache_path).unwrap();
+        let first =
+            load_or_compile(&definitions, &HashMap::new(), "fingerprint-a", &cache_path).unwrap();
         let artifact_path = compiled_rules_cache_path(&cache_path);
         let loaded = load_artifact(&artifact_path, "fingerprint-a")
             .unwrap()
@@ -754,10 +792,13 @@ mod tests {
 
     #[test]
     fn max_function_params_rule_reports_diagnostics() {
-        let rules = compile_rules(&[english_rule(
-            "no function should have more than 2 params",
-            "error",
-        )])
+        let rules = compile_rules(
+            &[english_rule(
+                "no function should have more than 2 params",
+                "error",
+            )],
+            &HashMap::new(),
+        )
         .unwrap();
         let result = lint_source_for_test_with_english_rules(
             "test.js",
@@ -772,7 +813,11 @@ mod tests {
 
     #[test]
     fn banned_import_rule_reports_diagnostics() {
-        let rules = compile_rules(&[english_rule("do not import lodash", "warn")]).unwrap();
+        let rules = compile_rules(
+            &[english_rule("do not import lodash", "warn")],
+            &HashMap::new(),
+        )
+        .unwrap();
         let result = lint_source_for_test_with_english_rules(
             "test.js",
             "import thing from 'lodash';\n",
@@ -789,8 +834,11 @@ mod tests {
 
     #[test]
     fn function_name_prefix_rule_reports_diagnostics() {
-        let rules =
-            compile_rules(&[english_rule("function names should start with use", "warn")]).unwrap();
+        let rules = compile_rules(
+            &[english_rule("function names should start with use", "warn")],
+            &HashMap::new(),
+        )
+        .unwrap();
         let result =
             lint_source_for_test_with_english_rules("test.js", "function readData() {}\n", &rules);
         let diagnostics = english_diagnostics(&result);
@@ -800,5 +848,24 @@ mod tests {
             diagnostics[0].message,
             "Function names must start with `use`"
         );
+    }
+
+    #[test]
+    fn lint_rules_map_toggles_english_rule() {
+        let definitions = vec![english_rule(
+            "no function should have more than 3 params",
+            "error",
+        )];
+        let base = compile_rules(&definitions, &HashMap::new()).unwrap();
+        let id = base[0].id.clone();
+
+        let overrides_off = english_overrides(vec![(id.as_str(), "off")]);
+        assert!(compile_rules(&definitions, &overrides_off)
+            .unwrap()
+            .is_empty());
+        let overrides_warn = english_overrides(vec![(id.as_str(), "warn")]);
+        let rules = compile_rules(&definitions, &overrides_warn).unwrap();
+        assert_eq!(rules.len(), 1);
+        assert_eq!(rules[0].severity, Severity::Warning);
     }
 }
