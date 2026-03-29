@@ -1,5 +1,6 @@
-use crate::cli::EnglishRuleConfig;
+use crate::cli::{EnglishRuleConfig, ZarcAuthConfig};
 
+use super::english_llm::{build_compiler, EnglishRuleCompiler};
 use super::{hash_bytes, LintContext, LintDiagnostic, RuleOrigin, Severity};
 use miette::Result;
 use oxc_ast::ast::{
@@ -14,7 +15,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 const ENGLISH_RULE_ARTIFACT_SCHEMA_VERSION: u32 = 1;
-const ENGLISH_RULE_COMPILER_VERSION: u32 = 1;
+const ENGLISH_RULE_COMPILER_VERSION: u32 = 2;
 
 const SUPPORTED_FORMS: &[&str] = &[
     "no function should have more than <number> params",
@@ -73,19 +74,19 @@ struct EnglishRulesArtifactHeader {
 }
 
 impl EnglishRulesArtifactHeader {
-    fn new(config_fingerprint: &str) -> Self {
+    fn new(config_fingerprint: &str, compiler_fingerprint: &str) -> Self {
         Self {
             schema_version: ENGLISH_RULE_ARTIFACT_SCHEMA_VERSION,
             compiler_version: ENGLISH_RULE_COMPILER_VERSION,
-            compiler_fingerprint: compiler_fingerprint(),
+            compiler_fingerprint: compiler_fingerprint.to_string(),
             config_fingerprint: config_fingerprint.to_string(),
         }
     }
 
-    fn matches(&self, config_fingerprint: &str) -> bool {
+    fn matches(&self, config_fingerprint: &str, compiler_fingerprint: &str) -> bool {
         self.schema_version == ENGLISH_RULE_ARTIFACT_SCHEMA_VERSION
             && self.compiler_version == ENGLISH_RULE_COMPILER_VERSION
-            && self.compiler_fingerprint == compiler_fingerprint()
+            && self.compiler_fingerprint == compiler_fingerprint
             && self.config_fingerprint == config_fingerprint
     }
 }
@@ -113,6 +114,7 @@ pub fn compiled_rules_cache_path(cache_path: &Path) -> PathBuf {
 pub fn load_or_compile(
     definitions: &[EnglishRuleConfig],
     overrides: &HashMap<String, String>,
+    auth: Option<&ZarcAuthConfig>,
     config_fingerprint: &str,
     cache_path: &Path,
 ) -> Result<Vec<CompiledEnglishRule>> {
@@ -120,14 +122,20 @@ pub fn load_or_compile(
         return Ok(Vec::new());
     }
 
+    let compiler = build_compiler(auth)?;
+    let compiler_fingerprint = compiler_fingerprint(compiler.as_deref());
     let artifact_path = compiled_rules_cache_path(cache_path);
-    if let Some(artifact) = load_artifact(&artifact_path, config_fingerprint)? {
+    if let Some(artifact) = load_artifact(
+        &artifact_path,
+        config_fingerprint,
+        &compiler_fingerprint,
+    )? {
         return Ok(artifact.rules);
     }
 
-    let compiled = compile_rules(definitions, overrides)?;
+    let compiled = compile_rules_with_compiler(definitions, overrides, compiler.as_deref())?;
     let artifact = EnglishRulesArtifact {
-        header: EnglishRulesArtifactHeader::new(config_fingerprint),
+        header: EnglishRulesArtifactHeader::new(config_fingerprint, &compiler_fingerprint),
         rules: compiled.clone(),
     };
     persist_artifact(&artifact_path, &artifact)?;
@@ -138,10 +146,18 @@ pub fn compile_rules(
     definitions: &[EnglishRuleConfig],
     overrides: &HashMap<String, String>,
 ) -> Result<Vec<CompiledEnglishRule>> {
+    compile_rules_with_compiler(definitions, overrides, None)
+}
+
+fn compile_rules_with_compiler(
+    definitions: &[EnglishRuleConfig],
+    overrides: &HashMap<String, String>,
+    compiler: Option<&dyn EnglishRuleCompiler>,
+) -> Result<Vec<CompiledEnglishRule>> {
     let mut compiled = Vec::new();
 
     for (index, definition) in definitions.iter().enumerate() {
-        if let Some(rule) = compile_definition(index, definition, overrides)? {
+        if let Some(rule) = compile_definition(index, definition, overrides, compiler)? {
             compiled.push(rule);
         }
     }
@@ -153,16 +169,10 @@ fn compile_definition(
     index: usize,
     definition: &EnglishRuleConfig,
     overrides: &HashMap<String, String>,
+    compiler: Option<&dyn EnglishRuleCompiler>,
 ) -> Result<Option<CompiledEnglishRule>> {
     let default_severity = parse_severity(&definition.severity)?;
-    let predicate = parse_rule(&definition.text).ok_or_else(|| {
-        miette::miette!(
-            "Unsupported english rule at lint.english_rules[{}]: {:?}. Supported forms: {}",
-            index,
-            definition.text,
-            SUPPORTED_FORMS.join("; ")
-        )
-    })?;
+    let predicate = compile_predicate(index, &definition.text, compiler)?;
     let normalized = normalize_rule_text(&definition.text);
     let id = rule_id(&predicate, &normalized);
 
@@ -188,6 +198,35 @@ fn compile_definition(
     } else {
         Ok(None)
     }
+}
+
+fn compile_predicate(
+    index: usize,
+    text: &str,
+    compiler: Option<&dyn EnglishRuleCompiler>,
+) -> Result<EnglishPredicate> {
+    if let Some(predicate) = parse_rule(text) {
+        return Ok(predicate);
+    }
+
+    if let Some(compiler) = compiler {
+        return compiler
+            .compile_rule(text)?
+            .ok_or_else(|| {
+                miette::miette!(
+                    "English rule compiler could not deterministically map lint.english_rules[{}]: {:?} into a supported native predicate",
+                    index,
+                    text
+                )
+            });
+    }
+
+    Err(miette::miette!(
+        "Unsupported english rule at lint.english_rules[{}]: {:?}. Supported native forms: {}. Add `api_key = \"...\"` to `.zarcrc` to enable hosted natural-language compilation.",
+        index,
+        text,
+        SUPPORTED_FORMS.join("; ")
+    ))
 }
 
 pub fn run_compiled_rules(
@@ -642,17 +681,24 @@ fn member_is_call_callee(ctx: &LintContext, node_id: oxc_syntax::node::NodeId) -
     )
 }
 
-fn compiler_fingerprint() -> String {
+fn compiler_fingerprint(compiler: Option<&dyn EnglishRuleCompiler>) -> String {
+    let compiler_mode = compiler
+        .map(|compiler| compiler.fingerprint_material())
+        .unwrap_or_else(|| "manual-only".to_string());
     hash_bytes(
         format!(
-            "{ENGLISH_RULE_ARTIFACT_SCHEMA_VERSION}:{ENGLISH_RULE_COMPILER_VERSION}:{}",
+            "{ENGLISH_RULE_ARTIFACT_SCHEMA_VERSION}:{ENGLISH_RULE_COMPILER_VERSION}:{}:{compiler_mode}",
             SUPPORTED_FORMS.join("|")
         )
         .as_bytes(),
     )
 }
 
-fn load_artifact(path: &Path, config_fingerprint: &str) -> Result<Option<EnglishRulesArtifact>> {
+fn load_artifact(
+    path: &Path,
+    config_fingerprint: &str,
+    compiler_fingerprint: &str,
+) -> Result<Option<EnglishRulesArtifact>> {
     if !path.exists() {
         return Ok(None);
     }
@@ -664,7 +710,10 @@ fn load_artifact(path: &Path, config_fingerprint: &str) -> Result<Option<English
         Err(_) => return Ok(None),
     };
 
-    if artifact.header.matches(config_fingerprint) {
+    if artifact
+        .header
+        .matches(config_fingerprint, compiler_fingerprint)
+    {
         Ok(Some(artifact))
     } else {
         Ok(None)
@@ -710,9 +759,30 @@ fn persist_artifact(path: &Path, artifact: &EnglishRulesArtifact) -> Result<()> 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::rules::english_llm::EnglishRuleCompiler;
     use crate::rules::lint_source_for_test_with_english_rules;
     use std::collections::HashMap;
     use tempfile::tempdir;
+
+    struct MockEnglishRuleCompiler {
+        predicate: Option<EnglishPredicate>,
+        error: Option<String>,
+        fingerprint: &'static str,
+    }
+
+    impl EnglishRuleCompiler for MockEnglishRuleCompiler {
+        fn compile_rule(&self, _rule_text: &str) -> Result<Option<EnglishPredicate>> {
+            if let Some(error) = &self.error {
+                return Err(miette::miette!("{}", error));
+            }
+
+            Ok(self.predicate.clone())
+        }
+
+        fn fingerprint_material(&self) -> String {
+            self.fingerprint.to_string()
+        }
+    }
 
     fn english_rule(text: &str, severity: &str) -> EnglishRuleConfig {
         EnglishRuleConfig {
@@ -771,6 +841,20 @@ mod tests {
     }
 
     #[test]
+    fn unsupported_english_rule_points_to_zarcrc_auth_flow() {
+        let error = compile_rules(
+            &[english_rule(
+                "all reducers should stay tiny and elegant",
+                "warn",
+            )],
+            &HashMap::new(),
+        )
+        .unwrap_err();
+
+        assert!(error.to_string().contains(".zarcrc"));
+    }
+
+    #[test]
     fn compiled_artifact_round_trips() {
         let dir = tempdir().unwrap();
         let cache_path = dir.path().join("cache.json");
@@ -779,15 +863,86 @@ mod tests {
             "warn",
         )];
 
-        let first =
-            load_or_compile(&definitions, &HashMap::new(), "fingerprint-a", &cache_path).unwrap();
+        let first = load_or_compile(
+            &definitions,
+            &HashMap::new(),
+            None,
+            "fingerprint-a",
+            &cache_path,
+        )
+        .unwrap();
         let artifact_path = compiled_rules_cache_path(&cache_path);
-        let loaded = load_artifact(&artifact_path, "fingerprint-a")
+        let loaded = load_artifact(
+            &artifact_path,
+            "fingerprint-a",
+            &compiler_fingerprint(None),
+        )
             .unwrap()
             .expect("artifact should be readable");
 
         assert!(artifact_path.exists());
         assert_eq!(first, loaded.rules);
+    }
+
+    #[test]
+    fn llm_compiles_unsupported_phrasing_into_supported_predicate() {
+        let compiler = MockEnglishRuleCompiler {
+            predicate: Some(EnglishPredicate::MaxFunctionParams { max: 2 }),
+            error: None,
+            fingerprint: "mock-v1",
+        };
+        let rules = compile_rules_with_compiler(
+            &[english_rule("functions must accept at most 2 arguments", "warn")],
+            &HashMap::new(),
+            Some(&compiler),
+        )
+        .unwrap();
+
+        assert_eq!(rules.len(), 1);
+        assert_eq!(
+            rules[0].predicate,
+            EnglishPredicate::MaxFunctionParams { max: 2 }
+        );
+    }
+
+    #[test]
+    fn llm_errors_fail_closed() {
+        let compiler = MockEnglishRuleCompiler {
+            predicate: None,
+            error: Some("English rule compiler returned invalid JSON".to_string()),
+            fingerprint: "mock-v1",
+        };
+        let error = compile_rules_with_compiler(
+            &[english_rule("functions must accept at most 2 arguments", "warn")],
+            &HashMap::new(),
+            Some(&compiler),
+        )
+        .unwrap_err();
+
+        assert!(error
+            .to_string()
+            .contains("English rule compiler returned invalid JSON"));
+    }
+
+    #[test]
+    fn compiled_artifact_invalidates_when_compiler_fingerprint_changes() {
+        let dir = tempdir().unwrap();
+        let artifact_path = dir.path().join("cache.rules.json");
+        let artifact = EnglishRulesArtifact {
+            header: EnglishRulesArtifactHeader::new("fingerprint-a", "compiler-a"),
+            rules: vec![CompiledEnglishRule {
+                id: "english/max-function-params/mock".to_string(),
+                source_text: "no function should have more than 2 params".to_string(),
+                severity: Severity::Warning,
+                message: "Functions must not have more than 2 parameters".to_string(),
+                predicate: EnglishPredicate::MaxFunctionParams { max: 2 },
+            }],
+        };
+
+        persist_artifact(&artifact_path, &artifact).unwrap();
+
+        let loaded = load_artifact(&artifact_path, "fingerprint-a", "compiler-b").unwrap();
+        assert!(loaded.is_none());
     }
 
     #[test]

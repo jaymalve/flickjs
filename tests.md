@@ -83,6 +83,19 @@ Why: lets tests run the full parser + semantic + rule pipeline on source strings
 - `lint_source_for_test_with_english_rules`
 Why: lets tests exercise built-in rules and compiled English rules in the same native pass.
 
+## `cli`
+
+Defined in [src/cli.rs](/Users/jaymalave/Desktop/ZarcDev/cova/src/cli.rs).
+
+- `project_zarcrc_overrides_home_zarcrc`
+Why: proves `.zarcrc` resolution prefers the project key over the home-directory fallback.
+
+- `falls_back_to_home_zarcrc_when_project_missing`
+Why: proves hosted compiler auth still works when only `~/.zarcrc` is present.
+
+- `rejects_empty_api_key_in_zarcrc`
+Why: proves malformed hosted-auth config fails clearly instead of silently disabling compilation.
+
 ## `english_rules`
 
 Defined in [src/rules/english.rs](/Users/jaymalave/Desktop/ZarcDev/cova/src/rules/english.rs).
@@ -91,10 +104,22 @@ Defined in [src/rules/english.rs](/Users/jaymalave/Desktop/ZarcDev/cova/src/rule
 Why: proves supported English config compiles into the expected internal rule predicate.
 
 - `rejects_unsupported_english_rule`
-Why: proves unsupported plain-English rules fail fast instead of degrading to best-effort behavior.
+Why: proves unsupported plain-English rules still fail fast when no hosted compiler auth is available.
+
+- `unsupported_english_rule_points_to_zarcrc_auth_flow`
+Why: proves the unsupported-rule guidance points users at `.zarcrc` rather than provider config.
 
 - `compiled_artifact_round_trips`
 Why: proves the compiled English-rule artifact persists and reloads from cache correctly.
+
+- `llm_compiles_unsupported_phrasing_into_supported_predicate`
+Why: proves the LLM-backed compiler path can map broader natural-language phrasing into the same native predicate IR.
+
+- `llm_errors_fail_closed`
+Why: proves invalid compiler responses stop compilation instead of silently approximating behavior.
+
+- `compiled_artifact_invalidates_when_compiler_fingerprint_changes`
+Why: proves cached English-rule artifacts are invalidated when the compiler mode or prompt/schema fingerprint changes.
 
 - `max_function_params_rule_reports_diagnostics`
 Why: proves a compiled threshold rule executes inside the native lint pass and emits English-rule diagnostics.

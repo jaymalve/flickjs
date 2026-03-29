@@ -1,4 +1,5 @@
 pub mod english;
+pub mod english_llm;
 pub mod no_console;
 pub mod no_empty_catch;
 pub mod no_explicit_any;

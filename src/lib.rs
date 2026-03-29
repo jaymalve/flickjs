@@ -200,6 +200,7 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
     let compiled_english_rules = rules::english::load_or_compile(
         &loaded_config.config.lint.english_rules,
         &loaded_config.config.lint.rules,
+        loaded_config.auth.as_ref(),
         &loaded_config.fingerprint,
         &args.cache_path,
     )?;

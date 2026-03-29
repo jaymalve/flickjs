@@ -3,6 +3,7 @@ use miette::{IntoDiagnostic, Result};
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
+use std::env;
 use std::path::{Path, PathBuf};
 
 #[derive(Parser)]
@@ -84,12 +85,18 @@ pub struct FilesConfig {
 pub struct LoadedConfig {
     pub config: Config,
     pub fingerprint: String,
+    pub auth: Option<ZarcAuthConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct EnglishRuleConfig {
     pub text: String,
     pub severity: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ZarcAuthConfig {
+    pub api_key: String,
 }
 
 impl Default for Config {
@@ -128,6 +135,7 @@ pub fn load_config_with_fingerprint() -> Result<LoadedConfig> {
         return Ok(LoadedConfig {
             config: Config::default(),
             fingerprint: hash_string("__default__"),
+            auth: load_zarcrc()?,
         });
     }
 
@@ -138,7 +146,57 @@ pub fn load_config_with_fingerprint() -> Result<LoadedConfig> {
     Ok(LoadedConfig {
         config,
         fingerprint: hash_string(&normalized),
+        auth: load_zarcrc()?,
     })
+}
+
+pub fn load_zarcrc() -> Result<Option<ZarcAuthConfig>> {
+    let project_path = Path::new(".zarcrc").to_path_buf();
+    let home_path = env::var_os("HOME")
+        .map(PathBuf::from)
+        .map(|path| path.join(".zarcrc"));
+    load_zarcrc_from_candidates(&project_path, home_path.as_deref())
+}
+
+fn load_zarcrc_from_candidates(
+    project_path: &Path,
+    home_path: Option<&Path>,
+) -> Result<Option<ZarcAuthConfig>> {
+    if project_path.exists() {
+        return load_zarcrc_from_path(project_path);
+    }
+
+    if let Some(home_path) = home_path {
+        if home_path.exists() {
+            return load_zarcrc_from_path(home_path);
+        }
+    }
+
+    Ok(None)
+}
+
+fn load_zarcrc_from_path(path: &Path) -> Result<Option<ZarcAuthConfig>> {
+    let raw = std::fs::read_to_string(path).into_diagnostic()?;
+    let parsed = toml::from_str::<ZarcRcFile>(&raw)
+        .into_diagnostic()
+        .map_err(|error| miette::miette!("Failed to parse {}: {}", path.display(), error))?;
+    let api_key = parsed.api_key.trim();
+
+    if api_key.is_empty() {
+        return Err(miette::miette!(
+            "Failed to parse {}: `api_key` must not be empty",
+            path.display()
+        ));
+    }
+
+    Ok(Some(ZarcAuthConfig {
+        api_key: api_key.to_string(),
+    }))
+}
+
+#[derive(Debug, Deserialize)]
+struct ZarcRcFile {
+    api_key: String,
 }
 
 fn normalize_inline_tables(raw: &str) -> String {
@@ -270,4 +328,56 @@ exclude = ["node_modules", "dist", "build", ".git"]
     );
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[test]
+    fn project_zarcrc_overrides_home_zarcrc() {
+        let dir = tempdir().unwrap();
+        let project_path = dir.path().join(".zarcrc");
+        let home_path = dir.path().join("home.zarcrc");
+
+        std::fs::write(&project_path, "api_key = 'project-key'\n").unwrap();
+        std::fs::write(&home_path, "api_key = 'home-key'\n").unwrap();
+
+        let loaded = load_zarcrc_from_candidates(&project_path, Some(&home_path)).unwrap();
+        assert_eq!(
+            loaded,
+            Some(ZarcAuthConfig {
+                api_key: "project-key".to_string()
+            })
+        );
+    }
+
+    #[test]
+    fn falls_back_to_home_zarcrc_when_project_missing() {
+        let dir = tempdir().unwrap();
+        let project_path = dir.path().join(".zarcrc");
+        let home_path = dir.path().join("home.zarcrc");
+
+        std::fs::write(&home_path, "api_key = 'home-key'\n").unwrap();
+
+        let loaded = load_zarcrc_from_candidates(&project_path, Some(&home_path)).unwrap();
+        assert_eq!(
+            loaded,
+            Some(ZarcAuthConfig {
+                api_key: "home-key".to_string()
+            })
+        );
+    }
+
+    #[test]
+    fn rejects_empty_api_key_in_zarcrc() {
+        let dir = tempdir().unwrap();
+        let project_path = dir.path().join(".zarcrc");
+
+        std::fs::write(&project_path, "api_key = ''\n").unwrap();
+
+        let error = load_zarcrc_from_candidates(&project_path, None).unwrap_err();
+        assert!(error.to_string().contains("api_key"));
+    }
 }

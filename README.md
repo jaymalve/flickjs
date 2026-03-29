@@ -51,6 +51,13 @@ severity = "warn"
 exclude = ["node_modules", "dist", "build", ".git"]
 ```
 
+If you want broader natural-language compilation for English rules, add a Zarc API key in
+`.zarcrc`:
+
+```toml
+api_key = "zk_your_zarc_api_key"
+```
+
 Severity values:
 
 - `off`
@@ -70,9 +77,12 @@ All built-in rules are active. `prefer-const` and `no-unused-vars` currently use
 ## Plain-English Rules
 
 Custom English rules compile once into a cached internal rule IR and then execute inside Zarc's
-normal OXC-backed lint pass. There is no LLM or prompt step in the hot path for `zarc check`.
+normal OXC-backed lint pass. The compiler keeps a native handwritten fast path for canonical
+templates and can optionally fall back to Zarc's hosted compiler during compilation when a Zarc API
+key is available in `.zarcrc`. Compiled IR is cached, so there is no per-file remote call in the
+lint execution path.
 
-Supported forms today:
+Supported native predicate forms:
 
 - `no function should have more than 3 params`
 - `do not import lodash`
@@ -84,7 +94,10 @@ Supported forms today:
 
 Each English rule compiles to an ID like `english/<kind>/<hash>`; place that ID in `[lint].rules` to enable/disable the rule and choose `warn`/`error`. By default the rule uses the severity declared in the `[[lint.english_rules]]` block.
 
-Unsupported or ambiguous English rules fail fast during compilation instead of being approximated.
+`.zarcrc` is resolved project-first and then from `~/.zarcrc`. When a Zarc API key is available,
+semantically equivalent phrasing can compile into the same native predicates even if it does not
+match the canonical templates exactly. Unsupported or ambiguous English rules still fail fast
+during compilation instead of being approximated.
 
 ## File Support
 
