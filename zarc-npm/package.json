@@ -1,0 +1,37 @@
+{
+  "name": "zarc",
+  "version": "0.1.0",
+  "description": "⚡ Blazing-fast JavaScript and TypeScript linter",
+  "keywords": [
+    "linter",
+    "typescript",
+    "javascript",
+    "static-analysis",
+    "lint",
+    "rust"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/zarc"
+  },
+  "bin": {
+    "zarc": "./bin.js"
+  },
+  "files": [
+    "bin.js",
+    "binaries/"
+  ],
+  "scripts": {
+    "postinstall": "node bin.js --install"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ]
+}
