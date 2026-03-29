@@ -1,3 +1,4 @@
+pub mod english;
 pub mod no_console;
 pub mod no_empty_catch;
 pub mod no_explicit_any;
@@ -33,6 +34,7 @@ pub struct LintDiagnostic {
     pub message: String,
     pub span: String, // "line:col"
     pub severity: Severity,
+    pub origin: RuleOrigin,
     pub fix: Option<Fix>,
 }
 
@@ -46,6 +48,13 @@ pub struct Fix {
 pub enum Severity {
     Error,
     Warning,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum RuleOrigin {
+    BuiltIn,
+    English,
+    Engine,
 }
 
 // ── Rule trait ──────────────────────────────────────────────
@@ -99,12 +108,24 @@ impl<'a> LintContext<'a> {
         span: oxc_span::Span,
         severity: Severity,
     ) -> LintDiagnostic {
+        self.diagnostic_with_origin(rule_name, message, span, severity, RuleOrigin::BuiltIn)
+    }
+
+    pub fn diagnostic_with_origin(
+        &self,
+        rule_name: impl Into<String>,
+        message: impl Into<String>,
+        span: oxc_span::Span,
+        severity: Severity,
+        origin: RuleOrigin,
+    ) -> LintDiagnostic {
         let (line, col) = self.offset_to_line_col(span.start as usize);
         LintDiagnostic {
-            rule_name: rule_name.to_string(),
+            rule_name: rule_name.into(),
             message: message.into(),
             span: format!("{line}:{col}"),
             severity,
+            origin,
             fix: None,
         }
     }
@@ -125,9 +146,20 @@ fn builtin_rules() -> Vec<Box<dyn LintRule>> {
 
 /// Lint a single file — parse once, then run all built-in rules
 pub fn lint_file(path: &Path) -> Result<LintResult> {
+    lint_file_with_english_rules(path, &[])
+}
+
+pub fn lint_file_with_english_rules(
+    path: &Path,
+    custom_rules: &[english::CompiledEnglishRule],
+) -> Result<LintResult> {
     let source = fs::read_to_string(path)
         .map_err(|e| miette::miette!("Failed to read {}: {}", path.display(), e))?;
-    Ok(lint_source_at_path(path, &source))
+    Ok(lint_source_at_path_with_english_rules(
+        path,
+        &source,
+        custom_rules,
+    ))
 }
 
 pub struct HashedSource {
@@ -147,7 +179,16 @@ pub fn load_source_with_hash(path: &Path) -> Result<HashedSource> {
     Ok(HashedSource { source, hash, size })
 }
 
+#[allow(dead_code)]
 pub(crate) fn lint_source_at_path(path: &Path, source: &str) -> LintResult {
+    lint_source_at_path_with_english_rules(path, source, &[])
+}
+
+pub(crate) fn lint_source_at_path_with_english_rules(
+    path: &Path,
+    source: &str,
+    custom_rules: &[english::CompiledEnglishRule],
+) -> LintResult {
     let source_type = SourceType::from_path(path).unwrap_or_default();
 
     let allocator = Allocator::default();
@@ -171,6 +212,7 @@ pub(crate) fn lint_source_at_path(path: &Path, source: &str) -> LintResult {
             .flat_map(|rule| rule.run(&ctx))
             .collect::<Vec<_>>(),
     );
+    diagnostics.extend(english::run_compiled_rules(&ctx, custom_rules));
 
     LintResult {
         file: path.to_path_buf(),
@@ -213,6 +255,7 @@ fn diagnostics_to_lints(
                 message: error.to_string(),
                 span: format!("{line}:{col}"),
                 severity: severity.clone(),
+                origin: RuleOrigin::Engine,
                 fix: None,
             }
         })
@@ -239,6 +282,15 @@ fn offset_to_line_col(source: &str, offset: usize) -> (usize, usize) {
 #[cfg(test)]
 pub(crate) fn lint_source_for_test(path: &str, source: &str) -> LintResult {
     lint_source_at_path(Path::new(path), source)
+}
+
+#[cfg(test)]
+pub(crate) fn lint_source_for_test_with_english_rules(
+    path: &str,
+    source: &str,
+    custom_rules: &[english::CompiledEnglishRule],
+) -> LintResult {
+    lint_source_at_path_with_english_rules(Path::new(path), source, custom_rules)
 }
 
 pub fn apply_severity_overrides(
@@ -268,7 +320,7 @@ pub fn apply_severity_overrides(
 
 // ── File hashing for cache ──────────────────────────────────
 
-pub const CACHE_SCHEMA_VERSION: u32 = 2;
+pub const CACHE_SCHEMA_VERSION: u32 = 3;
 pub const CACHE_LOGIC_VERSION: u32 = 1;
 const MAX_TIMING_SAMPLES: usize = 8;
 

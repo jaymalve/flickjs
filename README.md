@@ -11,7 +11,8 @@ Zarc is focused on one job:
 - keep the rule set small and high-value
 - optimize cold CLI performance first
 
-Code health scoring and natural-language rules are intentionally out of scope for this MVP.
+Code health scoring is intentionally out of scope. Zarc now also supports a narrow plain-English
+rule surface that compiles into deterministic native checks.
 
 ## Commands
 
@@ -42,6 +43,10 @@ Zarc uses `zarc.toml`:
 [lint]
 rules = { no-explicit-any = "warn", no-unused-vars = "error", no-console = "warn", prefer-const = "warn", no-empty-catch = "error" }
 
+[[lint.english_rules]]
+text = "no function should have more than 3 params"
+severity = "warn"
+
 [files]
 exclude = ["node_modules", "dist", "build", ".git"]
 ```
@@ -61,6 +66,23 @@ Severity values:
 - `no-unused-vars`
 
 All built-in rules are active. `prefer-const` and `no-unused-vars` currently use lightweight MVP heuristics and should later be replaced with full semantic implementations.
+
+## Plain-English Rules
+
+Custom English rules compile once into a cached internal rule IR and then execute inside Zarc's
+normal OXC-backed lint pass. There is no LLM or prompt step in the hot path for `zarc check`.
+
+Supported forms today:
+
+- `no function should have more than 3 params`
+- `do not import lodash`
+- `do not call console.log`
+- `do not use console.log`
+- `function names should start with use`
+- `function names should end with service`
+- `no file should have more than 400 lines`
+
+Unsupported or ambiguous English rules fail fast during compilation instead of being approximated.
 
 ## File Support
 
@@ -83,7 +105,7 @@ zarc/
 │   ├── lib.rs            # CLI orchestration and output
 │   ├── main.rs           # Binary entrypoint
 │   ├── cli.rs            # CLI args, config loading, file discovery
-│   └── rules/            # Built-in lint rules and cache
+│   └── rules/            # Built-in rules, English-rule compiler, and cache
 └── zarc-npm/             # npm wrapper package for native binaries
 ```
 
@@ -99,9 +121,9 @@ zarc/
 
 - [x] Rename public product surface to `zarc`
 - [x] Remove code health scoring from the MVP
-- [x] Remove natural-language rule compilation from the MVP
 - [x] Support JS and TS file discovery
 - [x] Add a minimal `zarc.toml`
+- [x] Add cached plain-English rule compilation for supported native checks
 - [ ] Replace the current heuristic rule implementations with proper AST/semantic analysis
 - [ ] Reduce the shipped rule set to the few rules we want to support extremely well
 - [ ] Tighten ignore handling and config-driven rule enablement further

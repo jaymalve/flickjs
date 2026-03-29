@@ -197,6 +197,11 @@ enum ExecutionStrategy {
 fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
     let total_start = Instant::now();
     let loaded_config = cli::load_config_with_fingerprint()?;
+    let compiled_english_rules = rules::english::load_or_compile(
+        &loaded_config.config.lint.english_rules,
+        &loaded_config.fingerprint,
+        &args.cache_path,
+    )?;
     let files = cli::discover_files(
         &args.path,
         &loaded_config.config.files.exclude,
@@ -228,6 +233,7 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
         let (results, _) = execute_without_cache(
             &snapshots,
             &loaded_config.config.lint.rules,
+            &compiled_english_rules,
             false,
             &mut metrics,
         );
@@ -255,6 +261,7 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
             let (results, updates) = execute_without_cache(
                 &snapshots,
                 &loaded_config.config.lint.rules,
+                &compiled_english_rules,
                 prime_cache,
                 &mut metrics,
             );
@@ -267,6 +274,7 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
                 &snapshots,
                 &cache,
                 &loaded_config.config.lint.rules,
+                &compiled_english_rules,
                 &mut metrics,
             )
         }
@@ -441,6 +449,7 @@ fn should_use_cache(cache: &rules::Cache, snapshots: &[FileSnapshot], total_byte
 fn execute_without_cache(
     snapshots: &[FileSnapshot],
     overrides: &std::collections::HashMap<String, String>,
+    custom_rules: &[rules::english::CompiledEnglishRule],
     prepare_cache_entries: bool,
     metrics: &mut RunMetrics,
 ) -> (Vec<rules::LintResult>, Vec<CacheUpdate>) {
@@ -451,7 +460,11 @@ fn execute_without_cache(
                 let lint_start = Instant::now();
                 match rules::load_source_with_hash(&snapshot.path) {
                     Ok(loaded) => {
-                        let result = rules::lint_source_at_path(&snapshot.path, &loaded.source);
+                        let result = rules::lint_source_at_path_with_english_rules(
+                            &snapshot.path,
+                            &loaded.source,
+                            custom_rules,
+                        );
                         let result = rules::apply_severity_overrides(result, overrides);
                         let lint_time = lint_start.elapsed();
                         Some(FileExecution {
@@ -476,7 +489,7 @@ fn execute_without_cache(
                 }
             } else {
                 let lint_start = Instant::now();
-                match rules::lint_file(&snapshot.path) {
+                match rules::lint_file_with_english_rules(&snapshot.path, custom_rules) {
                     Ok(result) => Some(FileExecution {
                         result: rules::apply_severity_overrides(result, overrides),
                         update: None,
@@ -518,6 +531,7 @@ fn execute_with_cache(
     snapshots: &[FileSnapshot],
     cache: &rules::Cache,
     overrides: &std::collections::HashMap<String, String>,
+    custom_rules: &[rules::english::CompiledEnglishRule],
     metrics: &mut RunMetrics,
 ) -> (Vec<rules::LintResult>, Vec<CacheUpdate>, bool) {
     let executions: Vec<FileExecution> = snapshots
@@ -564,7 +578,11 @@ fn execute_with_cache(
                 }
 
                 let lint_start = Instant::now();
-                let result = rules::lint_source_at_path(&snapshot.path, &loaded.source);
+                let result = rules::lint_source_at_path_with_english_rules(
+                    &snapshot.path,
+                    &loaded.source,
+                    custom_rules,
+                );
                 let lint_time = lint_start.elapsed();
                 let result = rules::apply_severity_overrides(result, overrides);
 
@@ -595,7 +613,11 @@ fn execute_with_cache(
             let hash_time = hash_start.elapsed();
 
             let lint_start = Instant::now();
-            let result = rules::lint_source_at_path(&snapshot.path, &loaded.source);
+            let result = rules::lint_source_at_path_with_english_rules(
+                &snapshot.path,
+                &loaded.source,
+                custom_rules,
+            );
             let lint_time = lint_start.elapsed();
             let result = rules::apply_severity_overrides(result, overrides);
 

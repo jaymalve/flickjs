@@ -80,6 +80,31 @@ Defined in [src/rules/mod.rs](/Users/jaymalave/Desktop/ZarcDev/cova/src/rules/mo
 - `lint_source_for_test`
 Why: lets tests run the full parser + semantic + rule pipeline on source strings without needing fixture files on disk.
 
+- `lint_source_for_test_with_english_rules`
+Why: lets tests exercise built-in rules and compiled English rules in the same native pass.
+
+## `english_rules`
+
+Defined in [src/rules/english.rs](/Users/jaymalave/Desktop/ZarcDev/cova/src/rules/english.rs).
+
+- `compiles_max_function_params_rule`
+Why: proves supported English config compiles into the expected internal rule predicate.
+
+- `rejects_unsupported_english_rule`
+Why: proves unsupported plain-English rules fail fast instead of degrading to best-effort behavior.
+
+- `compiled_artifact_round_trips`
+Why: proves the compiled English-rule artifact persists and reloads from cache correctly.
+
+- `max_function_params_rule_reports_diagnostics`
+Why: proves a compiled threshold rule executes inside the native lint pass and emits English-rule diagnostics.
+
+- `banned_import_rule_reports_diagnostics`
+Why: proves compiled import bans run against real import declarations.
+
+- `function_name_prefix_rule_reports_diagnostics`
+Why: proves naming rules compile and execute against function declarations.
+
 ## Why These Tests Exist
 
 These tests were added to pin down the exact semantic behavior we implemented, especially around:

@@ -71,6 +71,8 @@ pub struct Config {
 pub struct LintConfig {
     #[serde(default)]
     pub rules: HashMap<String, String>,
+    #[serde(default)]
+    pub english_rules: Vec<EnglishRuleConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -82,6 +84,12 @@ pub struct FilesConfig {
 pub struct LoadedConfig {
     pub config: Config,
     pub fingerprint: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EnglishRuleConfig {
+    pub text: String,
+    pub severity: String,
 }
 
 impl Default for Config {
@@ -239,6 +247,10 @@ pub fn init_config() -> Result<()> {
 [lint]
 # "off" | "warn" | "error"
 rules = { no-explicit-any = "warn", no-unused-vars = "error", no-console = "warn", prefer-const = "warn", no-empty-catch = "error" }
+
+[[lint.english_rules]]
+text = "no function should have more than 3 params"
+severity = "warn"
 
 [files]
 exclude = ["node_modules", "dist", "build", ".git"]
