@@ -48,13 +48,30 @@ impl LintRule for UnreachableCode {
 }
 
 fn is_terminator(stmt: &Statement<'_>) -> bool {
-    matches!(
-        stmt,
+    match stmt {
         Statement::ReturnStatement(_)
-            | Statement::ThrowStatement(_)
-            | Statement::BreakStatement(_)
-            | Statement::ContinueStatement(_)
-    )
+        | Statement::ThrowStatement(_)
+        | Statement::BreakStatement(_)
+        | Statement::ContinueStatement(_) => true,
+
+        // if/else is terminating when both branches terminate
+        Statement::IfStatement(if_stmt) => {
+            let then_terminates = is_terminator(&if_stmt.consequent);
+            let else_terminates = if_stmt
+                .alternate
+                .as_ref()
+                .map(|s| is_terminator(s))
+                .unwrap_or(false); // no else = control falls through
+            then_terminates && else_terminates
+        }
+
+        // block is terminating if its last statement terminates
+        Statement::BlockStatement(block) => {
+            block.body.last().map(|s| is_terminator(s)).unwrap_or(false)
+        }
+
+        _ => false,
+    }
 }
 
 fn ast_kind_name(stmt: &Statement<'_>) -> String {
@@ -125,5 +142,73 @@ mod tests {
             "function foo() {\n  return 1;\n  const a = 1;\n  const b = 2;\n}\n",
         );
         assert_eq!(spans.len(), 1);
+    }
+
+    #[test]
+    fn flags_code_after_exhaustive_if_else_return() {
+        let spans = unreachable_spans(
+            r#"function foo(x) {
+  if (x > 0) {
+    return true;
+  } else {
+    return false;
+  }
+  return false;
+}
+"#,
+        );
+        assert_eq!(spans.len(), 1);
+    }
+
+    #[test]
+    fn no_flag_if_without_else() {
+        let spans = unreachable_spans(
+            r#"function foo(x) {
+  if (x > 0) {
+    return true;
+  }
+  return false;
+}
+"#,
+        );
+        assert!(spans.is_empty());
+    }
+
+    #[test]
+    fn flags_code_after_nested_exhaustive_if_else() {
+        let spans = unreachable_spans(
+            r#"function foo(x) {
+  if (x > 0) {
+    if (x > 10) {
+      return "big";
+    } else {
+      return "small";
+    }
+  } else {
+    return "negative";
+  }
+  console.log("unreachable");
+}
+"#,
+        );
+        assert_eq!(spans.len(), 1);
+    }
+
+    #[test]
+    fn no_flag_nested_if_missing_else() {
+        let spans = unreachable_spans(
+            r#"function foo(x) {
+  if (x > 0) {
+    if (x > 10) {
+      return "big";
+    }
+  } else {
+    return "negative";
+  }
+  console.log("reachable");
+}
+"#,
+        );
+        assert!(spans.is_empty());
     }
 }
