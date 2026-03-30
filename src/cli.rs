@@ -213,7 +213,11 @@ pub fn init_config() -> Result<()> {
     "naming-functions": "camelCase",
     "naming-classes": "PascalCase",
     "banned-imports": [],
-    "banned-calls": []
+    "banned-calls": [],
+    "unreachable-code": "error",
+    "unused-exports": "warn",
+    "unused-files": "warn",
+    "unused-dependencies": "warn"
   },
   "files": {
     "exclude": ["node_modules", "dist", "build", ".git"]

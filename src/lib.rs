@@ -7,7 +7,7 @@ use miette::Result;
 use rayon::prelude::*;
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 const AUTO_SMALL_FILE_THRESHOLD: usize = 32;
@@ -227,12 +227,13 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
 
     if args.no_cache {
         let snapshots = collect_file_snapshots(&files, &mut metrics);
-        let (results, _) = execute_without_cache(
+        let (mut results, _) = execute_without_cache(
             &snapshots,
             rule_config,
             false,
             &mut metrics,
         );
+        run_cross_file_analysis(&mut results, &files, rule_config, &args.path);
         metrics.total_runtime = total_start.elapsed();
         return Ok(CheckExecution { results, metrics });
     }
@@ -245,7 +246,7 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
     let snapshots = collect_file_snapshots(&files, &mut metrics);
     let strategy = select_strategy(&cache, load_status, &snapshots, &metrics);
 
-    let (results, updates, dirty_entries) = match strategy {
+    let (mut results, updates, dirty_entries) = match strategy {
         ExecutionStrategy::Bypass {
             reason,
             prime_cache,
@@ -313,8 +314,114 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
         }
     }
 
+    run_cross_file_analysis(&mut results, &files, rule_config, &args.path);
     metrics.total_runtime = total_start.elapsed();
     Ok(CheckExecution { results, metrics })
+}
+
+/// Run cross-file dead code analysis (unused exports, unused files, unused dependencies).
+/// Appends diagnostics to the existing per-file results.
+fn run_cross_file_analysis(
+    results: &mut Vec<rules::LintResult>,
+    files: &[PathBuf],
+    rule_config: &HashMap<String, serde_json::Value>,
+    project_root: &Path,
+) {
+    let wants_unused_exports = rule_config
+        .get("unused-exports")
+        .and_then(|v| cli::parse_rule_severity(v))
+        .is_some();
+    let wants_unused_files = rule_config
+        .get("unused-files")
+        .and_then(|v| cli::parse_rule_severity(v))
+        .is_some();
+    let wants_unused_deps = rule_config
+        .get("unused-dependencies")
+        .and_then(|v| cli::parse_rule_severity(v))
+        .is_some();
+
+    if !wants_unused_exports && !wants_unused_files && !wants_unused_deps {
+        return;
+    }
+
+    // Read all file sources for import graph analysis
+    let file_sources: Vec<(PathBuf, String)> = files
+        .par_iter()
+        .filter_map(|path| {
+            std::fs::read_to_string(path)
+                .ok()
+                .map(|source| (path.clone(), source))
+        })
+        .collect();
+
+    let graph = rules::dead_code::build_import_graph(&file_sources, files);
+
+    // Apply severity overrides
+    let export_severity = rule_config
+        .get("unused-exports")
+        .and_then(|v| cli::parse_rule_severity(v));
+    let file_severity = rule_config
+        .get("unused-files")
+        .and_then(|v| cli::parse_rule_severity(v));
+    let dep_severity = rule_config
+        .get("unused-dependencies")
+        .and_then(|v| cli::parse_rule_severity(v));
+
+    if wants_unused_exports {
+        let mut diagnostics = rules::dead_code::find_unused_exports(&graph);
+        if let Some(ref severity) = export_severity {
+            for (_, d) in &mut diagnostics {
+                d.severity = severity.clone();
+            }
+        }
+        append_paired_diagnostics(results, diagnostics);
+    }
+
+    if wants_unused_files {
+        let mut diagnostics = rules::dead_code::find_unused_files(&graph);
+        if let Some(ref severity) = file_severity {
+            for (_, d) in &mut diagnostics {
+                d.severity = severity.clone();
+            }
+        }
+        append_paired_diagnostics(results, diagnostics);
+    }
+
+    if wants_unused_deps {
+        let package_json = project_root.join("package.json");
+        if package_json.exists() {
+            let mut diagnostics =
+                rules::dead_code::find_unused_dependencies(&graph, &package_json);
+            if let Some(ref severity) = dep_severity {
+                for d in &mut diagnostics {
+                    d.severity = severity.clone();
+                }
+            }
+            if !diagnostics.is_empty() {
+                results.push(rules::LintResult {
+                    file: package_json,
+                    diagnostics,
+                });
+            }
+        }
+    }
+}
+
+/// Append (file_path, diagnostic) pairs to matching file results, or create new entries.
+fn append_paired_diagnostics(
+    results: &mut Vec<rules::LintResult>,
+    diagnostics: Vec<(PathBuf, rules::LintDiagnostic)>,
+) {
+    for (file_path, diagnostic) in diagnostics {
+        if let Some(existing) = results.iter_mut().find(|r| r.file == file_path) {
+            existing.diagnostics.push(diagnostic);
+        } else {
+            results.push(rules::LintResult {
+                file: file_path,
+                diagnostics: vec![diagnostic],
+            });
+        }
+    }
 }
 
 fn collect_file_snapshots(files: &[PathBuf], metrics: &mut RunMetrics) -> Vec<FileSnapshot> {

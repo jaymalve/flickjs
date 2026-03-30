@@ -1,3 +1,4 @@
+pub mod dead_code;
 pub mod no_console;
 pub mod no_empty_catch;
 pub mod no_explicit_any;
@@ -5,6 +6,7 @@ pub mod no_unused_vars;
 pub mod policy;
 pub mod policy_ir;
 pub mod prefer_const;
+pub mod unreachable_code;
 
 use miette::Result;
 use oxc_allocator::Allocator;
@@ -193,6 +195,7 @@ fn all_builtin_rules() -> Vec<Box<dyn LintRule>> {
         Box::new(no_empty_catch::NoEmptyCatch),
         Box::new(prefer_const::PreferConst),
         Box::new(no_unused_vars::NoUnusedVars),
+        Box::new(unreachable_code::UnreachableCode),
     ]
 }
 
