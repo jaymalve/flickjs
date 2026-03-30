@@ -7,8 +7,10 @@ use oxc_ast::AstKind;
 use oxc_parser::Parser;
 use oxc_semantic::SemanticBuilder;
 use oxc_span::SourceType;
+use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use super::{LintDiagnostic, RuleOrigin, Severity};
 
@@ -53,6 +55,8 @@ pub struct ImportGraph {
     pub files: HashMap<PathBuf, FileInfo>,
     /// Maps a normalized import source to the resolved file path
     pub resolved_imports: HashMap<(PathBuf, String), Option<PathBuf>>,
+    /// Maps each original file path to its canonical form (computed once).
+    pub canonical_paths: HashMap<PathBuf, PathBuf>,
 }
 
 // ── Analysis ───────────────────────────────────────────────
@@ -261,7 +265,11 @@ fn collect_default_export(source: &str, decl: &ExportDefaultDeclaration<'_>) -> 
 
 /// Try to resolve a relative import to a file path.
 /// Handles: ./foo → ./foo.ts, ./foo/index.ts, etc.
-pub fn resolve_import(from_file: &Path, import_source: &str, all_files: &[PathBuf]) -> Option<PathBuf> {
+pub fn resolve_import(
+    from_file: &Path,
+    import_source: &str,
+    canonical_files: &HashSet<PathBuf>,
+) -> Option<PathBuf> {
     // Only resolve relative imports
     if !import_source.starts_with('.') {
         return None;
@@ -280,23 +288,20 @@ pub fn resolve_import(from_file: &Path, import_source: &str, all_files: &[PathBu
         } else {
             PathBuf::from(format!("{}{}", base.display(), ext))
         };
-
-        let Some(canonical) = candidate.canonicalize().ok() else {
-            continue;
-        };
-        if all_files.iter().any(|f| f.canonicalize().ok().as_ref() == Some(&canonical)) {
-            return Some(canonical);
+        if let Ok(canonical) = candidate.canonicalize() {
+            if canonical_files.contains(&canonical) {
+                return Some(canonical);
+            }
         }
     }
 
     // Try as directory with index file
     for index in &index_names {
         let candidate = base.join(index);
-        let Some(canonical) = candidate.canonicalize().ok() else {
-            continue;
-        };
-        if all_files.iter().any(|f| f.canonicalize().ok().as_ref() == Some(&canonical)) {
-            return Some(canonical);
+        if let Ok(canonical) = candidate.canonicalize() {
+            if canonical_files.contains(&canonical) {
+                return Some(canonical);
+            }
         }
     }
 
@@ -306,26 +311,42 @@ pub fn resolve_import(from_file: &Path, import_source: &str, all_files: &[PathBu
 // ── Build import graph ─────────────────────────────────────
 
 pub fn build_import_graph(files: &[(PathBuf, String)], all_file_paths: &[PathBuf]) -> ImportGraph {
-    let mut file_infos = HashMap::new();
-    let mut resolved_imports = HashMap::new();
+    // Pre-canonicalize all file paths ONCE — O(N) syscalls total
+    let canonical_set: Arc<HashSet<PathBuf>> = Arc::new(
+        all_file_paths
+            .iter()
+            .filter_map(|f| f.canonicalize().ok())
+            .collect(),
+    );
 
-    // Phase 1: Analyze each file
-    for (path, source) in files {
-        let info = analyze_file(path, source);
-        file_infos.insert(path.clone(), info);
-    }
+    // Build original→canonical mapping for downstream consumers
+    let canonical_paths: HashMap<PathBuf, PathBuf> = files
+        .iter()
+        .filter_map(|(path, _)| path.canonicalize().ok().map(|c| (path.clone(), c)))
+        .collect();
 
-    // Phase 2: Resolve imports
-    for (path, info) in &file_infos {
-        for import in &info.imports {
-            let resolved = resolve_import(path, &import.source, all_file_paths);
-            resolved_imports.insert((path.clone(), import.source.clone()), resolved);
-        }
-    }
+    // Phase 1: Analyze each file (parallel)
+    let file_infos: HashMap<PathBuf, FileInfo> = files
+        .par_iter()
+        .map(|(path, source)| (path.clone(), analyze_file(path, source)))
+        .collect();
+
+    // Phase 2: Resolve imports — O(1) HashSet lookup per candidate
+    let resolved_imports: HashMap<(PathBuf, String), Option<PathBuf>> = file_infos
+        .par_iter()
+        .flat_map_iter(|(path, info)| {
+            let canonical_set = Arc::clone(&canonical_set);
+            info.imports.iter().map(move |import| {
+                let resolved = resolve_import(path, &import.source, canonical_set.as_ref());
+                ((path.clone(), import.source.clone()), resolved)
+            })
+        })
+        .collect();
 
     ImportGraph {
         files: file_infos,
         resolved_imports,
+        canonical_paths,
     }
 }
 
@@ -381,9 +402,8 @@ pub fn find_unused_exports(graph: &ImportGraph) -> Vec<(PathBuf, LintDiagnostic)
             continue;
         }
 
-        let canonical = path.canonicalize().ok();
+        let canonical = graph.canonical_paths.get(path);
         let used_names = canonical
-            .as_ref()
             .and_then(|c| imported_names.get(c))
             .or_else(|| imported_names.get(path));
         let has_namespace_import = used_names
@@ -443,9 +463,8 @@ pub fn find_unused_files(graph: &ImportGraph) -> Vec<(PathBuf, LintDiagnostic)> 
             continue;
         }
 
-        let canonical = path.canonicalize().ok();
+        let canonical = graph.canonical_paths.get(path);
         let is_imported = canonical
-            .as_ref()
             .map(|c| imported_files.contains(c))
             .unwrap_or(false);
 
