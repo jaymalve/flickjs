@@ -1,10 +1,12 @@
-pub mod english;
 pub mod english_llm;
 pub mod no_console;
 pub mod no_empty_catch;
 pub mod no_explicit_any;
 pub mod no_unused_vars;
+pub mod policy;
+pub mod policy_ir;
 pub mod prefer_const;
+pub use policy as english;
 
 use miette::Result;
 use oxc_allocator::Allocator;

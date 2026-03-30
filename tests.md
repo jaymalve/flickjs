@@ -98,10 +98,10 @@ Why: proves malformed hosted-auth config fails clearly instead of silently disab
 
 ## `english_rules`
 
-Defined in [src/rules/english.rs](/Users/jaymalave/Desktop/ZarcDev/cova/src/rules/english.rs).
+Defined in [src/rules/policy.rs](/Users/jaymalave/Desktop/ZarcDev/cova/src/rules/policy.rs).
 
 - `compiles_max_function_params_rule`
-Why: proves supported English config compiles into the expected internal rule predicate.
+Why: proves supported English config compiles into the expected native policy IR.
 
 - `rejects_unsupported_english_rule`
 Why: proves unsupported plain-English rules still fail fast when no hosted compiler auth is available.
@@ -113,7 +113,7 @@ Why: proves the unsupported-rule guidance points users at `.zarcrc` rather than 
 Why: proves the compiled English-rule artifact persists and reloads from cache correctly.
 
 - `llm_compiles_unsupported_phrasing_into_supported_predicate`
-Why: proves the LLM-backed compiler path can map broader natural-language phrasing into the same native predicate IR.
+Why: proves the hosted compiler path can map broader natural-language phrasing into the same native policy IR.
 
 - `llm_errors_fail_closed`
 Why: proves invalid compiler responses stop compilation instead of silently approximating behavior.

@@ -1,17 +1,17 @@
 use crate::cli::ZarcAuthConfig;
-use crate::rules::english::EnglishPredicate;
+use crate::rules::policy_ir::RuleIR;
 use miette::Result;
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-pub const ENGLISH_COMPILER_PROMPT_VERSION: u32 = 1;
-pub const ENGLISH_COMPILER_RESPONSE_SCHEMA_VERSION: u32 = 1;
+pub const ENGLISH_COMPILER_PROMPT_VERSION: u32 = 2;
+pub const ENGLISH_COMPILER_RESPONSE_SCHEMA_VERSION: u32 = 2;
 const ZARC_COMPILER_TIMEOUT_SECS: u64 = 20;
 const ZARC_COMPILER_ENDPOINT: &str = "http://localhost:8787/v1/english/compile";
 
 pub trait EnglishRuleCompiler: Send + Sync {
-    fn compile_rule(&self, rule_text: &str) -> Result<Option<EnglishPredicate>>;
+    fn compile_rule(&self, rule_text: &str) -> Result<Option<RuleIR>>;
     fn fingerprint_material(&self) -> String;
 }
 
@@ -43,7 +43,7 @@ impl ZarcBackendCompiler {
 }
 
 impl EnglishRuleCompiler for ZarcBackendCompiler {
-    fn compile_rule(&self, rule_text: &str) -> Result<Option<EnglishPredicate>> {
+    fn compile_rule(&self, rule_text: &str) -> Result<Option<RuleIR>> {
         let request = HostedCompileRequest {
             rule_text: rule_text.trim().to_string(),
             prompt_version: ENGLISH_COMPILER_PROMPT_VERSION,
@@ -66,8 +66,8 @@ impl EnglishRuleCompiler for ZarcBackendCompiler {
 
         match structured.outcome {
             CompileOutcome::Compiled => structured
-                .predicate
-                .ok_or_else(|| miette::miette!("English rule compiler omitted predicate data"))
+                .rule
+                .ok_or_else(|| miette::miette!("English rule compiler omitted policy IR data"))
                 .map(Some),
             CompileOutcome::Unsupported => Ok(None),
         }
@@ -101,5 +101,5 @@ enum CompileOutcome {
 struct StructuredCompilerResponse {
     outcome: CompileOutcome,
     #[serde(default)]
-    predicate: Option<EnglishPredicate>,
+    rule: Option<RuleIR>,
 }

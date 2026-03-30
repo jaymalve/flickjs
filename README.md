@@ -11,8 +11,8 @@ Zarc is focused on one job:
 - keep the rule set small and high-value
 - optimize cold CLI performance first
 
-Code health scoring is intentionally out of scope. Zarc now also supports a narrow plain-English
-rule surface that compiles into deterministic native checks.
+Code health scoring is intentionally out of scope. Zarc now also supports plain-English policies
+that compile into deterministic native rule IR.
 
 ## Commands
 
@@ -76,13 +76,21 @@ All built-in rules are active. `prefer-const` and `no-unused-vars` currently use
 
 ## Plain-English Rules
 
-Custom English rules compile once into a cached internal rule IR and then execute inside Zarc's
-normal OXC-backed lint pass. The compiler keeps a native handwritten fast path for canonical
-templates and can optionally fall back to Zarc's hosted compiler during compilation when a Zarc API
-key is available in `.zarcrc`. Compiled IR is cached, so there is no per-file remote call in the
-lint execution path.
+Custom English rules now compile into a typed native policy IR and then execute inside Zarc's
+normal OXC-backed lint pass. The hosted compiler is compile-time only: lint execution remains fully
+local, deterministic, and millisecond-scale. Compiled policy artifacts are cached, so there is no
+per-file remote call in the lint execution path.
 
-Supported native predicate forms:
+The first-wave policy IR supports these native categories:
+
+- AST and syntax rules
+- import and module rules
+- naming rules
+- file and path rules
+- comment and text rules
+- file-local semantic rules
+
+Canonical handwritten fast-path examples:
 
 - `no function should have more than 3 params`
 - `do not import lodash`
@@ -91,13 +99,20 @@ Supported native predicate forms:
 - `function names should start with use`
 - `function names should end with service`
 - `no file should have more than 400 lines`
+- `no comments in files`
+- `do not use todo in comments`
 
-Each English rule compiles to an ID like `english/<kind>/<hash>`; place that ID in `[lint].rules` to enable/disable the rule and choose `warn`/`error`. By default the rule uses the severity declared in the `[[lint.english_rules]]` block.
+Each English rule compiles to an ID like `policy/<category>/<kind>/<hash>`; place that ID in
+`[lint].rules` to enable/disable the rule and choose `warn`/`error`. By default the rule uses the
+severity declared in the `[[lint.english_rules]]` block.
 
 `.zarcrc` is resolved project-first and then from `~/.zarcrc`. When a Zarc API key is available,
-semantically equivalent phrasing can compile into the same native predicates even if it does not
+semantically equivalent phrasing can compile into the same native policy IR even if it does not
 match the canonical templates exactly. Unsupported or ambiguous English rules still fail fast
 during compilation instead of being approximated.
+
+This is a clean break from the old predicate-only artifact format. Existing compiled English-rule
+artifacts are treated as stale and will be regenerated under the new policy schema.
 
 ## File Support
 
@@ -120,7 +135,7 @@ zarc/
 │   ├── lib.rs            # CLI orchestration and output
 │   ├── main.rs           # Binary entrypoint
 │   ├── cli.rs            # CLI args, config loading, file discovery
-│   └── rules/            # Built-in rules, English-rule compiler, and cache
+│   └── rules/            # Built-in rules, policy IR compiler, and runtime evaluators
 └── zarc-npm/             # npm wrapper package for native binaries
 ```
 
