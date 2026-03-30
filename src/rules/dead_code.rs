@@ -92,7 +92,7 @@ pub fn analyze_file(path: &Path, source: &str) -> FileInfo {
     }
 }
 
-fn collect_import(source: &str, decl: &ImportDeclaration<'_>) -> ImportInfo {
+fn collect_import(_source: &str, decl: &ImportDeclaration<'_>) -> ImportInfo {
     let source_value = decl.source.value.to_string();
     let is_type_only = decl.import_kind.is_type();
 

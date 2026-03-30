@@ -217,7 +217,10 @@ pub fn init_config() -> Result<()> {
     "unreachable-code": "error",
     "unused-exports": "warn",
     "unused-files": "warn",
-    "unused-dependencies": "warn"
+    "unused-dependencies": "warn",
+    "no-missing-return": "error",
+    "no-wrong-arg-count": "error",
+    "no-unsafe-optional-access": "error"
   },
   "files": {
     "exclude": ["node_modules", "dist", "build", ".git"]
