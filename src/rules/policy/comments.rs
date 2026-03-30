@@ -17,7 +17,7 @@ pub fn evaluate(
                     compiled_rule.message.clone(),
                     Span::empty(comment.start as u32),
                     compiled_rule.severity.clone(),
-                    RuleOrigin::English,
+                    RuleOrigin::Config,
                 )
             })
             .collect(),
@@ -32,7 +32,7 @@ pub fn evaluate(
                         compiled_rule.message.clone(),
                         Span::empty(comment.start as u32),
                         compiled_rule.severity.clone(),
-                        RuleOrigin::English,
+                        RuleOrigin::Config,
                     )
                 })
                 .collect()

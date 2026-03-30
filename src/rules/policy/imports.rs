@@ -30,7 +30,7 @@ pub fn evaluate(
                         compiled_rule.message.clone(),
                         declaration.span(),
                         compiled_rule.severity.clone(),
-                        RuleOrigin::English,
+                        RuleOrigin::Config,
                     ))
                 }
                 _ => None,
@@ -47,7 +47,7 @@ pub fn evaluate(
                         compiled_rule.message.clone(),
                         declaration.span(),
                         compiled_rule.severity.clone(),
-                        RuleOrigin::English,
+                        RuleOrigin::Config,
                     ))
                 }
                 _ => None,

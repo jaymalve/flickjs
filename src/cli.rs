@@ -3,15 +3,14 @@ use miette::{IntoDiagnostic, Result};
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
-use std::env;
 use std::path::{Path, PathBuf};
 
 #[derive(Parser)]
 #[command(
     name = "zarc",
-    about = "⚡ Blazing-fast JavaScript and TypeScript linter",
+    about = "⚡ Zarc — The JavaScript Static Analysis Engine",
     version,
-    after_help = "Examples:\n  zarc check ./src\n  zarc check . --format json\n  zarc init"
+    after_help = "Examples:\n  zarc check ./src\n  zarc check . --format agent-json\n  zarc init"
 )]
 pub struct Cli {
     #[command(subcommand)]
@@ -58,22 +57,17 @@ pub enum OutputFormat {
     Pretty,
     Json,
     Compact,
+    AgentJson,
 }
+
+// ── Config types ───────────────────────────────────────────
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     #[serde(default)]
-    pub lint: LintConfig,
+    pub rules: HashMap<String, serde_json::Value>,
     #[serde(default)]
     pub files: FilesConfig,
-}
-
-#[derive(Debug, Clone, Default, Deserialize)]
-pub struct LintConfig {
-    #[serde(default)]
-    pub rules: HashMap<String, String>,
-    #[serde(default)]
-    pub english_rules: Vec<EnglishRuleConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -85,24 +79,12 @@ pub struct FilesConfig {
 pub struct LoadedConfig {
     pub config: Config,
     pub fingerprint: String,
-    pub auth: Option<ZarcAuthConfig>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct EnglishRuleConfig {
-    pub text: String,
-    pub severity: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ZarcAuthConfig {
-    pub api_key: String,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
-            lint: LintConfig::default(),
+            rules: default_rules(),
             files: FilesConfig::default(),
         }
     }
@@ -125,126 +107,37 @@ fn default_excludes() -> Vec<String> {
     ]
 }
 
+fn default_rules() -> HashMap<String, serde_json::Value> {
+    let mut rules = HashMap::new();
+    rules.insert("no-explicit-any".into(), serde_json::Value::String("warn".into()));
+    rules.insert("no-unused-vars".into(), serde_json::Value::String("error".into()));
+    rules.insert("no-console".into(), serde_json::Value::String("warn".into()));
+    rules.insert("prefer-const".into(), serde_json::Value::String("warn".into()));
+    rules.insert("no-empty-catch".into(), serde_json::Value::String("error".into()));
+    rules
+}
+
 pub fn load_config() -> Result<Config> {
     Ok(load_config_with_fingerprint()?.config)
 }
 
 pub fn load_config_with_fingerprint() -> Result<LoadedConfig> {
-    let path = Path::new("zarc.toml");
+    let path = Path::new("zarc.json");
     if !path.exists() {
         return Ok(LoadedConfig {
             config: Config::default(),
             fingerprint: hash_string("__default__"),
-            auth: load_zarcrc()?,
         });
     }
 
     let raw = std::fs::read_to_string(path).into_diagnostic()?;
-    let normalized = normalize_inline_tables(&raw);
-    let config = toml::from_str(&normalized).into_diagnostic()?;
+    let config: Config = serde_json::from_str(&raw)
+        .map_err(|e| miette::miette!("Failed to parse zarc.json: {}", e))?;
 
     Ok(LoadedConfig {
         config,
-        fingerprint: hash_string(&normalized),
-        auth: load_zarcrc()?,
+        fingerprint: hash_string(&raw),
     })
-}
-
-pub fn load_zarcrc() -> Result<Option<ZarcAuthConfig>> {
-    let project_path = Path::new(".zarcrc").to_path_buf();
-    let home_path = env::var_os("HOME")
-        .map(PathBuf::from)
-        .map(|path| path.join(".zarcrc"));
-    load_zarcrc_from_candidates(&project_path, home_path.as_deref())
-}
-
-fn load_zarcrc_from_candidates(
-    project_path: &Path,
-    home_path: Option<&Path>,
-) -> Result<Option<ZarcAuthConfig>> {
-    if project_path.exists() {
-        return load_zarcrc_from_path(project_path);
-    }
-
-    if let Some(home_path) = home_path {
-        if home_path.exists() {
-            return load_zarcrc_from_path(home_path);
-        }
-    }
-
-    Ok(None)
-}
-
-fn load_zarcrc_from_path(path: &Path) -> Result<Option<ZarcAuthConfig>> {
-    let raw = std::fs::read_to_string(path).into_diagnostic()?;
-    let parsed = toml::from_str::<ZarcRcFile>(&raw)
-        .into_diagnostic()
-        .map_err(|error| miette::miette!("Failed to parse {}: {}", path.display(), error))?;
-    let api_key = parsed.api_key.trim();
-
-    if api_key.is_empty() {
-        return Err(miette::miette!(
-            "Failed to parse {}: `api_key` must not be empty",
-            path.display()
-        ));
-    }
-
-    Ok(Some(ZarcAuthConfig {
-        api_key: api_key.to_string(),
-    }))
-}
-
-#[derive(Debug, Deserialize)]
-struct ZarcRcFile {
-    api_key: String,
-}
-
-fn normalize_inline_tables(raw: &str) -> String {
-    let mut normalized = String::with_capacity(raw.len());
-    let mut brace_depth = 0usize;
-    let mut in_string = false;
-    let mut string_delim = '\0';
-    let mut escape = false;
-
-    for ch in raw.chars() {
-        if in_string {
-            normalized.push(ch);
-            if escape {
-                escape = false;
-                continue;
-            }
-            if ch == '\\' && string_delim == '"' {
-                escape = true;
-            } else if ch == string_delim {
-                in_string = false;
-            }
-            continue;
-        }
-
-        match ch {
-            '"' | '\'' => {
-                in_string = true;
-                string_delim = ch;
-                normalized.push(ch);
-            }
-            '{' => {
-                brace_depth += 1;
-                normalized.push(ch);
-            }
-            '}' => {
-                brace_depth = brace_depth.saturating_sub(1);
-                normalized.push(ch);
-            }
-            '\n' if brace_depth > 0 => {
-                if !normalized.ends_with(' ') {
-                    normalized.push(' ');
-                }
-            }
-            _ => normalized.push(ch),
-        }
-    }
-
-    normalized
 }
 
 fn hash_string(value: &str) -> String {
@@ -296,32 +189,46 @@ fn is_ignored_path(path: &Path, patterns: &[&str]) -> bool {
     })
 }
 
-/// Initialize a zarc.toml config file
+/// Initialize a zarc.json config file
 pub fn init_config() -> Result<()> {
     use colored::*;
 
-    let config = r#"# zarc.toml — Zarc linter configuration
-
-[lint]
-# "off" | "warn" | "error"
-rules = { no-explicit-any = "warn", no-unused-vars = "error", no-console = "warn", prefer-const = "warn", no-empty-catch = "error" }
-
-[[lint.english_rules]]
-text = "no function should have more than 3 params"
-severity = "warn"
-
-[files]
-exclude = ["node_modules", "dist", "build", ".git"]
+    let config = r#"{
+  "$schema": "https://zarc.dev/schema.json",
+  "rules": {
+    "no-explicit-any": "warn",
+    "no-unused-vars": "error",
+    "no-console": "warn",
+    "prefer-const": "warn",
+    "no-empty-catch": "error",
+    "no-debugger": true,
+    "no-var": true,
+    "no-nested-ternaries": true,
+    "no-default-export": true,
+    "no-switch": false,
+    "no-type-assertion": false,
+    "no-await-in-loops": true,
+    "max-function-params": 4,
+    "max-file-lines": 500,
+    "naming-functions": "camelCase",
+    "naming-classes": "PascalCase",
+    "banned-imports": [],
+    "banned-calls": []
+  },
+  "files": {
+    "exclude": ["node_modules", "dist", "build", ".git"]
+  }
+}
 "#;
 
-    let path = Path::new("zarc.toml");
+    let path = Path::new("zarc.json");
     if path.exists() {
-        eprintln!("{} zarc.toml already exists", "warning:".yellow().bold());
+        eprintln!("{} zarc.json already exists", "warning:".yellow().bold());
         return Ok(());
     }
 
     std::fs::write(path, config).into_diagnostic()?;
-    println!("{} Created zarc.toml", "✓".green().bold());
+    println!("{} Created zarc.json", "✓".green().bold());
     println!(
         "  Edit the config and run {} to start linting",
         "zarc check".cyan()
@@ -330,54 +237,59 @@ exclude = ["node_modules", "dist", "build", ".git"]
     Ok(())
 }
 
+/// Parse a rule config value into an optional severity.
+/// Returns Ok(None) if the rule is disabled.
+pub fn parse_rule_severity(value: &serde_json::Value) -> Option<super::rules::Severity> {
+    match value {
+        serde_json::Value::Bool(false) => None,
+        serde_json::Value::Bool(true) => Some(super::rules::Severity::Warning),
+        serde_json::Value::String(s) if s.eq_ignore_ascii_case("off") => None,
+        serde_json::Value::String(s) if s.eq_ignore_ascii_case("warn") => {
+            Some(super::rules::Severity::Warning)
+        }
+        serde_json::Value::String(s) if s.eq_ignore_ascii_case("error") => {
+            Some(super::rules::Severity::Error)
+        }
+        // Numbers, arrays, and other strings mean enabled (warn by default)
+        serde_json::Value::Number(_) => Some(super::rules::Severity::Warning),
+        serde_json::Value::Array(_) => Some(super::rules::Severity::Warning),
+        serde_json::Value::String(_) => Some(super::rules::Severity::Warning),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::tempdir;
 
     #[test]
-    fn project_zarcrc_overrides_home_zarcrc() {
-        let dir = tempdir().unwrap();
-        let project_path = dir.path().join(".zarcrc");
-        let home_path = dir.path().join("home.zarcrc");
-
-        std::fs::write(&project_path, "api_key = 'project-key'\n").unwrap();
-        std::fs::write(&home_path, "api_key = 'home-key'\n").unwrap();
-
-        let loaded = load_zarcrc_from_candidates(&project_path, Some(&home_path)).unwrap();
-        assert_eq!(
-            loaded,
-            Some(ZarcAuthConfig {
-                api_key: "project-key".to_string()
-            })
-        );
+    fn default_config_has_five_rules() {
+        let config = Config::default();
+        assert_eq!(config.rules.len(), 5);
+        assert!(config.rules.contains_key("no-console"));
     }
 
     #[test]
-    fn falls_back_to_home_zarcrc_when_project_missing() {
-        let dir = tempdir().unwrap();
-        let project_path = dir.path().join(".zarcrc");
-        let home_path = dir.path().join("home.zarcrc");
-
-        std::fs::write(&home_path, "api_key = 'home-key'\n").unwrap();
-
-        let loaded = load_zarcrc_from_candidates(&project_path, Some(&home_path)).unwrap();
-        assert_eq!(
-            loaded,
-            Some(ZarcAuthConfig {
-                api_key: "home-key".to_string()
-            })
-        );
+    fn parse_severity_from_bool() {
+        assert!(parse_rule_severity(&serde_json::json!(true)).is_some());
+        assert!(parse_rule_severity(&serde_json::json!(false)).is_none());
     }
 
     #[test]
-    fn rejects_empty_api_key_in_zarcrc() {
-        let dir = tempdir().unwrap();
-        let project_path = dir.path().join(".zarcrc");
+    fn parse_severity_from_string() {
+        assert_eq!(
+            parse_rule_severity(&serde_json::json!("error")),
+            Some(super::super::rules::Severity::Error)
+        );
+        assert_eq!(
+            parse_rule_severity(&serde_json::json!("warn")),
+            Some(super::super::rules::Severity::Warning)
+        );
+        assert!(parse_rule_severity(&serde_json::json!("off")).is_none());
+    }
 
-        std::fs::write(&project_path, "api_key = ''\n").unwrap();
-
-        let error = load_zarcrc_from_candidates(&project_path, None).unwrap_err();
-        assert!(error.to_string().contains("api_key"));
+    #[test]
+    fn parse_severity_from_number() {
+        assert!(parse_rule_severity(&serde_json::json!(3)).is_some());
     }
 }

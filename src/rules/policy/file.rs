@@ -21,7 +21,7 @@ pub fn evaluate(
                 format!("File has {line_count} lines; maximum allowed is {max}"),
                 Span::empty(0),
                 compiled_rule.severity.clone(),
-                RuleOrigin::English,
+                RuleOrigin::Config,
             )]
         }
         FileRule::PathPattern {
@@ -44,7 +44,7 @@ pub fn evaluate(
                 compiled_rule.message.clone(),
                 Span::empty(0),
                 compiled_rule.severity.clone(),
-                RuleOrigin::English,
+                RuleOrigin::Config,
             )]
         }
     }

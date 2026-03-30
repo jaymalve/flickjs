@@ -1,4 +1,3 @@
-pub mod english_llm;
 pub mod no_console;
 pub mod no_empty_catch;
 pub mod no_explicit_any;
@@ -6,7 +5,6 @@ pub mod no_unused_vars;
 pub mod policy;
 pub mod policy_ir;
 pub mod prefer_const;
-pub use policy as english;
 
 use miette::Result;
 use oxc_allocator::Allocator;
@@ -39,12 +37,34 @@ pub struct LintDiagnostic {
     pub severity: Severity,
     pub origin: RuleOrigin,
     pub fix: Option<Fix>,
+    #[serde(default)]
+    pub byte_start: u32,
+    #[serde(default)]
+    pub byte_end: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub node_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub symbol: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Fix {
     pub range: (usize, usize),
     pub replacement: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub safety: FixSafety,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum FixSafety {
+    #[default]
+    Safe,
+    SemanticSafe,
+    Risky,
+    SuppressOnly,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -56,7 +76,7 @@ pub enum Severity {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum RuleOrigin {
     BuiltIn,
-    English,
+    Config,
     Engine,
 }
 
@@ -130,14 +150,43 @@ impl<'a> LintContext<'a> {
             severity,
             origin,
             fix: None,
+            byte_start: span.start,
+            byte_end: span.end,
+            node_kind: None,
+            symbol: None,
+        }
+    }
+
+    pub fn diagnostic_with_context(
+        &self,
+        rule_name: impl Into<String>,
+        message: impl Into<String>,
+        span: oxc_span::Span,
+        severity: Severity,
+        origin: RuleOrigin,
+        node_kind: Option<String>,
+        symbol: Option<String>,
+    ) -> LintDiagnostic {
+        let (line, col) = self.offset_to_line_col(span.start as usize);
+        LintDiagnostic {
+            rule_name: rule_name.into(),
+            message: message.into(),
+            span: format!("{line}:{col}"),
+            severity,
+            origin,
+            fix: None,
+            byte_start: span.start,
+            byte_end: span.end,
+            node_kind,
+            symbol,
         }
     }
 }
 
 // ── Lint engine ─────────────────────────────────────────────
 
-/// Returns all enabled built-in rules
-fn builtin_rules() -> Vec<Box<dyn LintRule>> {
+/// Returns all built-in rules (used when no config is present)
+fn all_builtin_rules() -> Vec<Box<dyn LintRule>> {
     vec![
         Box::new(no_explicit_any::NoExplicitAny),
         Box::new(no_console::NoConsole),
@@ -147,22 +196,91 @@ fn builtin_rules() -> Vec<Box<dyn LintRule>> {
     ]
 }
 
-/// Lint a single file — parse once, then run all built-in rules
-pub fn lint_file(path: &Path) -> Result<LintResult> {
-    lint_file_with_english_rules(path, &[])
+/// Returns only the built-in rules that are enabled in config
+pub fn enabled_builtin_rules(config: &HashMap<String, serde_json::Value>) -> Vec<Box<dyn LintRule>> {
+    let all = all_builtin_rules();
+    if config.is_empty() {
+        return all;
+    }
+
+    all.into_iter()
+        .filter(|rule| {
+            config
+                .get(rule.name())
+                .map(|v| crate::cli::parse_rule_severity(v).is_some())
+                .unwrap_or(false)
+        })
+        .collect()
 }
 
-pub fn lint_file_with_english_rules(
+/// Get severity override for a built-in rule from config
+pub fn get_severity_override(
+    rule_name: &str,
+    config: &HashMap<String, serde_json::Value>,
+) -> Option<Severity> {
+    config
+        .get(rule_name)
+        .and_then(|v| crate::cli::parse_rule_severity(v))
+}
+
+/// Lint a single file with config-driven rules
+pub fn lint_file_with_config(
     path: &Path,
-    custom_rules: &[english::CompiledEnglishRule],
+    config: &HashMap<String, serde_json::Value>,
 ) -> Result<LintResult> {
     let source = fs::read_to_string(path)
         .map_err(|e| miette::miette!("Failed to read {}: {}", path.display(), e))?;
-    Ok(lint_source_at_path_with_english_rules(
+    Ok(lint_source_with_config(path, &source, config))
+}
+
+pub fn lint_source_with_config(
+    path: &Path,
+    source: &str,
+    config: &HashMap<String, serde_json::Value>,
+) -> LintResult {
+    let source_type = SourceType::from_path(path).unwrap_or_default();
+
+    let allocator = Allocator::default();
+    let parsed = Parser::new(&allocator, source, source_type).parse();
+    let semantic = SemanticBuilder::new()
+        .with_check_syntax_error(true)
+        .build(&parsed.program);
+
+    let ctx = LintContext::new(source, path, &semantic.semantic);
+
+    let builtin_rules = enabled_builtin_rules(config);
+    let policy_rules = policy::build_all_policy_rules(config);
+
+    let mut diagnostics = parser_diagnostics_to_lints(source, &parsed.errors);
+    diagnostics.extend(semantic_diagnostics_to_lints(
+        source,
+        &semantic.errors,
         path,
-        &source,
-        custom_rules,
-    ))
+    ));
+
+    // Run built-in rules with severity overrides
+    for rule in &builtin_rules {
+        let mut rule_diagnostics = rule.run(&ctx);
+        if let Some(severity) = get_severity_override(rule.name(), config) {
+            for d in &mut rule_diagnostics {
+                d.severity = severity.clone();
+            }
+        }
+        diagnostics.extend(rule_diagnostics);
+    }
+
+    // Run config-driven policy rules
+    diagnostics.extend(policy::run_compiled_rules(&ctx, &policy_rules));
+
+    LintResult {
+        file: path.to_path_buf(),
+        diagnostics,
+    }
+}
+
+// Keep backward-compatible function for existing callers
+pub fn lint_file(path: &Path) -> Result<LintResult> {
+    lint_file_with_config(path, &HashMap::new())
 }
 
 pub struct HashedSource {
@@ -184,43 +302,7 @@ pub fn load_source_with_hash(path: &Path) -> Result<HashedSource> {
 
 #[allow(dead_code)]
 pub(crate) fn lint_source_at_path(path: &Path, source: &str) -> LintResult {
-    lint_source_at_path_with_english_rules(path, source, &[])
-}
-
-pub(crate) fn lint_source_at_path_with_english_rules(
-    path: &Path,
-    source: &str,
-    custom_rules: &[english::CompiledEnglishRule],
-) -> LintResult {
-    let source_type = SourceType::from_path(path).unwrap_or_default();
-
-    let allocator = Allocator::default();
-    let parsed = Parser::new(&allocator, source, source_type).parse();
-    let semantic = SemanticBuilder::new()
-        .with_check_syntax_error(true)
-        .build(&parsed.program);
-
-    let ctx = LintContext::new(source, path, &semantic.semantic);
-
-    let rules = builtin_rules();
-    let mut diagnostics = parser_diagnostics_to_lints(&source, &parsed.errors);
-    diagnostics.extend(semantic_diagnostics_to_lints(
-        source,
-        &semantic.errors,
-        path,
-    ));
-    diagnostics.extend(
-        rules
-            .iter()
-            .flat_map(|rule| rule.run(&ctx))
-            .collect::<Vec<_>>(),
-    );
-    diagnostics.extend(english::run_compiled_rules(&ctx, custom_rules));
-
-    LintResult {
-        file: path.to_path_buf(),
-        diagnostics,
-    }
+    lint_source_with_config(path, source, &HashMap::new())
 }
 
 fn parser_diagnostics_to_lints(source: &str, errors: &[OxcDiagnostic]) -> Vec<LintDiagnostic> {
@@ -260,6 +342,10 @@ fn diagnostics_to_lints(
                 severity: severity.clone(),
                 origin: RuleOrigin::Engine,
                 fix: None,
+                byte_start: offset as u32,
+                byte_end: offset as u32,
+                node_kind: None,
+                symbol: None,
             }
         })
         .collect()
@@ -287,43 +373,9 @@ pub(crate) fn lint_source_for_test(path: &str, source: &str) -> LintResult {
     lint_source_at_path(Path::new(path), source)
 }
 
-#[cfg(test)]
-pub(crate) fn lint_source_for_test_with_english_rules(
-    path: &str,
-    source: &str,
-    custom_rules: &[english::CompiledEnglishRule],
-) -> LintResult {
-    lint_source_at_path_with_english_rules(Path::new(path), source, custom_rules)
-}
-
-pub fn apply_severity_overrides(
-    mut result: LintResult,
-    overrides: &HashMap<String, String>,
-) -> LintResult {
-    result.diagnostics = result
-        .diagnostics
-        .into_iter()
-        .filter_map(
-            |mut diagnostic| match overrides.get(&diagnostic.rule_name) {
-                Some(level) if level.eq_ignore_ascii_case("off") => None,
-                Some(level) if level.eq_ignore_ascii_case("error") => {
-                    diagnostic.severity = Severity::Error;
-                    Some(diagnostic)
-                }
-                Some(level) if level.eq_ignore_ascii_case("warn") => {
-                    diagnostic.severity = Severity::Warning;
-                    Some(diagnostic)
-                }
-                _ => Some(diagnostic),
-            },
-        )
-        .collect();
-    result
-}
-
 // ── File hashing for cache ──────────────────────────────────
 
-pub const CACHE_SCHEMA_VERSION: u32 = 3;
+pub const CACHE_SCHEMA_VERSION: u32 = 4; // Bumped for new diagnostic fields
 pub const CACHE_LOGIC_VERSION: u32 = 1;
 const MAX_TIMING_SAMPLES: usize = 8;
 

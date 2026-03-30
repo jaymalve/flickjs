@@ -38,7 +38,7 @@ pub fn evaluate(
                         compiled_rule.message.clone(),
                         call.span,
                         compiled_rule.severity.clone(),
-                        RuleOrigin::English,
+                        RuleOrigin::Config,
                     ))
                 }
                 AstKind::StaticMemberExpression(member) if !require_call => {
@@ -60,7 +60,7 @@ pub fn evaluate(
                         compiled_rule.message.clone(),
                         member.span(),
                         compiled_rule.severity.clone(),
-                        RuleOrigin::English,
+                        RuleOrigin::Config,
                     ))
                 }
                 AstKind::ComputedMemberExpression(member) if !require_call => {
@@ -82,7 +82,7 @@ pub fn evaluate(
                         compiled_rule.message.clone(),
                         member.span(),
                         compiled_rule.severity.clone(),
-                        RuleOrigin::English,
+                        RuleOrigin::Config,
                     ))
                 }
                 _ => None,
@@ -118,7 +118,7 @@ pub fn evaluate(
                     compiled_rule.message.clone(),
                     scoping.symbol_span(symbol_id),
                     compiled_rule.severity.clone(),
-                    RuleOrigin::English,
+                    RuleOrigin::Config,
                 ))
             })
             .collect(),

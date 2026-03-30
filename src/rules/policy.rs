@@ -1,17 +1,9 @@
-use crate::cli::{EnglishRuleConfig, ZarcAuthConfig};
-
-use super::english_llm::{build_compiler, EnglishRuleCompiler};
 use super::policy_ir::{
-    AffixMatchKind, AstRule, CommentRule, CompiledPolicyRule, FileRule, ImportRule, NameSelector,
-    NamingRule, PathPatternExpectation, RuleIR, SemanticRule, StringMatchKind,
+    AstRule, CaseStyle, CommentRule, CompiledPolicyRule, FileRule, ForbiddenSyntaxKind, ImportRule,
+    NameSelector, NamingRule, RuleIR, SemanticRule, StringMatchKind,
 };
-use super::{hash_bytes, LintContext, LintDiagnostic, Severity};
-use miette::Result;
-use serde::{Deserialize, Serialize};
+use super::{LintContext, LintDiagnostic};
 use std::collections::HashMap;
-use std::ffi::OsStr;
-use std::fs;
-use std::path::{Path, PathBuf};
 
 mod ast;
 mod comments;
@@ -20,174 +12,219 @@ mod imports;
 mod naming;
 mod semantic;
 
-const POLICY_RULE_ARTIFACT_SCHEMA_VERSION: u32 = 2;
-const POLICY_RULE_COMPILER_VERSION: u32 = 3;
+pub type CompiledConfigRule = CompiledPolicyRule;
 
-pub type CompiledEnglishRule = CompiledPolicyRule;
+/// Build policy rules from the JSON config.
+/// Maps config keys like "max-function-params", "banned-imports", etc. to CompiledPolicyRule.
+pub fn build_policy_rules_from_config(
+    config: &HashMap<String, serde_json::Value>,
+) -> Vec<CompiledConfigRule> {
+    let mut rules = Vec::new();
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-struct PolicyRulesArtifactHeader {
-    schema_version: u32,
-    compiler_version: u32,
-    compiler_fingerprint: String,
-    config_fingerprint: String,
-}
+    for (key, value) in config {
+        let severity = match crate::cli::parse_rule_severity(value) {
+            Some(s) => s,
+            None => continue, // disabled
+        };
 
-impl PolicyRulesArtifactHeader {
-    fn new(config_fingerprint: &str, compiler_fingerprint: &str) -> Self {
-        Self {
-            schema_version: POLICY_RULE_ARTIFACT_SCHEMA_VERSION,
-            compiler_version: POLICY_RULE_COMPILER_VERSION,
-            compiler_fingerprint: compiler_fingerprint.to_string(),
-            config_fingerprint: config_fingerprint.to_string(),
+        if let Some(rule_ir) = config_key_to_rule_ir(key, value) {
+            rules.push(CompiledPolicyRule {
+                id: key.clone(),
+                source_text: String::new(),
+                severity,
+                message: default_message(&rule_ir),
+                rule: rule_ir,
+            });
         }
     }
 
-    fn matches(&self, config_fingerprint: &str, compiler_fingerprint: &str) -> bool {
-        self.schema_version == POLICY_RULE_ARTIFACT_SCHEMA_VERSION
-            && self.compiler_version == POLICY_RULE_COMPILER_VERSION
-            && self.compiler_fingerprint == compiler_fingerprint
-            && self.config_fingerprint == config_fingerprint
+    rules
+}
+
+/// Maps a config key + value to a RuleIR. Returns None for built-in rules
+/// (which are handled separately) or unrecognized keys.
+fn config_key_to_rule_ir(key: &str, value: &serde_json::Value) -> Option<RuleIR> {
+    match key {
+        // ── AST rules ─────────────────────────────────────────
+        "max-function-params" => {
+            let max = value.as_u64()? as usize;
+            Some(RuleIR::Ast(AstRule::MaxFunctionParams {
+                scope: Default::default(),
+                max,
+            }))
+        }
+        "no-nested-ternaries" => Some(RuleIR::Ast(AstRule::ForbiddenSyntax {
+            scope: Default::default(),
+            syntax: ForbiddenSyntaxKind::NestedTernary,
+        })),
+        "no-default-export" => Some(RuleIR::Ast(AstRule::ForbiddenSyntax {
+            scope: Default::default(),
+            syntax: ForbiddenSyntaxKind::DefaultExport,
+        })),
+        "no-switch" => Some(RuleIR::Ast(AstRule::ForbiddenSyntax {
+            scope: Default::default(),
+            syntax: ForbiddenSyntaxKind::Switch,
+        })),
+        "no-debugger" => Some(RuleIR::Ast(AstRule::ForbiddenSyntax {
+            scope: Default::default(),
+            syntax: ForbiddenSyntaxKind::Debugger,
+        })),
+        "no-try-catch" => Some(RuleIR::Ast(AstRule::ForbiddenSyntax {
+            scope: Default::default(),
+            syntax: ForbiddenSyntaxKind::TryCatch,
+        })),
+
+        // ── Import rules ──────────────────────────────────────
+        "banned-imports" => {
+            // This produces multiple rules from an array value
+            // Handled specially below
+            None
+        }
+        "no-side-effect-imports" => Some(RuleIR::Import(ImportRule::NoSideEffectImport {
+            scope: Default::default(),
+        })),
+
+        // ── Naming rules ──────────────────────────────────────
+        "naming-functions" => {
+            let style = parse_case_style(value.as_str()?)?;
+            Some(RuleIR::Naming(NamingRule::Case {
+                scope: Default::default(),
+                selector: NameSelector::Function,
+                style,
+            }))
+        }
+        "naming-classes" => {
+            let style = parse_case_style(value.as_str()?)?;
+            Some(RuleIR::Naming(NamingRule::Case {
+                scope: Default::default(),
+                selector: NameSelector::Class,
+                style,
+            }))
+        }
+        "naming-variables" => {
+            let style = parse_case_style(value.as_str()?)?;
+            Some(RuleIR::Naming(NamingRule::Case {
+                scope: Default::default(),
+                selector: NameSelector::Variable,
+                style,
+            }))
+        }
+        "naming-constants" => {
+            let style = parse_case_style(value.as_str()?)?;
+            Some(RuleIR::Naming(NamingRule::Case {
+                scope: Default::default(),
+                selector: NameSelector::Variable,
+                style,
+            }))
+        }
+
+        // ── File rules ────────────────────────────────────────
+        "max-file-lines" => {
+            let max = value.as_u64()? as usize;
+            Some(RuleIR::File(FileRule::MaxLines {
+                scope: Default::default(),
+                max,
+            }))
+        }
+
+        // ── Comment rules ─────────────────────────────────────
+        "no-comments" => Some(RuleIR::Comment(CommentRule::NoComments {
+            scope: Default::default(),
+        })),
+        "no-todo-comments" => Some(RuleIR::Comment(CommentRule::ForbidPattern {
+            scope: Default::default(),
+            pattern: "TODO".to_string(),
+        })),
+        "no-fixme-comments" => Some(RuleIR::Comment(CommentRule::ForbidPattern {
+            scope: Default::default(),
+            pattern: "FIXME".to_string(),
+        })),
+
+        // ── Semantic rules ────────────────────────────────────
+        "banned-calls" => {
+            // Handled specially below
+            None
+        }
+
+        // Built-in rules (handled by the builtin rule engine, not policy)
+        "no-explicit-any" | "no-console" | "no-empty-catch" | "prefer-const"
+        | "no-unused-vars" => None,
+
+        // Unknown rules - silently ignore
+        _ => None,
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-struct PolicyRulesArtifact {
-    header: PolicyRulesArtifactHeader,
-    rules: Vec<CompiledPolicyRule>,
-}
+/// Build policy rules, including array-valued rules that expand into multiple entries
+pub fn build_all_policy_rules(
+    config: &HashMap<String, serde_json::Value>,
+) -> Vec<CompiledConfigRule> {
+    let mut rules = build_policy_rules_from_config(config);
 
-pub fn compiled_rules_cache_path(cache_path: &Path) -> PathBuf {
-    let parent = cache_path.parent().unwrap_or_else(|| Path::new("."));
-    let file_name = cache_path
-        .file_name()
-        .and_then(OsStr::to_str)
-        .unwrap_or(".zarc-cache.json");
-
-    if let Some(base) = file_name.strip_suffix(".json") {
-        parent.join(format!("{base}.rules.json"))
-    } else {
-        parent.join(format!("{file_name}.rules.json"))
-    }
-}
-
-pub fn load_or_compile(
-    definitions: &[EnglishRuleConfig],
-    overrides: &HashMap<String, String>,
-    auth: Option<&ZarcAuthConfig>,
-    config_fingerprint: &str,
-    cache_path: &Path,
-) -> Result<Vec<CompiledEnglishRule>> {
-    if definitions.is_empty() {
-        return Ok(Vec::new());
-    }
-
-    let compiler = build_compiler(auth)?;
-    let compiler_fingerprint = compiler_fingerprint(compiler.as_deref());
-    let artifact_path = compiled_rules_cache_path(cache_path);
-    if let Some(artifact) = load_artifact(
-        &artifact_path,
-        config_fingerprint,
-        &compiler_fingerprint,
-    )? {
-        return Ok(artifact.rules);
-    }
-
-    let compiled = compile_rules_with_compiler(definitions, overrides, compiler.as_deref())?;
-    let artifact = PolicyRulesArtifact {
-        header: PolicyRulesArtifactHeader::new(config_fingerprint, &compiler_fingerprint),
-        rules: compiled.clone(),
-    };
-    persist_artifact(&artifact_path, &artifact)?;
-    Ok(compiled)
-}
-
-pub fn compile_rules(
-    definitions: &[EnglishRuleConfig],
-    overrides: &HashMap<String, String>,
-) -> Result<Vec<CompiledEnglishRule>> {
-    compile_rules_with_compiler(definitions, overrides, None)
-}
-
-fn compile_rules_with_compiler(
-    definitions: &[EnglishRuleConfig],
-    overrides: &HashMap<String, String>,
-    compiler: Option<&dyn EnglishRuleCompiler>,
-) -> Result<Vec<CompiledPolicyRule>> {
-    let mut compiled = Vec::new();
-
-    for (index, definition) in definitions.iter().enumerate() {
-        if let Some(rule) = compile_definition(index, definition, overrides, compiler)? {
-            compiled.push(rule);
+    // Handle banned-imports (array → one rule per entry)
+    if let Some(value) = config.get("banned-imports") {
+        if let Some(severity) = crate::cli::parse_rule_severity(value) {
+            if let Some(arr) = value.as_array() {
+                for pattern in arr {
+                    if let Some(pattern_str) = pattern.as_str() {
+                        rules.push(CompiledPolicyRule {
+                            id: format!("banned-imports/{}", pattern_str),
+                            source_text: String::new(),
+                            severity: severity.clone(),
+                            message: format!("Import of `{pattern_str}` is banned"),
+                            rule: RuleIR::Import(ImportRule::BannedModulePattern {
+                                scope: Default::default(),
+                                pattern: pattern_str.to_string(),
+                                match_kind: StringMatchKind::Exact,
+                            }),
+                        });
+                    }
+                }
+            }
         }
     }
 
-    Ok(compiled)
+    // Handle banned-calls (array → one rule per entry)
+    if let Some(value) = config.get("banned-calls") {
+        if let Some(severity) = crate::cli::parse_rule_severity(value) {
+            if let Some(arr) = value.as_array() {
+                for target in arr {
+                    if let Some(target_str) = target.as_str() {
+                        rules.push(CompiledPolicyRule {
+                            id: format!("banned-calls/{}", target_str),
+                            source_text: String::new(),
+                            severity: severity.clone(),
+                            message: format!("Calls to `{target_str}` are banned"),
+                            rule: RuleIR::Semantic(SemanticRule::BannedUsage {
+                                scope: Default::default(),
+                                target: target_str.to_string(),
+                                require_call: true,
+                                require_unshadowed_root: false,
+                            }),
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    rules
 }
 
-fn compile_definition(
-    index: usize,
-    definition: &EnglishRuleConfig,
-    overrides: &HashMap<String, String>,
-    compiler: Option<&dyn EnglishRuleCompiler>,
-) -> Result<Option<CompiledPolicyRule>> {
-    let default_severity = parse_severity(&definition.severity)?;
-    let rule = compile_rule_ir(index, &definition.text, compiler)?;
-    let normalized = normalize_rule_text(&definition.text);
-    let id = rule_id(&rule, &normalized);
-
-    let override_entry = overrides
-        .get(&id)
-        .map(|value| parse_severity(value))
-        .transpose()?;
-    let severity = match override_entry {
-        Some(Some(level)) => Some(level),
-        Some(None) => None,
-        None => default_severity,
-    };
-
-    if let Some(severity) = severity {
-        Ok(Some(CompiledPolicyRule {
-            id,
-            source_text: definition.text.trim().to_string(),
-            severity,
-            message: default_message(&rule),
-            rule,
-        }))
-    } else {
-        Ok(None)
+fn parse_case_style(s: &str) -> Option<CaseStyle> {
+    match s {
+        "camelCase" => Some(CaseStyle::CamelCase),
+        "PascalCase" => Some(CaseStyle::PascalCase),
+        "snake_case" => Some(CaseStyle::SnakeCase),
+        "kebab-case" => Some(CaseStyle::KebabCase),
+        "UPPER_SNAKE_CASE" => Some(CaseStyle::UpperSnakeCase),
+        _ => None,
     }
-}
-
-fn compile_rule_ir(
-    index: usize,
-    text: &str,
-    compiler: Option<&dyn EnglishRuleCompiler>,
-) -> Result<RuleIR> {
-    if let Some(rule) = parse_rule(text) {
-        return Ok(rule);
-    }
-
-    if let Some(compiler) = compiler {
-        return compiler.compile_rule(text)?.ok_or_else(|| {
-            miette::miette!(
-                "English rule compiler could not deterministically map lint.english_rules[{}]: {:?} into a supported native policy IR",
-                index,
-                text
-            )
-        });
-    }
-
-    Err(miette::miette!(
-        "Unsupported english rule at lint.english_rules[{}]: {:?}. Add `api_key = \"...\"` to `.zarcrc` to enable hosted natural-language compilation into native policy IR.",
-        index,
-        text
-    ))
 }
 
 pub fn run_compiled_rules(
     ctx: &LintContext,
-    custom_rules: &[CompiledEnglishRule],
+    custom_rules: &[CompiledConfigRule],
 ) -> Vec<LintDiagnostic> {
     let mut diagnostics = Vec::new();
     for rule in custom_rules {
@@ -211,165 +248,6 @@ fn run_policy_rule(ctx: &LintContext, rule: &CompiledPolicyRule) -> Vec<LintDiag
     }
 }
 
-fn parse_rule(text: &str) -> Option<RuleIR> {
-    let normalized = normalize_rule_text(text);
-    let tokens = normalized.split_whitespace().collect::<Vec<_>>();
-
-    parse_max_function_params(&tokens)
-        .or_else(|| parse_banned_import(&tokens))
-        .or_else(|| parse_banned_usage(&tokens))
-        .or_else(|| parse_function_name_rule(&tokens))
-        .or_else(|| parse_max_file_lines(&tokens))
-        .or_else(|| parse_no_comments(&tokens))
-        .or_else(|| parse_forbidden_comment_pattern(&tokens))
-}
-
-fn parse_max_function_params(tokens: &[&str]) -> Option<RuleIR> {
-    (tokens.len() == 8
-        && tokens[0] == "no"
-        && matches!(tokens[1], "function" | "functions")
-        && matches!(tokens[2], "should" | "must" | "shall")
-        && tokens[3] == "have"
-        && tokens[4] == "more"
-        && tokens[5] == "than"
-        && matches!(tokens[7], "param" | "params" | "parameter" | "parameters"))
-    .then(|| tokens[6].parse::<usize>().ok())
-    .flatten()
-    .map(|max| RuleIR::Ast(AstRule::MaxFunctionParams {
-        scope: Default::default(),
-        max,
-    }))
-}
-
-fn parse_banned_import(tokens: &[&str]) -> Option<RuleIR> {
-    if tokens.len() >= 4 && tokens[0] == "do" && tokens[1] == "not" && tokens[2] == "import" {
-        return Some(RuleIR::Import(ImportRule::BannedModulePattern {
-            scope: Default::default(),
-            pattern: strip_wrapping_quotes(&tokens[3..].join(" ")),
-            match_kind: StringMatchKind::Exact,
-        }));
-    }
-
-    if tokens.len() >= 4
-        && tokens[0] == "no"
-        && matches!(tokens[1], "imports" | "import")
-        && tokens[2] == "from"
-    {
-        return Some(RuleIR::Import(ImportRule::BannedModulePattern {
-            scope: Default::default(),
-            pattern: strip_wrapping_quotes(&tokens[3..].join(" ")),
-            match_kind: StringMatchKind::Exact,
-        }));
-    }
-
-    None
-}
-
-fn parse_banned_usage(tokens: &[&str]) -> Option<RuleIR> {
-    if tokens.len() >= 4 && tokens[0] == "do" && tokens[1] == "not" {
-        if tokens[2] == "call" {
-            return Some(RuleIR::Semantic(SemanticRule::BannedUsage {
-                scope: Default::default(),
-                target: strip_wrapping_quotes(&tokens[3..].join(" ")),
-                require_call: true,
-                require_unshadowed_root: false,
-            }));
-        }
-
-        if tokens[2] == "use" {
-            return Some(RuleIR::Semantic(SemanticRule::BannedUsage {
-                scope: Default::default(),
-                target: strip_wrapping_quotes(&tokens[3..].join(" ")),
-                require_call: false,
-                require_unshadowed_root: false,
-            }));
-        }
-    }
-
-    if tokens.len() >= 4
-        && tokens[0] == "no"
-        && matches!(tokens[1], "calls" | "call")
-        && tokens[2] == "to"
-    {
-        return Some(RuleIR::Semantic(SemanticRule::BannedUsage {
-            scope: Default::default(),
-            target: strip_wrapping_quotes(&tokens[3..].join(" ")),
-            require_call: true,
-            require_unshadowed_root: false,
-        }));
-    }
-
-    None
-}
-
-fn parse_function_name_rule(tokens: &[&str]) -> Option<RuleIR> {
-    if tokens.len() >= 6
-        && tokens[0] == "function"
-        && matches!(tokens[1], "name" | "names")
-        && matches!(tokens[2], "should" | "must" | "shall")
-        && tokens[4] == "with"
-    {
-        let affix = strip_wrapping_quotes(&tokens[5..].join(" "));
-        let match_kind = match tokens[3] {
-            "start" => AffixMatchKind::Prefix,
-            "end" => AffixMatchKind::Suffix,
-            _ => return None,
-        };
-
-        return Some(RuleIR::Naming(NamingRule::Affix {
-            scope: Default::default(),
-            selector: NameSelector::Function,
-            affix,
-            match_kind,
-        }));
-    }
-
-    None
-}
-
-fn parse_max_file_lines(tokens: &[&str]) -> Option<RuleIR> {
-    (tokens.len() == 8
-        && tokens[0] == "no"
-        && tokens[1] == "file"
-        && matches!(tokens[2], "should" | "must" | "shall")
-        && tokens[3] == "have"
-        && tokens[4] == "more"
-        && tokens[5] == "than"
-        && matches!(tokens[7], "line" | "lines"))
-    .then(|| tokens[6].parse::<usize>().ok())
-    .flatten()
-    .map(|max| RuleIR::File(FileRule::MaxLines {
-        scope: Default::default(),
-        max,
-    }))
-}
-
-fn parse_no_comments(tokens: &[&str]) -> Option<RuleIR> {
-    (tokens == ["no", "comments", "in", "files"]
-        || tokens == ["do", "not", "allow", "comments"]
-        || tokens == ["do", "not", "use", "comments"])
-        .then(|| RuleIR::Comment(CommentRule::NoComments {
-            scope: Default::default(),
-        }))
-}
-
-fn parse_forbidden_comment_pattern(tokens: &[&str]) -> Option<RuleIR> {
-    if tokens.len() >= 6
-        && tokens[0] == "do"
-        && tokens[1] == "not"
-        && tokens[2] == "use"
-        && tokens[4] == "in"
-        && tokens[5] == "comments"
-    {
-        return Some(RuleIR::Comment(CommentRule::ForbidPattern {
-            scope: Default::default(),
-            pattern: strip_wrapping_quotes(tokens[3]),
-        }));
-    }
-
-    None
-}
-
 fn default_message(rule: &RuleIR) -> String {
     match rule {
         RuleIR::Ast(AstRule::MaxFunctionParams { max, .. }) => {
@@ -379,7 +257,7 @@ fn default_message(rule: &RuleIR) -> String {
             format!("`{}` syntax is forbidden", forbidden_syntax_name(syntax))
         }
         RuleIR::Import(ImportRule::BannedModulePattern { pattern, .. }) => {
-            format!("Imports matching `{pattern}` are forbidden")
+            format!("Import of `{pattern}` is banned")
         }
         RuleIR::Import(ImportRule::NoSideEffectImport { .. }) => {
             "Side-effect-only imports are forbidden".to_string()
@@ -390,11 +268,11 @@ fn default_message(rule: &RuleIR) -> String {
             match_kind,
             ..
         }) => match match_kind {
-            AffixMatchKind::Prefix => format!(
+            super::policy_ir::AffixMatchKind::Prefix => format!(
                 "{} names must start with `{affix}`",
                 selector_name(selector)
             ),
-            AffixMatchKind::Suffix => format!(
+            super::policy_ir::AffixMatchKind::Suffix => format!(
                 "{} names must end with `{affix}`",
                 selector_name(selector)
             ),
@@ -414,15 +292,15 @@ fn default_message(rule: &RuleIR) -> String {
             expectation,
             ..
         }) => match expectation {
-            PathPatternExpectation::MustMatch => {
+            super::policy_ir::PathPatternExpectation::MustMatch => {
                 format!("File paths must match `{pattern}`")
             }
-            PathPatternExpectation::MustNotMatch => {
+            super::policy_ir::PathPatternExpectation::MustNotMatch => {
                 format!("File paths must not match `{pattern}`")
             }
         },
         RuleIR::Comment(CommentRule::NoComments { .. }) => {
-            "Comments are not allowed in this file".to_string()
+            "Comments are not allowed".to_string()
         }
         RuleIR::Comment(CommentRule::ForbidPattern { pattern, .. }) => {
             format!("Comments must not contain `{pattern}`")
@@ -433,9 +311,9 @@ fn default_message(rule: &RuleIR) -> String {
             ..
         }) => {
             if *require_call {
-                format!("Calls to `{target}` are forbidden")
+                format!("Calls to `{target}` are banned")
             } else {
-                format!("Usage of `{target}` is forbidden")
+                format!("Usage of `{target}` is banned")
             }
         }
         RuleIR::Semantic(SemanticRule::NoUnusedBindings { .. }) => {
@@ -444,13 +322,13 @@ fn default_message(rule: &RuleIR) -> String {
     }
 }
 
-fn forbidden_syntax_name(syntax: &super::policy_ir::ForbiddenSyntaxKind) -> &'static str {
+fn forbidden_syntax_name(syntax: &ForbiddenSyntaxKind) -> &'static str {
     match syntax {
-        super::policy_ir::ForbiddenSyntaxKind::TryCatch => "try/catch",
-        super::policy_ir::ForbiddenSyntaxKind::Switch => "switch",
-        super::policy_ir::ForbiddenSyntaxKind::DefaultExport => "default export",
-        super::policy_ir::ForbiddenSyntaxKind::NestedTernary => "nested ternary",
-        super::policy_ir::ForbiddenSyntaxKind::Debugger => "debugger",
+        ForbiddenSyntaxKind::TryCatch => "try/catch",
+        ForbiddenSyntaxKind::Switch => "switch",
+        ForbiddenSyntaxKind::DefaultExport => "default export",
+        ForbiddenSyntaxKind::NestedTernary => "nested ternary",
+        ForbiddenSyntaxKind::Debugger => "debugger",
     }
 }
 
@@ -462,139 +340,69 @@ fn selector_name(selector: &NameSelector) -> &'static str {
     }
 }
 
-fn case_style_name(style: &super::policy_ir::CaseStyle) -> &'static str {
+fn case_style_name(style: &CaseStyle) -> &'static str {
     match style {
-        super::policy_ir::CaseStyle::CamelCase => "camelCase",
-        super::policy_ir::CaseStyle::PascalCase => "PascalCase",
-        super::policy_ir::CaseStyle::SnakeCase => "snake_case",
-        super::policy_ir::CaseStyle::KebabCase => "kebab-case",
-        super::policy_ir::CaseStyle::UpperSnakeCase => "UPPER_SNAKE_CASE",
+        CaseStyle::CamelCase => "camelCase",
+        CaseStyle::PascalCase => "PascalCase",
+        CaseStyle::SnakeCase => "snake_case",
+        CaseStyle::KebabCase => "kebab-case",
+        CaseStyle::UpperSnakeCase => "UPPER_SNAKE_CASE",
     }
 }
 
-fn rule_id(rule: &RuleIR, normalized_text: &str) -> String {
-    let kind = rule.kind_slug();
-    let digest = hash_bytes(format!("{kind}:{normalized_text}").as_bytes());
-    format!("policy/{kind}/{}", &digest[..10])
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-fn parse_severity(level: &str) -> Result<Option<Severity>> {
-    if level.eq_ignore_ascii_case("off") {
-        return Ok(None);
+    #[test]
+    fn builds_max_function_params_from_config() {
+        let mut config = HashMap::new();
+        config.insert("max-function-params".to_string(), serde_json::json!(3));
+        let rules = build_policy_rules_from_config(&config);
+        assert_eq!(rules.len(), 1);
+        assert!(matches!(
+            rules[0].rule,
+            RuleIR::Ast(AstRule::MaxFunctionParams { max: 3, .. })
+        ));
     }
 
-    if level.eq_ignore_ascii_case("warn") {
-        return Ok(Some(Severity::Warning));
+    #[test]
+    fn builds_naming_rule_from_config() {
+        let mut config = HashMap::new();
+        config.insert(
+            "naming-functions".to_string(),
+            serde_json::json!("camelCase"),
+        );
+        let rules = build_policy_rules_from_config(&config);
+        assert_eq!(rules.len(), 1);
+        assert!(matches!(rules[0].rule, RuleIR::Naming(NamingRule::Case { .. })));
     }
 
-    if level.eq_ignore_ascii_case("error") {
-        return Ok(Some(Severity::Error));
+    #[test]
+    fn builds_banned_imports_from_array() {
+        let mut config = HashMap::new();
+        config.insert(
+            "banned-imports".to_string(),
+            serde_json::json!(["lodash", "moment"]),
+        );
+        let rules = build_all_policy_rules(&config);
+        assert_eq!(rules.len(), 2);
     }
 
-    Err(miette::miette!(
-        "Unsupported severity {:?} for english rule. Expected one of: off, warn, error",
-        level
-    ))
-}
-
-fn normalize_rule_text(text: &str) -> String {
-    let trimmed = text.trim().trim_end_matches(['.', ';', '!', '?']);
-    let mut normalized = String::with_capacity(trimmed.len());
-    let mut in_whitespace = false;
-
-    for ch in trimmed.chars() {
-        if ch.is_whitespace() {
-            if !in_whitespace && !normalized.is_empty() {
-                normalized.push(' ');
-            }
-            in_whitespace = true;
-        } else {
-            normalized.push(ch.to_ascii_lowercase());
-            in_whitespace = false;
-        }
+    #[test]
+    fn disabled_rules_are_skipped() {
+        let mut config = HashMap::new();
+        config.insert("max-function-params".to_string(), serde_json::json!(false));
+        config.insert("no-debugger".to_string(), serde_json::json!("off"));
+        let rules = build_policy_rules_from_config(&config);
+        assert!(rules.is_empty());
     }
 
-    normalized
-}
-
-fn strip_wrapping_quotes(value: &str) -> String {
-    value
-        .trim()
-        .trim_matches('`')
-        .trim_matches('"')
-        .trim_matches('\'')
-        .to_string()
-}
-
-fn compiler_fingerprint(compiler: Option<&dyn EnglishRuleCompiler>) -> String {
-    let compiler_mode = compiler
-        .map(|compiler| compiler.fingerprint_material())
-        .unwrap_or_else(|| "manual-only".to_string());
-    hash_bytes(
-        format!(
-            "{POLICY_RULE_ARTIFACT_SCHEMA_VERSION}:{POLICY_RULE_COMPILER_VERSION}:{compiler_mode}"
-        )
-        .as_bytes(),
-    )
-}
-
-fn load_artifact(
-    path: &Path,
-    config_fingerprint: &str,
-    compiler_fingerprint: &str,
-) -> Result<Option<PolicyRulesArtifact>> {
-    if !path.exists() {
-        return Ok(None);
+    #[test]
+    fn builtin_rule_keys_produce_no_policy_rules() {
+        let mut config = HashMap::new();
+        config.insert("no-console".to_string(), serde_json::json!(true));
+        let rules = build_policy_rules_from_config(&config);
+        assert!(rules.is_empty());
     }
-
-    let data = fs::read(path)
-        .map_err(|error| miette::miette!("Failed to read policy-rule artifact: {}", error))?;
-    let artifact = match serde_json::from_slice::<PolicyRulesArtifact>(&data) {
-        Ok(artifact) => artifact,
-        Err(_) => return Ok(None),
-    };
-
-    if artifact
-        .header
-        .matches(config_fingerprint, compiler_fingerprint)
-    {
-        Ok(Some(artifact))
-    } else {
-        Ok(None)
-    }
-}
-
-fn persist_artifact(path: &Path, artifact: &PolicyRulesArtifact) -> Result<()> {
-    if let Some(parent) = path.parent() {
-        if !parent.as_os_str().is_empty() {
-            fs::create_dir_all(parent).map_err(|error| {
-                miette::miette!(
-                    "Failed to create policy-rule cache directory {}: {}",
-                    parent.display(),
-                    error
-                )
-            })?;
-        }
-    }
-
-    let data = serde_json::to_vec(artifact)
-        .map_err(|error| miette::miette!("Failed to serialize policy-rule artifact: {}", error))?;
-    let parent = path.parent().unwrap_or_else(|| Path::new("."));
-    let file_name = path
-        .file_name()
-        .and_then(OsStr::to_str)
-        .unwrap_or("zarc-cache.rules.json");
-    let temp_path = parent.join(format!(".{}.{}.tmp", file_name, std::process::id()));
-
-    fs::write(&temp_path, data)
-        .map_err(|error| miette::miette!("Failed to write policy-rule artifact: {}", error))?;
-
-    if path.exists() {
-        fs::remove_file(path)
-            .map_err(|error| miette::miette!("Failed to replace policy-rule artifact: {}", error))?;
-    }
-
-    fs::rename(&temp_path, path)
-        .map_err(|error| miette::miette!("Failed to finalize policy-rule artifact: {}", error))?;
-    Ok(())
 }

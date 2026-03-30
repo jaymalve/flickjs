@@ -27,7 +27,7 @@ pub fn evaluate(
                             format!("Function has {count} parameters; maximum allowed is {max}"),
                             span,
                             compiled_rule.severity.clone(),
-                            RuleOrigin::English,
+                            RuleOrigin::Config,
                         )
                     })
                 }
@@ -39,7 +39,7 @@ pub fn evaluate(
                             format!("Function has {count} parameters; maximum allowed is {max}"),
                             function.span(),
                             compiled_rule.severity.clone(),
-                            RuleOrigin::English,
+                            RuleOrigin::Config,
                         )
                     })
                 }
@@ -57,7 +57,7 @@ pub fn evaluate(
                     compiled_rule.message.clone(),
                     span,
                     compiled_rule.severity.clone(),
-                    RuleOrigin::English,
+                    RuleOrigin::Config,
                 )
             })
             .collect(),

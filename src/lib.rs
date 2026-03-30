@@ -5,7 +5,8 @@ use clap::Parser;
 use colored::*;
 use miette::Result;
 use rayon::prelude::*;
-use std::collections::HashSet;
+use serde::Serialize;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
@@ -197,13 +198,7 @@ enum ExecutionStrategy {
 fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
     let total_start = Instant::now();
     let loaded_config = cli::load_config_with_fingerprint()?;
-    let compiled_english_rules = rules::english::load_or_compile(
-        &loaded_config.config.lint.english_rules,
-        &loaded_config.config.lint.rules,
-        loaded_config.auth.as_ref(),
-        &loaded_config.fingerprint,
-        &args.cache_path,
-    )?;
+    let rule_config = &loaded_config.config.rules;
     let files = cli::discover_files(
         &args.path,
         &loaded_config.config.files.exclude,
@@ -234,8 +229,7 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
         let snapshots = collect_file_snapshots(&files, &mut metrics);
         let (results, _) = execute_without_cache(
             &snapshots,
-            &loaded_config.config.lint.rules,
-            &compiled_english_rules,
+            rule_config,
             false,
             &mut metrics,
         );
@@ -262,8 +256,7 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
 
             let (results, updates) = execute_without_cache(
                 &snapshots,
-                &loaded_config.config.lint.rules,
-                &compiled_english_rules,
+                rule_config,
                 prime_cache,
                 &mut metrics,
             );
@@ -275,8 +268,7 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
             execute_with_cache(
                 &snapshots,
                 &cache,
-                &loaded_config.config.lint.rules,
-                &compiled_english_rules,
+                rule_config,
                 &mut metrics,
             )
         }
@@ -450,8 +442,7 @@ fn should_use_cache(cache: &rules::Cache, snapshots: &[FileSnapshot], total_byte
 
 fn execute_without_cache(
     snapshots: &[FileSnapshot],
-    overrides: &std::collections::HashMap<String, String>,
-    custom_rules: &[rules::english::CompiledEnglishRule],
+    rule_config: &HashMap<String, serde_json::Value>,
     prepare_cache_entries: bool,
     metrics: &mut RunMetrics,
 ) -> (Vec<rules::LintResult>, Vec<CacheUpdate>) {
@@ -462,12 +453,11 @@ fn execute_without_cache(
                 let lint_start = Instant::now();
                 match rules::load_source_with_hash(&snapshot.path) {
                     Ok(loaded) => {
-                        let result = rules::lint_source_at_path_with_english_rules(
+                        let result = rules::lint_source_with_config(
                             &snapshot.path,
                             &loaded.source,
-                            custom_rules,
+                            rule_config,
                         );
-                        let result = rules::apply_severity_overrides(result, overrides);
                         let lint_time = lint_start.elapsed();
                         Some(FileExecution {
                             update: Some(CacheUpdate {
@@ -491,9 +481,9 @@ fn execute_without_cache(
                 }
             } else {
                 let lint_start = Instant::now();
-                match rules::lint_file_with_english_rules(&snapshot.path, custom_rules) {
+                match rules::lint_file_with_config(&snapshot.path, rule_config) {
                     Ok(result) => Some(FileExecution {
-                        result: rules::apply_severity_overrides(result, overrides),
+                        result,
                         update: None,
                         status: FileStatus::Miss,
                         hash_time: Duration::ZERO,
@@ -532,8 +522,7 @@ fn execute_without_cache(
 fn execute_with_cache(
     snapshots: &[FileSnapshot],
     cache: &rules::Cache,
-    overrides: &std::collections::HashMap<String, String>,
-    custom_rules: &[rules::english::CompiledEnglishRule],
+    rule_config: &HashMap<String, serde_json::Value>,
     metrics: &mut RunMetrics,
 ) -> (Vec<rules::LintResult>, Vec<CacheUpdate>, bool) {
     let executions: Vec<FileExecution> = snapshots
@@ -542,7 +531,7 @@ fn execute_with_cache(
             if let Some(cached) = cache.get(&snapshot.path) {
                 if cached.fingerprint.matches(&snapshot.fingerprint) {
                     return Some(FileExecution {
-                        result: rules::apply_severity_overrides(cached.result.clone(), overrides),
+                        result: cached.result.clone(),
                         update: None,
                         status: FileStatus::MetadataHit,
                         hash_time: Duration::ZERO,
@@ -564,7 +553,7 @@ fn execute_with_cache(
 
                 if loaded.hash == cached.hash {
                     return Some(FileExecution {
-                        result: rules::apply_severity_overrides(cached.result.clone(), overrides),
+                        result: cached.result.clone(),
                         update: Some(CacheUpdate {
                             path: snapshot.path.clone(),
                             fingerprint: snapshot.fingerprint.clone(),
@@ -580,13 +569,12 @@ fn execute_with_cache(
                 }
 
                 let lint_start = Instant::now();
-                let result = rules::lint_source_at_path_with_english_rules(
+                let result = rules::lint_source_with_config(
                     &snapshot.path,
                     &loaded.source,
-                    custom_rules,
+                    rule_config,
                 );
                 let lint_time = lint_start.elapsed();
-                let result = rules::apply_severity_overrides(result, overrides);
 
                 return Some(FileExecution {
                     update: Some(CacheUpdate {
@@ -615,13 +603,12 @@ fn execute_with_cache(
             let hash_time = hash_start.elapsed();
 
             let lint_start = Instant::now();
-            let result = rules::lint_source_at_path_with_english_rules(
+            let result = rules::lint_source_with_config(
                 &snapshot.path,
                 &loaded.source,
-                custom_rules,
+                rule_config,
             );
             let lint_time = lint_start.elapsed();
-            let result = rules::apply_severity_overrides(result, overrides);
 
             Some(FileExecution {
                 update: Some(CacheUpdate {
@@ -715,6 +702,7 @@ fn print_results(
         cli::OutputFormat::Json => print_json(results),
         cli::OutputFormat::Compact => print_compact(results),
         cli::OutputFormat::Pretty => print_pretty(results, elapsed),
+        cli::OutputFormat::AgentJson => print_agent_json(results),
     }
 }
 
@@ -810,6 +798,184 @@ fn print_json(results: &[rules::LintResult]) -> Summary {
     Summary {
         errors: total_errors,
     }
+}
+
+// ── Agent JSON output ──────────────────────────────────────
+
+#[derive(Serialize)]
+struct AgentDiagnostic {
+    rule: String,
+    severity: String,
+    message: String,
+    file: String,
+    span: AgentSpan,
+    context: AgentContext,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    fix: Option<AgentFix>,
+}
+
+#[derive(Serialize)]
+struct AgentSpan {
+    start: AgentPosition,
+    end: AgentPosition,
+    byte_start: u32,
+    byte_end: u32,
+}
+
+#[derive(Serialize)]
+struct AgentPosition {
+    line: usize,
+    col: usize,
+}
+
+#[derive(Serialize)]
+struct AgentContext {
+    source_line: String,
+    surrounding_lines: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    node_kind: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    symbol: Option<String>,
+}
+
+#[derive(Serialize)]
+struct AgentFix {
+    description: String,
+    edits: Vec<AgentEdit>,
+    safety: String,
+}
+
+#[derive(Serialize)]
+struct AgentEdit {
+    start_byte: usize,
+    end_byte: usize,
+    replacement: String,
+}
+
+#[derive(Serialize)]
+struct AgentFileResult {
+    file: String,
+    diagnostics: Vec<AgentDiagnostic>,
+}
+
+fn print_agent_json(results: &[rules::LintResult]) -> Summary {
+    let mut total_errors = 0;
+    let mut agent_results = Vec::new();
+
+    for result in results {
+        let source = std::fs::read_to_string(&result.file).unwrap_or_default();
+        let lines: Vec<&str> = source.lines().collect();
+
+        let mut agent_diagnostics = Vec::new();
+
+        for diagnostic in &result.diagnostics {
+            if diagnostic.severity == rules::Severity::Error {
+                total_errors += 1;
+            }
+
+            // Parse "line:col" span
+            let (start_line, start_col) = parse_span(&diagnostic.span);
+            let (end_line, end_col) = if diagnostic.byte_end > diagnostic.byte_start {
+                offset_to_line_col_from_source(&source, diagnostic.byte_end as usize)
+            } else {
+                (start_line, start_col)
+            };
+
+            // Get source context
+            let source_line = lines
+                .get(start_line.saturating_sub(1))
+                .unwrap_or(&"")
+                .to_string();
+
+            let surrounding_start = start_line.saturating_sub(2); // 1 line before
+            let surrounding_end = (start_line + 1).min(lines.len()); // 1 line after
+            let surrounding_lines: Vec<String> = lines
+                .get(surrounding_start..surrounding_end)
+                .unwrap_or(&[])
+                .iter()
+                .map(|l| l.to_string())
+                .collect();
+
+            let agent_fix = diagnostic.fix.as_ref().map(|fix| AgentFix {
+                description: fix.description.clone().unwrap_or_else(|| "Apply fix".to_string()),
+                edits: vec![AgentEdit {
+                    start_byte: fix.range.0,
+                    end_byte: fix.range.1,
+                    replacement: fix.replacement.clone(),
+                }],
+                safety: format!("{:?}", fix.safety).to_lowercase(),
+            });
+
+            agent_diagnostics.push(AgentDiagnostic {
+                rule: diagnostic.rule_name.clone(),
+                severity: match diagnostic.severity {
+                    rules::Severity::Error => "error".to_string(),
+                    rules::Severity::Warning => "warning".to_string(),
+                },
+                message: diagnostic.message.clone(),
+                file: result.file.display().to_string(),
+                span: AgentSpan {
+                    start: AgentPosition {
+                        line: start_line,
+                        col: start_col,
+                    },
+                    end: AgentPosition {
+                        line: end_line,
+                        col: end_col,
+                    },
+                    byte_start: diagnostic.byte_start,
+                    byte_end: diagnostic.byte_end,
+                },
+                context: AgentContext {
+                    source_line,
+                    surrounding_lines,
+                    node_kind: diagnostic.node_kind.clone(),
+                    symbol: diagnostic.symbol.clone(),
+                },
+                fix: agent_fix,
+            });
+        }
+
+        if !agent_diagnostics.is_empty() {
+            agent_results.push(AgentFileResult {
+                file: result.file.display().to_string(),
+                diagnostics: agent_diagnostics,
+            });
+        }
+    }
+
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&agent_results).unwrap_or_else(|_| "[]".to_string())
+    );
+
+    Summary {
+        errors: total_errors,
+    }
+}
+
+fn parse_span(span: &str) -> (usize, usize) {
+    let parts: Vec<&str> = span.split(':').collect();
+    let line = parts.first().and_then(|s| s.parse().ok()).unwrap_or(1);
+    let col = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(1);
+    (line, col)
+}
+
+fn offset_to_line_col_from_source(source: &str, offset: usize) -> (usize, usize) {
+    let mut line = 1;
+    let mut col = 1;
+    for (i, ch) in source.char_indices() {
+        if i >= offset {
+            break;
+        }
+        if ch == '\n' {
+            line += 1;
+            col = 1;
+        } else {
+            col += 1;
+        }
+    }
+    (line, col)
 }
 
 #[cfg(test)]
