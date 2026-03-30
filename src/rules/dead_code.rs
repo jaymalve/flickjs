@@ -280,7 +280,10 @@ pub fn resolve_import(from_file: &Path, import_source: &str, all_files: &[PathBu
         } else {
             PathBuf::from(format!("{}{}", base.display(), ext))
         };
-        let canonical = candidate.canonicalize().ok()?;
+
+        let Some(canonical) = candidate.canonicalize().ok() else {
+            continue;
+        };
         if all_files.iter().any(|f| f.canonicalize().ok().as_ref() == Some(&canonical)) {
             return Some(canonical);
         }
@@ -289,7 +292,9 @@ pub fn resolve_import(from_file: &Path, import_source: &str, all_files: &[PathBu
     // Try as directory with index file
     for index in &index_names {
         let candidate = base.join(index);
-        let canonical = candidate.canonicalize().ok()?;
+        let Some(canonical) = candidate.canonicalize().ok() else {
+            continue;
+        };
         if all_files.iter().any(|f| f.canonicalize().ok().as_ref() == Some(&canonical)) {
             return Some(canonical);
         }
@@ -376,7 +381,11 @@ pub fn find_unused_exports(graph: &ImportGraph) -> Vec<(PathBuf, LintDiagnostic)
             continue;
         }
 
-        let used_names = imported_names.get(path);
+        let canonical = path.canonicalize().ok();
+        let used_names = canonical
+            .as_ref()
+            .and_then(|c| imported_names.get(c))
+            .or_else(|| imported_names.get(path));
         let has_namespace_import = used_names
             .map(|names| names.contains("*"))
             .unwrap_or(false);
