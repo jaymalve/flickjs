@@ -4,7 +4,7 @@ This file lists the focused rule tests that were added, and why each one exists.
 
 ## `no-explicit-any`
 
-Defined in [src/rules/no_explicit_any.rs](/Users/jaymalave/Desktop/ZarcDev/cova/src/rules/no_explicit_any.rs).
+Defined in [src/rules/no_explicit_any.rs](/Users/jaymalave/Desktop/FlickJS/flickjs/packages/linter/src/rules/no_explicit_any.rs).
 
 - `flags_any_in_multiple_type_positions`
 Why: proves we are catching real `TSAnyKeyword` nodes across aliases, params, returns, and assertions.
@@ -14,7 +14,7 @@ Why: proves we do not confuse identifier names like `any` with the actual TypeSc
 
 ## `no-console`
 
-Defined in [src/rules/no_console.rs](/Users/jaymalave/Desktop/ZarcDev/cova/src/rules/no_console.rs).
+Defined in [src/rules/no_console.rs](/Users/jaymalave/Desktop/FlickJS/flickjs/packages/linter/src/rules/no_console.rs).
 
 - `flags_console_calls`
 Why: proves global `console.*(...)` calls are detected.
@@ -24,7 +24,7 @@ Why: proves semantic resolution works and we do not flag a locally shadowed `con
 
 ## `no-empty-catch`
 
-Defined in [src/rules/no_empty_catch.rs](/Users/jaymalave/Desktop/ZarcDev/cova/src/rules/no_empty_catch.rs).
+Defined in [src/rules/no_empty_catch.rs](/Users/jaymalave/Desktop/FlickJS/flickjs/packages/linter/src/rules/no_empty_catch.rs).
 
 - `flags_empty_catch_blocks`
 Why: proves empty catch clauses are reported.
@@ -34,7 +34,7 @@ Why: proves any real statement in the catch body suppresses the lint.
 
 ## `prefer-const`
 
-Defined in [src/rules/prefer_const.rs](/Users/jaymalave/Desktop/ZarcDev/cova/src/rules/prefer_const.rs).
+Defined in [src/rules/prefer_const.rs](/Users/jaymalave/Desktop/FlickJS/flickjs/packages/linter/src/rules/prefer_const.rs).
 
 - `flags_simple_let_without_reassignment`
 Why: baseline `prefer-const` behavior.
@@ -50,7 +50,7 @@ Why: proves the deliberate loop exemption is enforced.
 
 ## `no-unused-vars`
 
-Defined in [src/rules/no_unused_vars.rs](/Users/jaymalave/Desktop/ZarcDev/cova/src/rules/no_unused_vars.rs).
+Defined in [src/rules/no_unused_vars.rs](/Users/jaymalave/Desktop/FlickJS/flickjs/packages/linter/src/rules/no_unused_vars.rs).
 
 - `flags_unused_destructured_binding`
 Why: proves destructured names are tracked individually.
@@ -75,7 +75,7 @@ Why: proves normal imports used only in TypeScript type positions are not falsel
 
 ## Test Helper
 
-Defined in [src/rules/mod.rs](/Users/jaymalave/Desktop/ZarcDev/cova/src/rules/mod.rs).
+Defined in [src/rules/mod.rs](/Users/jaymalave/Desktop/FlickJS/flickjs/packages/linter/src/rules/mod.rs).
 
 - `lint_source_for_test`
 Why: lets tests run the full parser + semantic + rule pipeline on source strings without needing fixture files on disk.
@@ -85,20 +85,20 @@ Why: lets tests exercise built-in rules and compiled English rules in the same n
 
 ## `cli`
 
-Defined in [src/cli.rs](/Users/jaymalave/Desktop/ZarcDev/cova/src/cli.rs).
+Defined in [src/cli.rs](/Users/jaymalave/Desktop/FlickJS/flickjs/packages/linter/src/cli.rs).
 
-- `project_zarcrc_overrides_home_zarcrc`
-Why: proves `.zarcrc` resolution prefers the project key over the home-directory fallback.
+- `project_flintrc_overrides_home_flintrc`
+Why: proves `.flintrc` resolution prefers the project key over the home-directory fallback.
 
-- `falls_back_to_home_zarcrc_when_project_missing`
-Why: proves hosted compiler auth still works when only `~/.zarcrc` is present.
+- `falls_back_to_home_flintrc_when_project_missing`
+Why: proves hosted compiler auth still works when only `~/.flintrc` is present.
 
-- `rejects_empty_api_key_in_zarcrc`
+- `rejects_empty_api_key_in_flintrc`
 Why: proves malformed hosted-auth config fails clearly instead of silently disabling compilation.
 
 ## `english_rules`
 
-Defined in [src/rules/policy.rs](/Users/jaymalave/Desktop/ZarcDev/cova/src/rules/policy.rs).
+Defined in [src/rules/policy.rs](/Users/jaymalave/Desktop/FlickJS/flickjs/packages/linter/src/rules/policy.rs).
 
 - `compiles_max_function_params_rule`
 Why: proves supported English config compiles into the expected native policy IR.
@@ -106,8 +106,8 @@ Why: proves supported English config compiles into the expected native policy IR
 - `rejects_unsupported_english_rule`
 Why: proves unsupported plain-English rules still fail fast when no hosted compiler auth is available.
 
-- `unsupported_english_rule_points_to_zarcrc_auth_flow`
-Why: proves the unsupported-rule guidance points users at `.zarcrc` rather than provider config.
+- `unsupported_english_rule_points_to_flintrc_auth_flow`
+Why: proves the unsupported-rule guidance points users at `.flintrc` rather than provider config.
 
 - `compiled_artifact_round_trips`
 Why: proves the compiled English-rule artifact persists and reloads from cache correctly.
@@ -144,7 +144,7 @@ They are intentionally narrow and rule-focused rather than broad integration tes
 
 ## How To Run All Tests
 
-From the repo root at [/Users/jaymalave/Desktop/ZarcDev/cova](/Users/jaymalave/Desktop/ZarcDev/cova), run:
+From the repo root at [/Users/jaymalave/Desktop/FlickJS/flickjs/packages/linter](/Users/jaymalave/Desktop/FlickJS/flickjs/packages/linter), run:
 
 ```bash
 cargo test

@@ -1,5 +1,5 @@
 {
-  "name": "zarc-workspace",
+  "name": "@flickjs/lint-workspace",
   "dependencies": {
     "codex": "^0.2.3"
   }
