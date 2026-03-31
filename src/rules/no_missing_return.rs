@@ -135,10 +135,12 @@ fn stmt_always_returns(stmt: &Statement<'_>) -> bool {
             if !has_default {
                 return false;
             }
-            switch
-                .cases
-                .iter()
-                .all(|c| all_paths_return(&c.consequent))
+            // Check each case, but allow fall-through: a case with no
+            // statements falls through to the next case, so only the
+            // case that actually has statements needs to return.
+            switch.cases.iter().all(|c| {
+                c.consequent.is_empty() || all_paths_return(&c.consequent)
+            })
         }
 
         Statement::TryStatement(try_stmt) => {
@@ -229,6 +231,45 @@ mod tests {
             .filter(|d| d.rule_name == "no-missing-return")
             .collect();
         assert!(msgs.is_empty());
+    }
+
+    #[test]
+    fn ok_with_switch_fallthrough() {
+        // Fall-through cases (empty consequent) should not be flagged
+        let msgs = missing_return_spans(
+            r#"
+            function foo(x: string): number {
+                switch (x) {
+                    case 'a':
+                    case 'b':
+                        return 1;
+                    case 'c':
+                        return 2;
+                    default:
+                        return 3;
+                }
+            }
+            "#,
+        );
+        assert!(msgs.is_empty(), "Expected no diagnostics but got: {:?}", msgs);
+    }
+
+    #[test]
+    fn ok_with_switch_default_throw() {
+        // default with throw counts as returning
+        let msgs = missing_return_spans(
+            r#"
+            function foo(x: string): number {
+                switch (x) {
+                    case 'a':
+                        return 1;
+                    default:
+                        throw new Error("unknown");
+                }
+            }
+            "#,
+        );
+        assert!(msgs.is_empty(), "Expected no diagnostics but got: {:?}", msgs);
     }
 
     #[test]
