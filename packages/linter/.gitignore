@@ -1,0 +1,6 @@
+/target
+.cova-cache.json
+.cova-health.json
+*.gguf
+node_modules/
+dist/
