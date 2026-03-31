@@ -93,6 +93,17 @@ fn is_void_or_never(ts_type: &oxc_ast::ast::TSType) -> bool {
         TSType::TSVoidKeyword(_) => true,
         TSType::TSNeverKeyword(_) => true,
         TSType::TSUndefinedKeyword(_) => true,
+        // Handle Promise<void>, Promise<never>, Promise<undefined>
+        TSType::TSTypeReference(type_ref) => {
+            if let oxc_ast::ast::TSTypeName::IdentifierReference(id) = &type_ref.type_name {
+                if id.name == "Promise" {
+                    if let Some(args) = &type_ref.type_arguments {
+                        return args.params.len() == 1 && is_void_or_never(&args.params[0]);
+                    }
+                }
+            }
+            false
+        }
         _ => false,
     }
 }
@@ -231,6 +242,35 @@ mod tests {
             .filter(|d| d.rule_name == "no-missing-return")
             .collect();
         assert!(msgs.is_empty());
+    }
+
+    #[test]
+    fn ok_for_promise_void_return() {
+        let msgs = missing_return_spans(
+            r#"
+            async function unlinkWallet(addr: string): Promise<void> {
+                try {
+                    const r = await fetch("/api");
+                    if (!r.ok) { throw new Error("fail"); }
+                } catch (e) {
+                    throw e;
+                }
+            }
+            "#,
+        );
+        assert!(msgs.is_empty(), "Expected no diagnostics but got: {:?}", msgs);
+    }
+
+    #[test]
+    fn ok_for_promise_never_return() {
+        let msgs = missing_return_spans(
+            r#"
+            async function fail(): Promise<never> {
+                throw new Error("always fails");
+            }
+            "#,
+        );
+        assert!(msgs.is_empty(), "Expected no diagnostics but got: {:?}", msgs);
     }
 
     #[test]
