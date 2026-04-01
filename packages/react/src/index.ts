@@ -7,4 +7,4 @@ export type { Fx } from "@flickjs/runtime";
 // React hooks
 export { useFx } from "./hooks/use-fx";
 export { useComputed } from "./hooks/use-computed";
-export { useFxEffect } from "./hooks/use-fx-effect";
+export { useRun } from "./hooks/use-run";

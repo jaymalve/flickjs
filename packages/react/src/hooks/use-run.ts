@@ -7,18 +7,18 @@ import { run } from "@flickjs/runtime";
  *
  * @example
  * ```tsx
- * import { fx } from '@flickjs/react'
+ * import { fx, useRun } from '@flickjs/react'
  * const count = fx(0)
  *
  * function Logger() {
- *   useFxEffect(() => {
+ *   useRun(() => {
  *     console.log('Count changed:', count())
  *   })
  *   return null
  * }
  * ```
  */
-export function useFxEffect(fn: () => void): void {
+export function useRun(fn: () => void): void {
   const fnRef = useRef(fn);
   fnRef.current = fn;
 
