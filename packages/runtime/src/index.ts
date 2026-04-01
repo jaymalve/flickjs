@@ -3,6 +3,7 @@ type Run = () => void;
 export type Fx<T> = (() => T) & { set: (next: T | ((v: T) => T)) => void };
 
 let activeRun: Run | null = null;
+let activeRunSubs: Set<Set<Run>> | null = null;
 
 /*
  * Instrumentation Hooks (used by DevTools)
@@ -59,7 +60,10 @@ export function fx<T>(value: T, name?: string): Fx<T> {
   const fxId = fxIdCounter++;
 
   function read() {
-    if (activeRun) subs.add(activeRun);
+    if (activeRun) {
+      subs.add(activeRun);
+      if (activeRunSubs) activeRunSubs.add(subs);
+    }
     return value;
   }
 
@@ -72,7 +76,8 @@ export function fx<T>(value: T, name?: string): Fx<T> {
       hooks.onSignalUpdate(fxId, prevValue, value, name);
     }
 
-    subs.forEach((fn) => fn());
+    const toRun = [...subs];
+    toRun.forEach((fn) => fn());
   };
 
   // Store fxId and name for devtools lookup
@@ -84,10 +89,15 @@ export function fx<T>(value: T, name?: string): Fx<T> {
   return read as (() => T) & { set: typeof read.set };
 }
 
-export function run(fn: Run, componentName?: string) {
+export function run(fn: Run, componentName?: string): () => void {
   const runId = runIdCounter++;
+  const subscribedSets = new Set<Set<Run>>();
 
   const execute = () => {
+    // Clear previous subscriptions before re-run
+    subscribedSets.forEach((set) => set.delete(execute));
+    subscribedSets.clear();
+
     const startTime = performance.now();
     const domNodes = new Set<Node>();
 
@@ -120,8 +130,10 @@ export function run(fn: Run, componentName?: string) {
     }
 
     activeRun = execute;
+    activeRunSubs = subscribedSets;
     fn();
     activeRun = null;
+    activeRunSubs = null;
 
     // Stop observing and collect any pending mutations
     if (observer) {
@@ -145,6 +157,12 @@ export function run(fn: Run, componentName?: string) {
   runIdMap.set(execute, runId);
 
   execute();
+
+  // Return dispose function to remove all subscriptions
+  return () => {
+    subscribedSets.forEach((set) => set.delete(execute));
+    subscribedSets.clear();
+  };
 }
 
 /**
