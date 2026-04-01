@@ -1,6 +1,6 @@
-import type { CoreMessage } from "ai";
-import type { Agent } from "../server/agent/types";
-import type { AgentRouter } from "./types";
+import type { CoreMessage } from 'ai';
+import type { Agent } from '../server/agent/types';
+import type { AgentRouter } from './types';
 
 /**
  * Minimal Express types to avoid requiring express as a dependency
@@ -60,16 +60,16 @@ function getCorsHeaders(cors: boolean | CorsOptions): Record<string, string> {
   const options: CorsOptions = cors === true ? {} : cors;
 
   const origin = Array.isArray(options.origin)
-    ? options.origin.join(", ")
-    : options.origin ?? "*";
+    ? options.origin.join(', ')
+    : (options.origin ?? '*');
 
-  const methods = options.methods?.join(", ") ?? "GET, POST, OPTIONS";
-  const headers = options.allowedHeaders?.join(", ") ?? "Content-Type";
+  const methods = options.methods?.join(', ') ?? 'GET, POST, OPTIONS';
+  const headers = options.allowedHeaders?.join(', ') ?? 'Content-Type';
 
   return {
-    "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Methods": methods,
-    "Access-Control-Allow-Headers": headers,
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': methods,
+    'Access-Control-Allow-Headers': headers
   };
 }
 
@@ -87,7 +87,7 @@ function withCors(response: Response, corsHeaders: Record<string, string>): Resp
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
-    headers: newHeaders,
+    headers: newHeaders
   });
 }
 
@@ -152,16 +152,16 @@ export function createHandler<T extends Record<string, Agent>>(
 
   return async (req: Request): Promise<Response> => {
     // Handle CORS preflight requests
-    if (req.method === "OPTIONS") {
+    if (req.method === 'OPTIONS') {
       return new Response(null, {
         status: 204,
-        headers: corsHeaders,
+        headers: corsHeaders
       });
     }
 
     // Extract agent name from URL path
     const url = new URL(req.url);
-    const pathParts = url.pathname.split("/").filter(Boolean);
+    const pathParts = url.pathname.split('/').filter(Boolean);
     const agentName = pathParts[pathParts.length - 1];
 
     // Find the agent
@@ -171,13 +171,13 @@ export function createHandler<T extends Record<string, Agent>>(
       return withCors(
         new Response(
           JSON.stringify({
-            error: "Agent not found",
+            error: 'Agent not found',
             agent: agentName,
-            available: Object.keys(router._agents),
+            available: Object.keys(router._agents)
           }),
           {
             status: 404,
-            headers: { "Content-Type": "application/json" },
+            headers: { 'Content-Type': 'application/json' }
           }
         ),
         corsHeaders
@@ -190,9 +190,9 @@ export function createHandler<T extends Record<string, Agent>>(
       body = await req.json();
     } catch {
       return withCors(
-        new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+        new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
           status: 400,
-          headers: { "Content-Type": "application/json" },
+          headers: { 'Content-Type': 'application/json' }
         }),
         corsHeaders
       );
@@ -204,11 +204,11 @@ export function createHandler<T extends Record<string, Agent>>(
       return withCors(
         new Response(
           JSON.stringify({
-            error: "Missing or invalid 'messages' array in request body",
+            error: "Missing or invalid 'messages' array in request body"
           }),
           {
             status: 400,
-            headers: { "Content-Type": "application/json" },
+            headers: { 'Content-Type': 'application/json' }
           }
         ),
         corsHeaders
@@ -220,12 +220,12 @@ export function createHandler<T extends Record<string, Agent>>(
 
     // Determine if streaming or not
     // Stream by default, unless explicitly disabled or Accept header doesn't want it
-    const acceptHeader = req.headers.get("accept") ?? "";
+    const acceptHeader = req.headers.get('accept') ?? '';
     const wantsStream =
       body.stream !== false &&
-      (acceptHeader.includes("text/event-stream") ||
-        acceptHeader.includes("*/*") ||
-        acceptHeader === "");
+      (acceptHeader.includes('text/event-stream') ||
+        acceptHeader.includes('*/*') ||
+        acceptHeader === '');
 
     try {
       if (wantsStream) {
@@ -237,18 +237,18 @@ export function createHandler<T extends Record<string, Agent>>(
         const result = await agent.run(coreMessages);
         return withCors(
           new Response(JSON.stringify(result), {
-            headers: { "Content-Type": "application/json" },
+            headers: { 'Content-Type': 'application/json' }
           }),
           corsHeaders
         );
       }
     } catch (error) {
-      console.error("[createHandler] Error:", error);
-      const message = error instanceof Error ? error.message : "Unknown error";
+      console.error('[createHandler] Error:', error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
       return withCors(
         new Response(JSON.stringify({ error: message }), {
           status: 500,
-          headers: { "Content-Type": "application/json" },
+          headers: { 'Content-Type': 'application/json' }
         }),
         corsHeaders
       );
@@ -308,13 +308,13 @@ export function createExpressHandler<T extends Record<string, Agent>>(
     }
 
     // Handle CORS preflight
-    if (req.method === "OPTIONS") {
+    if (req.method === 'OPTIONS') {
       res.status(204).end();
       return;
     }
 
     // Extract agent name from URL path
-    const pathParts = req.url.split("?")[0].split("/").filter(Boolean);
+    const pathParts = req.url.split('?')[0].split('/').filter(Boolean);
     const agentName = pathParts[pathParts.length - 1];
 
     // Find the agent
@@ -322,9 +322,9 @@ export function createExpressHandler<T extends Record<string, Agent>>(
 
     if (!agent) {
       res.status(404).json({
-        error: "Agent not found",
+        error: 'Agent not found',
         agent: agentName,
-        available: Object.keys(router._agents),
+        available: Object.keys(router._agents)
       });
       return;
     }
@@ -334,7 +334,7 @@ export function createExpressHandler<T extends Record<string, Agent>>(
 
     if (!body) {
       res.status(400).json({
-        error: "Missing request body. Make sure express.json() middleware is applied.",
+        error: 'Missing request body. Make sure express.json() middleware is applied.'
       });
       return;
     }
@@ -343,7 +343,7 @@ export function createExpressHandler<T extends Record<string, Agent>>(
 
     if (!messages || !Array.isArray(messages)) {
       res.status(400).json({
-        error: "Missing or invalid 'messages' array in request body",
+        error: "Missing or invalid 'messages' array in request body"
       });
       return;
     }
@@ -351,12 +351,12 @@ export function createExpressHandler<T extends Record<string, Agent>>(
     const coreMessages = messages as CoreMessage[];
 
     // Determine if streaming
-    const acceptHeader = req.get("accept") ?? "";
+    const acceptHeader = req.get('accept') ?? '';
     const wantsStream =
       body.stream !== false &&
-      (acceptHeader.includes("text/event-stream") ||
-        acceptHeader.includes("*/*") ||
-        acceptHeader === "");
+      (acceptHeader.includes('text/event-stream') ||
+        acceptHeader.includes('*/*') ||
+        acceptHeader === '');
 
     try {
       if (wantsStream) {
@@ -389,8 +389,8 @@ export function createExpressHandler<T extends Record<string, Agent>>(
         res.json(result);
       }
     } catch (error) {
-      console.error("[createExpressHandler] Error:", error);
-      const message = error instanceof Error ? error.message : "Unknown error";
+      console.error('[createExpressHandler] Error:', error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
       if (!res.headersSent) {
         res.status(500).json({ error: message });
       }

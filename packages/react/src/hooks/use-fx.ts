@@ -1,5 +1,5 @@
-import type { Fx } from "@flickjs/runtime";
-import { useFxValue } from "../internal/use-fx-value";
+import type { Fx } from '@flickjs/runtime';
+import { useFxValue } from '../internal/use-fx-value';
 
 /**
  * Subscribe a React component to a FlickJS signal.

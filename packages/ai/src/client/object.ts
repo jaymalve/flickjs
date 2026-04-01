@@ -1,6 +1,6 @@
-import { fx, getCurrentSuspense } from "@flickjs/runtime";
-import type { AiObject, AiObjectOptions } from "./types";
-import { parseStream } from "../utils/stream-parser";
+import { fx, getCurrentSuspense } from '@flickjs/runtime';
+import type { AiObject, AiObjectOptions } from './types';
+import { parseStream } from '../utils/stream-parser';
 
 /**
  * Create a reactive AI object generator
@@ -29,21 +29,10 @@ import { parseStream } from "../utils/stream-parser";
  * ```
  */
 export function aiObject<T>(options: AiObjectOptions<T>): AiObject<T> {
-  const {
-    api,
-    schema,
-    headers,
-    body,
-    onFinish,
-    onError,
-    suspense = false,
-    credentials,
-  } = options;
+  const { api, schema, headers, body, onFinish, onError, suspense = false, credentials } = options;
 
   // Reactive state
-  const object = fx<Partial<T> | undefined>(
-    undefined
-  );
+  const object = fx<Partial<T> | undefined>(undefined);
   const error = fx<Error | undefined>(undefined);
   const loading = fx<boolean>(false);
 
@@ -58,9 +47,7 @@ export function aiObject<T>(options: AiObjectOptions<T>): AiObject<T> {
   /**
    * Submit input to generate the object
    */
-  const submit = async (
-    input: string | Record<string, unknown>
-  ): Promise<void> => {
+  const submit = async (input: string | Record<string, unknown>): Promise<void> => {
     // Reset state
     object.set(undefined);
     error.set(undefined);
@@ -73,18 +60,18 @@ export function aiObject<T>(options: AiObjectOptions<T>): AiObject<T> {
     const streamPromise = (async () => {
       try {
         const response = await fetch(api, {
-          method: "POST",
+          method: 'POST',
           headers: {
-            "Content-Type": "application/json",
-            ...headers,
+            'Content-Type': 'application/json',
+            ...headers
           },
           body: JSON.stringify({
-            input: typeof input === "string" ? input : undefined,
-            ...(typeof input === "object" ? input : {}),
-            ...body,
+            input: typeof input === 'string' ? input : undefined,
+            ...(typeof input === 'object' ? input : {}),
+            ...body
           }),
           signal: abortController!.signal,
-          credentials,
+          credentials
         });
 
         if (!response.ok) {
@@ -92,16 +79,16 @@ export function aiObject<T>(options: AiObjectOptions<T>): AiObject<T> {
         }
 
         if (!response.body) {
-          throw new Error("Response body is empty");
+          throw new Error('Response body is empty');
         }
 
         const reader = response.body.getReader();
 
         // Parse the stream - AI SDK sends partial objects directly
         for await (const part of parseStream(reader)) {
-          if (part.type === "object") {
+          if (part.type === 'object') {
             object.set(part.value as Partial<T>);
-          } else if (part.type === "error") {
+          } else if (part.type === 'error') {
             throw new Error(String(part.value));
           }
         }
@@ -128,13 +115,12 @@ export function aiObject<T>(options: AiObjectOptions<T>): AiObject<T> {
         }
       } catch (err) {
         // Handle abort
-        if (err instanceof Error && err.name === "AbortError") {
+        if (err instanceof Error && err.name === 'AbortError') {
           loading.set(false);
           return;
         }
 
-        const errorInstance =
-          err instanceof Error ? err : new Error(String(err));
+        const errorInstance = err instanceof Error ? err : new Error(String(err));
         error.set(errorInstance);
         loading.set(false);
         onError?.(errorInstance);
@@ -168,6 +154,6 @@ export function aiObject<T>(options: AiObjectOptions<T>): AiObject<T> {
     error,
     isLoading,
     submit,
-    stop,
+    stop
   };
 }

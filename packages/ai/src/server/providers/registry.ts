@@ -1,10 +1,10 @@
-import type { LanguageModel } from "ai";
-import { openai } from "@ai-sdk/openai";
-import { anthropic } from "@ai-sdk/anthropic";
-import { google } from "@ai-sdk/google";
-import { groq } from "@ai-sdk/groq";
-import { cerebras } from "@ai-sdk/cerebras";
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import type { LanguageModel } from 'ai';
+import { openai } from '@ai-sdk/openai';
+import { anthropic } from '@ai-sdk/anthropic';
+import { google } from '@ai-sdk/google';
+import { groq } from '@ai-sdk/groq';
+import { cerebras } from '@ai-sdk/cerebras';
+import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 
 // Use a flexible type since providers may return different model versions
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -18,7 +18,7 @@ const providers: Record<string, ProviderFactory> = {
   google: (modelId) => google(modelId),
   groq: (modelId) => groq(modelId),
   cerebras: (modelId) => cerebras(modelId),
-  openrouter: (modelId) => openrouter(modelId),
+  openrouter: (modelId) => openrouter(modelId)
 };
 
 /**
@@ -32,12 +32,12 @@ const providers: Record<string, ProviderFactory> = {
  */
 export function resolveModel(spec: string | LanguageModel): LanguageModel {
   // If already a model instance, return as-is
-  if (typeof spec !== "string") {
+  if (typeof spec !== 'string') {
     return spec;
   }
 
   // Parse provider:model format
-  const colonIndex = spec.indexOf(":");
+  const colonIndex = spec.indexOf(':');
   if (colonIndex === -1) {
     throw new Error(
       `Invalid model spec "${spec}". Expected format: "provider:model" (e.g., "openai:gpt-4o-mini")`
@@ -50,7 +50,7 @@ export function resolveModel(spec: string | LanguageModel): LanguageModel {
   const factory = providers[provider];
   if (!factory) {
     throw new Error(
-      `Unknown provider "${provider}". Available: ${Object.keys(providers).join(", ")}`
+      `Unknown provider "${provider}". Available: ${Object.keys(providers).join(', ')}`
     );
   }
 

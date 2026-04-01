@@ -1,12 +1,12 @@
-import type { Fx } from "@flickjs/runtime";
-import type { z } from "zod";
+import type { Fx } from '@flickjs/runtime';
+import type { z } from 'zod';
 
 /**
  * Represents a chat message
  */
 export interface Message {
   id: string;
-  role: "user" | "assistant" | "system";
+  role: 'user' | 'assistant' | 'system';
   content: string;
   createdAt?: Date;
 }
@@ -14,7 +14,7 @@ export interface Message {
 /**
  * Status of the AI chat
  */
-export type ChatStatus = "idle" | "submitting" | "streaming" | "error";
+export type ChatStatus = 'idle' | 'submitting' | 'streaming' | 'error';
 
 /**
  * Options for aiChat()

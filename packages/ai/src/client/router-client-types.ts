@@ -1,5 +1,5 @@
-import type { Agent, AgentResult } from "../server/agent/types";
-import type { AiChat, AiChatOptions, Message } from "./types";
+import type { Agent, AgentResult } from '../server/agent/types';
+import type { AiChat, AiChatOptions, Message } from './types';
 
 /**
  * Options for creating an agent client
@@ -31,7 +31,7 @@ export interface StreamOptions {
 /**
  * Options for chat (reactive streaming)
  */
-export interface ChatOptions extends Omit<AiChatOptions, "api"> {
+export interface ChatOptions extends Omit<AiChatOptions, 'api'> {
   // Inherits all AiChatOptions except api (which is set automatically)
 }
 

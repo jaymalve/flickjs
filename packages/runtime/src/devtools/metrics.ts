@@ -36,7 +36,7 @@ export interface RenderStats {
 }
 
 export interface TimelineEntry {
-  type: "signal" | "effect" | "dom";
+  type: 'signal' | 'effect' | 'dom';
   id: number;
   name?: string;
   timestamp: number;
@@ -77,7 +77,7 @@ class MetricsStore {
     insertBefore: 0,
     removeChild: 0,
     textContent: 0,
-    setAttribute: 0,
+    setAttribute: 0
   };
 
   // List rendering stats
@@ -85,7 +85,7 @@ class MetricsStore {
     lisComputations: 0,
     totalMoves: 0,
     totalInserts: 0,
-    totalDeletes: 0,
+    totalDeletes: 0
   };
 
   // Pause state
@@ -114,14 +114,14 @@ class MetricsStore {
     if (this._paused) return;
 
     this.addTimelineEntry({
-      type: "signal",
+      type: 'signal',
       id: event.fxId,
       name: event.name,
       timestamp: event.timestamp,
       details: {
         prevValue: event.prevValue,
-        nextValue: event.nextValue,
-      },
+        nextValue: event.nextValue
+      }
     });
 
     this.notifyListeners();
@@ -131,26 +131,21 @@ class MetricsStore {
     if (this._paused) return;
 
     this.addTimelineEntry({
-      type: "effect",
+      type: 'effect',
       id: event.runId,
       name: event.name,
       timestamp: event.timestamp,
       duration: event.duration,
       details: {
         domNodesAffected: event.domNodesAffected,
-        dependencies: event.dependencies,
-      },
+        dependencies: event.dependencies
+      }
     });
 
     this.notifyListeners();
   }
 
-  recordDOMNodeUpdate(
-    node: Node,
-    _runId: number,
-    duration: number,
-    triggeredBy?: string
-  ): void {
+  recordDOMNodeUpdate(node: Node, _runId: number, duration: number, triggeredBy?: string): void {
     if (this._paused) return;
 
     let stats = this.nodeStats.get(node);
@@ -161,7 +156,7 @@ class MetricsStore {
         totalTime: 0,
         avgTime: 0,
         lastRenderTime: 0,
-        lastTriggeredBy: "",
+        lastTriggeredBy: ''
       };
       this.nodeStats.set(node, stats);
     }
@@ -181,7 +176,7 @@ class MetricsStore {
   }
 
   recordListOperation(operation: {
-    type: "lis";
+    type: 'lis';
     inputSize: number;
     lisSize: number;
     movesRequired: number;
@@ -228,13 +223,13 @@ class MetricsStore {
     totalEffectExecutions: number;
     totalDOMNodes: number;
   } {
-    const signals = this.timeline.filter((e) => e.type === "signal").length;
-    const effects = this.timeline.filter((e) => e.type === "effect").length;
+    const signals = this.timeline.filter((e) => e.type === 'signal').length;
+    const effects = this.timeline.filter((e) => e.type === 'effect').length;
 
     return {
       totalSignalUpdates: signals,
       totalEffectExecutions: effects,
-      totalDOMNodes: this.nodeStats.size,
+      totalDOMNodes: this.nodeStats.size
     };
   }
 
@@ -263,13 +258,13 @@ class MetricsStore {
       insertBefore: 0,
       removeChild: 0,
       textContent: 0,
-      setAttribute: 0,
+      setAttribute: 0
     };
     this.listStats = {
       lisComputations: 0,
       totalMoves: 0,
       totalInserts: 0,
-      totalDeletes: 0,
+      totalDeletes: 0
     };
     this.notifyListeners();
   }
@@ -288,15 +283,15 @@ class MetricsStore {
   private getNodeIdentifier(node: Node): string {
     if (node instanceof Element) {
       const tag = node.tagName.toLowerCase();
-      const id = node.id ? `#${node.id}` : "";
+      const id = node.id ? `#${node.id}` : '';
       const classes = node.className
-        ? `.${String(node.className).split(" ").filter(Boolean).join(".")}`
-        : "";
+        ? `.${String(node.className).split(' ').filter(Boolean).join('.')}`
+        : '';
       return `${tag}${id}${classes}`;
     }
     if (node.nodeType === Node.TEXT_NODE) {
-      const text = node.textContent?.slice(0, 20) || "";
-      return `text("${text}${text.length >= 20 ? "..." : ""}")`;
+      const text = node.textContent?.slice(0, 20) || '';
+      return `text("${text}${text.length >= 20 ? '...' : ''}")`;
     }
     return node.nodeName;
   }

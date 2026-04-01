@@ -1,9 +1,9 @@
-import fs from "fs-extra";
-import path from "path";
+import fs from 'fs-extra';
+import path from 'path';
 
 export function createTodoDetailPage(root: string) {
   fs.writeFileSync(
-    path.join(root, "src/pages/todos/[id].tsx"),
+    path.join(root, 'src/pages/todos/[id].tsx'),
     `import { query, fx, Suspense } from "@flickjs/runtime";
 import { Link, params } from "@flickjs/router";
 

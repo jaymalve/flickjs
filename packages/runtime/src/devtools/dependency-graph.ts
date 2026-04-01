@@ -11,7 +11,7 @@
 
 export interface GraphNode {
   id: number;
-  type: "signal" | "effect";
+  type: 'signal' | 'effect';
   name?: string;
   createdAt: number;
 }
@@ -52,9 +52,9 @@ class DependencyGraph {
 
     this.nodes.set(id, {
       id,
-      type: "signal",
+      type: 'signal',
       name,
-      createdAt: performance.now(),
+      createdAt: performance.now()
     });
 
     this.signalToEffects.set(id, new Set());
@@ -66,9 +66,9 @@ class DependencyGraph {
 
     this.nodes.set(id, {
       id,
-      type: "effect",
+      type: 'effect',
       name,
-      createdAt: performance.now(),
+      createdAt: performance.now()
     });
 
     this.effectToSignals.set(id, new Set());
@@ -141,14 +141,14 @@ class DependencyGraph {
    * Get all signals
    */
   getSignals(): GraphNode[] {
-    return Array.from(this.nodes.values()).filter((n) => n.type === "signal");
+    return Array.from(this.nodes.values()).filter((n) => n.type === 'signal');
   }
 
   /**
    * Get all effects
    */
   getEffects(): GraphNode[] {
-    return Array.from(this.nodes.values()).filter((n) => n.type === "effect");
+    return Array.from(this.nodes.values()).filter((n) => n.type === 'effect');
   }
 
   /**
@@ -171,18 +171,14 @@ class DependencyGraph {
 
     const avgDepsPerEffect =
       effects.length > 0
-        ? Array.from(this.effectToSignals.values()).reduce(
-            (sum, set) => sum + set.size,
-            0
-          ) / effects.length
+        ? Array.from(this.effectToSignals.values()).reduce((sum, set) => sum + set.size, 0) /
+          effects.length
         : 0;
 
     const avgSubscribersPerSignal =
       signals.length > 0
-        ? Array.from(this.signalToEffects.values()).reduce(
-            (sum, set) => sum + set.size,
-            0
-          ) / signals.length
+        ? Array.from(this.signalToEffects.values()).reduce((sum, set) => sum + set.size, 0) /
+          signals.length
         : 0;
 
     return {
@@ -190,7 +186,7 @@ class DependencyGraph {
       effectCount: effects.length,
       edgeCount: totalEdges,
       avgDepsPerEffect: Math.round(avgDepsPerEffect * 100) / 100,
-      avgSubscribersPerSignal: Math.round(avgSubscribersPerSignal * 100) / 100,
+      avgSubscribersPerSignal: Math.round(avgSubscribersPerSignal * 100) / 100
     };
   }
 

@@ -36,7 +36,7 @@ my-flick-app/
 A simple counter demonstrating signals:
 
 ```tsx
-import { signal, mount } from "@flickjs/runtime";
+import { signal, mount } from '@flickjs/runtime';
 
 function Counter() {
   const count = signal(0);
@@ -51,7 +51,7 @@ function Counter() {
   );
 }
 
-mount(Counter, document.getElementById("app"));
+mount(Counter, document.getElementById('app'));
 ```
 
 ---
@@ -61,7 +61,7 @@ mount(Counter, document.getElementById("app"));
 A todo list demonstrating state management and list rendering:
 
 ```tsx
-import { signal, mount } from "@flickjs/runtime";
+import { signal, mount } from '@flickjs/runtime';
 
 interface Todo {
   id: number;
@@ -71,22 +71,18 @@ interface Todo {
 
 function TodoApp() {
   const todos = signal<Todo[]>([]);
-  const input = signal("");
+  const input = signal('');
   let nextId = 1;
 
   const addTodo = () => {
     if (input().trim()) {
       todos.set([...todos(), { id: nextId++, text: input(), done: false }]);
-      input.set("");
+      input.set('');
     }
   };
 
   const toggleTodo = (id: number) => {
-    todos.set(
-      todos().map((todo) =>
-        todo.id === id ? { ...todo, done: !todo.done } : todo
-      )
-    );
+    todos.set(todos().map((todo) => (todo.id === id ? { ...todo, done: !todo.done } : todo)));
   };
 
   const removeTodo = (id: number) => {
@@ -102,7 +98,7 @@ function TodoApp() {
           type="text"
           value={input()}
           oninput={(e) => input.set(e.target.value)}
-          onkeypress={(e) => e.key === "Enter" && addTodo()}
+          onkeypress={(e) => e.key === 'Enter' && addTodo()}
           placeholder="Add a todo..."
         />
         <button onclick={addTodo}>Add</button>
@@ -111,14 +107,8 @@ function TodoApp() {
       <ul>
         {todos().map((todo) => (
           <li key={todo.id}>
-            <input
-              type="checkbox"
-              checked={todo.done}
-              onchange={() => toggleTodo(todo.id)}
-            />
-            <span style={todo.done ? "text-decoration: line-through" : ""}>
-              {todo.text}
-            </span>
+            <input type="checkbox" checked={todo.done} onchange={() => toggleTodo(todo.id)} />
+            <span style={todo.done ? 'text-decoration: line-through' : ''}>{todo.text}</span>
             <button onclick={() => removeTodo(todo.id)}>Delete</button>
           </li>
         ))}
@@ -129,7 +119,7 @@ function TodoApp() {
   );
 }
 
-mount(TodoApp, document.getElementById("app"));
+mount(TodoApp, document.getElementById('app'));
 ```
 
 ---
@@ -139,7 +129,7 @@ mount(TodoApp, document.getElementById("app"));
 Fetching data with Suspense and resources:
 
 ```tsx
-import { signal, mount, Suspense, resource } from "@flickjs/runtime";
+import { signal, mount, Suspense, resource } from '@flickjs/runtime';
 
 interface User {
   id: number;
@@ -149,7 +139,7 @@ interface User {
 
 function UserList() {
   const users = resource<User[]>(() =>
-    fetch("https://jsonplaceholder.typicode.com/users").then((r) => r.json())
+    fetch('https://jsonplaceholder.typicode.com/users').then((r) => r.json())
   );
 
   return (
@@ -178,7 +168,7 @@ function App() {
   );
 }
 
-mount(App, document.getElementById("app"));
+mount(App, document.getElementById('app'));
 ```
 
 ---
@@ -188,25 +178,25 @@ mount(App, document.getElementById("app"));
 Implementing a dark mode toggle with effects:
 
 ```tsx
-import { signal, effect, mount } from "@flickjs/runtime";
+import { signal, effect, mount } from '@flickjs/runtime';
 
 function ThemeToggle() {
-  const theme = signal(localStorage.getItem("theme") || "light");
+  const theme = signal(localStorage.getItem('theme') || 'light');
 
   // Sync to localStorage and document
   effect(() => {
-    localStorage.setItem("theme", theme());
-    document.documentElement.setAttribute("data-theme", theme());
+    localStorage.setItem('theme', theme());
+    document.documentElement.setAttribute('data-theme', theme());
   });
 
   return (
-    <button onclick={() => theme.set(theme() === "light" ? "dark" : "light")}>
-      {theme() === "light" ? "🌙 Dark Mode" : "☀️ Light Mode"}
+    <button onclick={() => theme.set(theme() === 'light' ? 'dark' : 'light')}>
+      {theme() === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode'}
     </button>
   );
 }
 
-mount(ThemeToggle, document.getElementById("app"));
+mount(ThemeToggle, document.getElementById('app'));
 ```
 
 ---
@@ -217,10 +207,10 @@ Using file-based routing:
 
 ```tsx
 // src/main.tsx
-import "./index.css";
-import { mount, Suspense } from "@flickjs/runtime";
-import { Router, Link } from "@flickjs/router";
-import { routes } from "virtual:flick-routes";
+import './index.css';
+import { mount, Suspense } from '@flickjs/runtime';
+import { Router, Link } from '@flickjs/router';
+import { routes } from 'virtual:flick-routes';
 
 function App() {
   return (
@@ -240,7 +230,7 @@ function App() {
   );
 }
 
-mount(App, document.getElementById("app"));
+mount(App, document.getElementById('app'));
 ```
 
 ```tsx
@@ -257,13 +247,11 @@ export default function Home() {
 
 ```tsx
 // src/pages/users/[id].tsx
-import { params } from "@flickjs/router";
-import { resource, Suspense } from "@flickjs/runtime";
+import { params } from '@flickjs/router';
+import { resource, Suspense } from '@flickjs/runtime';
 
 export default function UserPage() {
-  const user = resource(params().id, (id) =>
-    fetch(`/api/users/${id}`).then((r) => r.json())
-  );
+  const user = resource(params().id, (id) => fetch(`/api/users/${id}`).then((r) => r.json()));
 
   return (
     <div>

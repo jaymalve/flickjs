@@ -5,8 +5,8 @@
  * timing data, track dependencies, and record metrics.
  */
 
-import { metricsStore } from "./metrics";
-import { depGraph } from "./dependency-graph";
+import { metricsStore } from './metrics';
+import { depGraph } from './dependency-graph';
 
 /*
  * Type Definitions
@@ -36,12 +36,7 @@ export interface RunMetadata {
 
 export interface InstrumentationCallbacks {
   onEffectStart?: (runId: number, name?: string) => void;
-  onEffectEnd?: (
-    runId: number,
-    duration: number,
-    domNodes: Set<Node>,
-    name?: string
-  ) => void;
+  onEffectEnd?: (runId: number, duration: number, domNodes: Set<Node>, name?: string) => void;
   onSignalUpdate?: (fxId: number, name?: string) => void;
 }
 
@@ -68,9 +63,7 @@ let callbacks: InstrumentationCallbacks = {};
  * Configuration
  */
 
-export function setInstrumentationCallbacks(
-  newCallbacks: InstrumentationCallbacks
-): void {
+export function setInstrumentationCallbacks(newCallbacks: InstrumentationCallbacks): void {
   callbacks = newCallbacks;
 }
 
@@ -107,7 +100,7 @@ export function instrumentedFx<T>(value: T, name?: string): Fx<T> {
     name,
     createdAt: performance.now(),
     updateCount: 0,
-    lastUpdateTime: 0,
+    lastUpdateTime: 0
   };
 
   function read(): T {
@@ -127,7 +120,7 @@ export function instrumentedFx<T>(value: T, name?: string): Fx<T> {
 
   read.set = (next: T | ((v: T) => T)) => {
     const prevValue = value;
-    value = typeof next === "function" ? (next as (v: T) => T)(value) : next;
+    value = typeof next === 'function' ? (next as (v: T) => T)(value) : next;
 
     // Record the signal change
     metadata.updateCount++;
@@ -138,7 +131,7 @@ export function instrumentedFx<T>(value: T, name?: string): Fx<T> {
       name: metadata.name,
       prevValue,
       nextValue: value,
-      timestamp: metadata.lastUpdateTime,
+      timestamp: metadata.lastUpdateTime
     });
 
     // Notify callback for overlay
@@ -171,7 +164,7 @@ export function instrumentedRun(fn: Run, name?: string): void {
     totalTime: 0,
     lastExecutionTime: 0,
     dependencies: new Set(),
-    domNodes: new Set(),
+    domNodes: new Set()
   };
 
   const execute = () => {
@@ -219,7 +212,7 @@ export function instrumentedRun(fn: Run, name?: string): void {
       duration,
       timestamp: startTime,
       domNodesAffected: metadata.domNodes.size,
-      dependencies: Array.from(metadata.dependencies),
+      dependencies: Array.from(metadata.dependencies)
     });
 
     // Record stats for each affected DOM node
@@ -266,7 +259,7 @@ function createMutationObserver(metadata: RunMetadata): MutationObserver {
         childList: true,
         subtree: true,
         attributes: true,
-        characterData: true,
+        characterData: true
       });
     }
   } catch {

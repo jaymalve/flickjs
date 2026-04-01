@@ -31,7 +31,7 @@ Creates a reactive fx that holds a value. Fx are the foundation of Flick's react
 **Example**:
 
 ```tsx
-import { fx } from "@flickjs/runtime";
+import { fx } from '@flickjs/runtime';
 
 const count = fx(0);
 
@@ -55,12 +55,12 @@ Creates a run that automatically tracks fx dependencies and re-runs when they ch
 **Example**:
 
 ```tsx
-import { fx, run } from "@flickjs/runtime";
+import { fx, run } from '@flickjs/runtime';
 
 const count = fx(0);
 
 run(() => {
-  console.log("Count is:", count());
+  console.log('Count is:', count());
 });
 // Logs: "Count is: 0"
 
@@ -82,7 +82,7 @@ Mounts a Flick component to a DOM element.
 **Example**:
 
 ```tsx
-import { fx, mount } from "@flickjs/runtime";
+import { fx, mount } from '@flickjs/runtime';
 
 function App() {
   const count = fx(0);
@@ -95,7 +95,7 @@ function App() {
   );
 }
 
-mount(App, document.getElementById("app"));
+mount(App, document.getElementById('app'));
 ```
 
 ## Complete Examples
@@ -103,7 +103,7 @@ mount(App, document.getElementById("app"));
 ### Counter
 
 ```tsx
-import { fx, mount } from "@flickjs/runtime";
+import { fx, mount } from '@flickjs/runtime';
 
 function Counter() {
   const count = fx(0);
@@ -122,16 +122,16 @@ function Counter() {
   );
 }
 
-mount(Counter, document.getElementById("app"));
+mount(Counter, document.getElementById('app'));
 ```
 
 ### Input Binding
 
 ```tsx
-import { fx, mount } from "@flickjs/runtime";
+import { fx, mount } from '@flickjs/runtime';
 
 function NameInput() {
-  const name = fx("");
+  const name = fx('');
 
   return (
     <div>
@@ -141,24 +141,24 @@ function NameInput() {
         oninput={(e) => name.set(e.target.value)}
         placeholder="Enter your name"
       />
-      <p>Hello, {name() || "stranger"}!</p>
+      <p>Hello, {name() || 'stranger'}!</p>
     </div>
   );
 }
 
-mount(NameInput, document.getElementById("app"));
+mount(NameInput, document.getElementById('app'));
 ```
 
 ### Computed Values
 
 ```tsx
-import { fx, run, mount } from "@flickjs/runtime";
+import { fx, run, mount } from '@flickjs/runtime';
 
 function TodoApp() {
   const todos = fx([
-    { id: 1, text: "Learn Flick", done: false },
-    { id: 2, text: "Build something", done: false },
-    { id: 3, text: "Ship it", done: false },
+    { id: 1, text: 'Learn Flick', done: false },
+    { id: 2, text: 'Build something', done: false },
+    { id: 3, text: 'Ship it', done: false }
   ]);
 
   const remaining = fx(0);
@@ -172,11 +172,7 @@ function TodoApp() {
   });
 
   const toggleTodo = (id) => {
-    todos.set(
-      todos().map((todo) =>
-        todo.id === id ? { ...todo, done: !todo.done } : todo
-      )
-    );
+    todos.set(todos().map((todo) => (todo.id === id ? { ...todo, done: !todo.done } : todo)));
   };
 
   return (
@@ -189,7 +185,7 @@ function TodoApp() {
         {todos().map((todo) => (
           <li
             onclick={() => toggleTodo(todo.id)}
-            style={{ textDecoration: todo.done ? "line-through" : "none" }}
+            style={{ textDecoration: todo.done ? 'line-through' : 'none' }}
           >
             {todo.text}
           </li>
@@ -199,13 +195,13 @@ function TodoApp() {
   );
 }
 
-mount(TodoApp, document.getElementById("app"));
+mount(TodoApp, document.getElementById('app'));
 ```
 
 ### Multiple Signals
 
 ```tsx
-import { fx, run, mount } from "@flickjs/runtime";
+import { fx, run, mount } from '@flickjs/runtime';
 
 function Calculator() {
   const a = fx(0);
@@ -218,23 +214,15 @@ function Calculator() {
 
   return (
     <div>
-      <input
-        type="number"
-        value={a()}
-        oninput={(e) => a.set(Number(e.target.value))}
-      />
+      <input type="number" value={a()} oninput={(e) => a.set(Number(e.target.value))} />
       <span> + </span>
-      <input
-        type="number"
-        value={b()}
-        oninput={(e) => b.set(Number(e.target.value))}
-      />
+      <input type="number" value={b()} oninput={(e) => b.set(Number(e.target.value))} />
       <span> = {result()}</span>
     </div>
   );
 }
 
-mount(Calculator, document.getElementById("app"));
+mount(Calculator, document.getElementById('app'));
 ```
 
 ## Advanced Patterns
@@ -288,7 +276,7 @@ function App() {
 The runtime is fully typed. Import types for better IDE support:
 
 ```tsx
-import { fx, run, mount } from "@flickjs/runtime";
+import { fx, run, mount } from '@flickjs/runtime';
 
 interface Todo {
   id: number;

@@ -29,7 +29,7 @@ bun dev
 ## Example
 
 ```tsx
-import { signal, effect, mount } from "@flickjs/runtime";
+import { signal, effect, mount } from '@flickjs/runtime';
 
 function Counter() {
   const count = signal(0);
@@ -42,7 +42,7 @@ function Counter() {
   );
 }
 
-mount(Counter, document.getElementById("app"));
+mount(Counter, document.getElementById('app'));
 ```
 
 ## How It Works
@@ -152,7 +152,7 @@ bun build src/main.tsx --outdir dist
 
 | Feature        | Flick        | SolidJS      | Vue 3        | React          |
 | -------------- | ------------ | ------------ | ------------ | -------------- |
-| Size           | ~1 KB   | ~7 KB        | ~34 KB       | ~45 KB         |
+| Size           | ~1 KB        | ~7 KB        | ~34 KB       | ~45 KB         |
 | Reactivity     | Fine-grained | Fine-grained | Fine-grained | Coarse-grained |
 | Virtual DOM    | No           | No           | Optional     | Yes            |
 | JSX Support    | Yes          | Yes          | Via plugin   | Yes            |
@@ -167,8 +167,8 @@ Flick is most similar to **SolidJS** in its reactivity model, but with an even s
 ```tsx
 function TodoList() {
   const todos = signal([
-    { id: 1, text: "Learn Flick", done: false },
-    { id: 2, text: "Build an app", done: false },
+    { id: 1, text: 'Learn Flick', done: false },
+    { id: 2, text: 'Build an app', done: false }
   ]);
 
   const remaining = signal(0);
@@ -194,26 +194,18 @@ function TodoList() {
 
 ```tsx
 function Form() {
-  const name = signal("");
-  const email = signal("");
+  const name = signal('');
+  const email = signal('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Submitted:", { name: name(), email: email() });
+    console.log('Submitted:', { name: name(), email: email() });
   };
 
   return (
     <form onsubmit={handleSubmit}>
-      <input
-        type="text"
-        value={name()}
-        oninput={(e) => name.set(e.target.value)}
-      />
-      <input
-        type="email"
-        value={email()}
-        oninput={(e) => email.set(e.target.value)}
-      />
+      <input type="text" value={name()} oninput={(e) => name.set(e.target.value)} />
+      <input type="email" value={email()} oninput={(e) => email.set(e.target.value)} />
       <button type="submit">Submit</button>
     </form>
   );

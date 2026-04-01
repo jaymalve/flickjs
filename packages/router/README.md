@@ -17,14 +17,14 @@ npm install @flickjs/router
 Add the router plugin to your `vite.config.js`:
 
 ```javascript
-import { defineConfig } from "vite";
-import { flickRouter } from "@flickjs/router/vite";
+import { defineConfig } from 'vite';
+import { flickRouter } from '@flickjs/router/vite';
 
 export default defineConfig({
   plugins: [
-    flickRouter({ pagesDir: "pages", root: process.cwd() }),
+    flickRouter({ pagesDir: 'pages', root: process.cwd() })
     // ... other plugins
-  ],
+  ]
 });
 ```
 
@@ -46,11 +46,11 @@ src/
 Update your `src/main.tsx`:
 
 ```tsx
-import { mount } from "@flickjs/runtime";
-import { Router } from "@flickjs/router";
-import routes from "virtual:flick-routes";
+import { mount } from '@flickjs/runtime';
+import { Router } from '@flickjs/router';
+import routes from 'virtual:flick-routes';
 
-mount(() => <Router routes={routes} />, document.getElementById("app"));
+mount(() => <Router routes={routes} />, document.getElementById('app'));
 ```
 
 ### 4. Create Your First Page
@@ -58,7 +58,7 @@ mount(() => <Router routes={routes} />, document.getElementById("app"));
 Create `src/pages/index.tsx`:
 
 ```tsx
-import { Link } from "@flickjs/router";
+import { Link } from '@flickjs/router';
 
 export default function Home() {
   return (
@@ -91,7 +91,7 @@ Use square brackets `[param]` for dynamic route parameters:
 **File**: `pages/users/[id].tsx`
 
 ```tsx
-import { params } from "@flickjs/router";
+import { params } from '@flickjs/router';
 
 export default function UserPage() {
   return <h1>User ID: {params().id}</h1>;
@@ -107,7 +107,7 @@ Use `[...param]` for catch-all routes that match multiple segments:
 **File**: `pages/posts/[...slug].tsx`
 
 ```tsx
-import { params } from "@flickjs/router";
+import { params } from '@flickjs/router';
 
 export default function PostPage() {
   return <h1>Post: {params().slug}</h1>;
@@ -129,8 +129,8 @@ Main router component that handles route matching and rendering.
 **Example**:
 
 ```tsx
-import { Router } from "@flickjs/router";
-import routes from "virtual:flick-routes";
+import { Router } from '@flickjs/router';
+import routes from 'virtual:flick-routes';
 
 <Router routes={routes} />;
 ```
@@ -148,7 +148,7 @@ Component for declarative navigation. Intercepts clicks and uses client-side nav
 **Example**:
 
 ```tsx
-import { Link } from "@flickjs/router";
+import { Link } from '@flickjs/router';
 
 <Link href="/about" class="nav-link">
   About
@@ -168,14 +168,14 @@ Programmatic navigation function.
 **Example**:
 
 ```tsx
-import { navigate } from "@flickjs/router";
+import { navigate } from '@flickjs/router';
 
 function handleClick() {
-  navigate("/about");
+  navigate('/about');
 }
 
 // Replace instead of push
-navigate("/login", { replace: true });
+navigate('/login', { replace: true });
 ```
 
 ### `currentPath()`
@@ -185,7 +185,7 @@ Reactive signal that returns the current URL pathname.
 **Example**:
 
 ```tsx
-import { currentPath } from "@flickjs/router";
+import { currentPath } from '@flickjs/router';
 
 function NavBar() {
   const path = currentPath();
@@ -205,7 +205,7 @@ Reactive signal that returns route parameters as an object.
 **Example**:
 
 ```tsx
-import { params } from "@flickjs/router";
+import { params } from '@flickjs/router';
 
 export default function UserPage() {
   const routeParams = params();
@@ -225,11 +225,11 @@ Reactive signal that returns URL query parameters as a `URLSearchParams` object.
 **Example**:
 
 ```tsx
-import { query } from "@flickjs/router";
+import { query } from '@flickjs/router';
 
 export default function SearchPage() {
   const searchParams = query();
-  const search = searchParams.get("q") || "";
+  const search = searchParams.get('q') || '';
 
   return <h1>Search: {search}</h1>;
 }
@@ -243,7 +243,7 @@ Accessing `/search?q=hello` will display "Search: hello".
 
 ```tsx
 // src/pages/index.tsx
-import { Link } from "@flickjs/router";
+import { Link } from '@flickjs/router';
 
 export default function Home() {
   return (
@@ -262,7 +262,7 @@ export default function Home() {
 
 ```tsx
 // src/pages/users/[id].tsx
-import { params, Link } from "@flickjs/router";
+import { params, Link } from '@flickjs/router';
 
 export default function UserPage() {
   const userId = params().id;
@@ -280,16 +280,16 @@ export default function UserPage() {
 ### Programmatic Navigation
 
 ```tsx
-import { signal } from "@flickjs/runtime";
-import { navigate } from "@flickjs/router";
+import { signal } from '@flickjs/runtime';
+import { navigate } from '@flickjs/router';
 
 function LoginForm() {
-  const username = signal("");
-  const password = signal("");
+  const username = signal('');
+  const password = signal('');
 
   const handleSubmit = () => {
     // Login logic...
-    navigate("/dashboard");
+    navigate('/dashboard');
   };
 
   return (
@@ -320,12 +320,12 @@ function LoginForm() {
 
 ```tsx
 // src/pages/search.tsx
-import { query, navigate } from "@flickjs/router";
-import { signal } from "@flickjs/runtime";
+import { query, navigate } from '@flickjs/router';
+import { signal } from '@flickjs/runtime';
 
 export default function SearchPage() {
   const searchParams = query();
-  const searchTerm = signal(searchParams.get("q") || "");
+  const searchTerm = signal(searchParams.get('q') || '');
 
   const handleSearch = () => {
     navigate(`/search?q=${encodeURIComponent(searchTerm())}`);
@@ -339,7 +339,7 @@ export default function SearchPage() {
         placeholder="Search..."
       />
       <button onclick={handleSearch}>Search</button>
-      {searchParams.get("q") && <p>Results for: {searchParams.get("q")}</p>}
+      {searchParams.get('q') && <p>Results for: {searchParams.get('q')}</p>}
     </div>
   );
 }
@@ -349,7 +349,7 @@ export default function SearchPage() {
 
 ```tsx
 // src/pages/blog/index.tsx
-import { Link } from "@flickjs/router";
+import { Link } from '@flickjs/router';
 
 export default function BlogIndex() {
   return (
@@ -368,7 +368,7 @@ export default function BlogIndex() {
 }
 
 // src/pages/blog/[slug].tsx
-import { params, Link } from "@flickjs/router";
+import { params, Link } from '@flickjs/router';
 
 export default function BlogPost() {
   const slug = params().slug;
@@ -387,14 +387,14 @@ export default function BlogPost() {
 ### Active Link Styling
 
 ```tsx
-import { Link, currentPath } from "@flickjs/router";
+import { Link, currentPath } from '@flickjs/router';
 
 function NavLink({ href, children }) {
   const path = currentPath();
   const isActive = path === href;
 
   return (
-    <Link href={href} class={isActive ? "nav-link active" : "nav-link"}>
+    <Link href={href} class={isActive ? 'nav-link active' : 'nav-link'}>
       {children}
     </Link>
   );
@@ -404,17 +404,17 @@ function NavLink({ href, children }) {
 ### Route Guards
 
 ```tsx
-import { effect } from "@flickjs/runtime";
-import { navigate, currentPath } from "@flickjs/router";
-import { signal } from "@flickjs/runtime";
+import { effect } from '@flickjs/runtime';
+import { navigate, currentPath } from '@flickjs/router';
+import { signal } from '@flickjs/runtime';
 
 const isAuthenticated = signal(false);
 
 // Protect routes
 effect(() => {
   const path = currentPath();
-  if (path.startsWith("/dashboard") && !isAuthenticated()) {
-    navigate("/login");
+  if (path.startsWith('/dashboard') && !isAuthenticated()) {
+    navigate('/login');
   }
 });
 ```
@@ -429,7 +429,7 @@ Create a catch-all route at the end of your routes array or create a `pages/[...
 
 ```tsx
 // src/pages/[...all].tsx
-import { currentPath } from "@flickjs/router";
+import { currentPath } from '@flickjs/router';
 
 export default function NotFound() {
   const path = currentPath();
@@ -463,16 +463,16 @@ flickRouter({
 ### Example Configuration
 
 ```javascript
-import { defineConfig } from "vite";
-import { flickRouter } from "@flickjs/router/vite";
+import { defineConfig } from 'vite';
+import { flickRouter } from '@flickjs/router/vite';
 
 export default defineConfig({
   plugins: [
     flickRouter({
-      pagesDir: "src/pages", // Custom pages directory
-      root: __dirname, // Custom root
-    }),
-  ],
+      pagesDir: 'src/pages', // Custom pages directory
+      root: __dirname // Custom root
+    })
+  ]
 });
 ```
 
@@ -507,7 +507,7 @@ The router uses the History API and works in all modern browsers:
 The router is fully typed. Import types for better IDE support:
 
 ```tsx
-import type { Route, MatchResult } from "@flickjs/router";
+import type { Route, MatchResult } from '@flickjs/router';
 ```
 
 ## Troubleshooting

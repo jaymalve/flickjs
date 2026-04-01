@@ -1,4 +1,4 @@
-import { fx, run, Fx } from "./index";
+import { fx, run, Fx } from './index';
 
 export interface SuspenseContext {
   register: (promise: Promise<any>) => void;
@@ -17,8 +17,8 @@ export interface SuspenseProps {
 }
 
 export function Suspense(props: SuspenseProps): Node {
-  const container = document.createElement("div");
-  container.setAttribute("data-suspense", "");
+  const container = document.createElement('div');
+  container.setAttribute('data-suspense', '');
 
   const pending = fx(0);
 
@@ -29,29 +29,25 @@ export function Suspense(props: SuspenseProps): Node {
       promise.finally(() => {
         pending.set((n) => n - 1);
       });
-    },
+    }
   };
 
   const resolveFallback = (): Node => {
-    return typeof props.fallback === "function"
-      ? props.fallback()
-      : props.fallback;
+    return typeof props.fallback === 'function' ? props.fallback() : props.fallback;
   };
 
   const fallbackNode = resolveFallback();
 
-  const childrenWrapper = document.createElement("div");
+  const childrenWrapper = document.createElement('div');
 
   const evaluateChildren = (): Node | null => {
     suspenseStack.push(context);
     try {
-      return typeof props.children === "function"
-        ? props.children()
-        : props.children ?? null;
+      return typeof props.children === 'function' ? props.children() : (props.children ?? null);
     } catch (thrown) {
       if (thrown instanceof Promise) {
         // Resource threw a promise, already registered, return placeholder
-        return document.createComment("suspense-pending");
+        return document.createComment('suspense-pending');
       }
       throw thrown;
     } finally {
@@ -64,20 +60,20 @@ export function Suspense(props: SuspenseProps): Node {
       return;
     }
     const result = evaluateChildren();
-    childrenWrapper.innerHTML = "";
+    childrenWrapper.innerHTML = '';
     childrenWrapper.appendChild(result ?? document.createDocumentFragment());
   });
 
   run(() => {
     const isPending = pending() > 0;
-    container.innerHTML = "";
+    container.innerHTML = '';
     container.appendChild(isPending ? fallbackNode : childrenWrapper);
   });
 
   return container;
 }
 
-type QueryState = "pending" | "resolved" | "rejected";
+type QueryState = 'pending' | 'resolved' | 'rejected';
 
 export interface Query<T> {
   (): T | undefined;
@@ -90,10 +86,7 @@ export interface Query<T> {
 type Fetcher<S, T> = (source: S) => Promise<T>;
 
 export function query<T>(fetcher: () => Promise<T>): Query<T>;
-export function query<S, T>(
-  source: () => S,
-  fetcher: Fetcher<S, T>
-): Query<T>;
+export function query<S, T>(source: () => S, fetcher: Fetcher<S, T>): Query<T>;
 
 export function query<S, T>(
   sourceOrFetcher: (() => S) | (() => Promise<T>),
@@ -101,11 +94,9 @@ export function query<S, T>(
 ): Query<T> {
   const hasSource = maybeFetcher !== undefined;
   const source = hasSource ? (sourceOrFetcher as () => S) : undefined;
-  const fetcher = hasSource
-    ? maybeFetcher!
-    : (sourceOrFetcher as () => Promise<T>);
+  const fetcher = hasSource ? maybeFetcher! : (sourceOrFetcher as () => Promise<T>);
 
-  const state = fx<QueryState>("pending");
+  const state = fx<QueryState>('pending');
   const value = fx<T | undefined>(undefined);
   const error = fx<Error | undefined>(undefined);
   const latest = fx<T | undefined>(undefined);
@@ -115,7 +106,7 @@ export function query<S, T>(
   let registeredWith = new Set<SuspenseContext>();
 
   const load = (sourceValue?: S) => {
-    state.set("pending");
+    state.set('pending');
     error.set(undefined);
 
     // Clear registrations for new load
@@ -131,12 +122,12 @@ export function query<S, T>(
       .then((result) => {
         value.set(result);
         latest.set(result);
-        state.set("resolved");
+        state.set('resolved');
         currentPromise = null;
       })
       .catch((err) => {
         error.set(err instanceof Error ? err : new Error(String(err)));
-        state.set("rejected");
+        state.set('rejected');
         currentPromise = null;
       });
   };
@@ -151,7 +142,7 @@ export function query<S, T>(
   }
   // Create the query accessor - throws promise while pending
   const read = (() => {
-    if (state() === "pending" && currentPromise) {
+    if (state() === 'pending' && currentPromise) {
       const suspenseContext = getCurrentSuspense();
       if (suspenseContext && !registeredWith.has(suspenseContext)) {
         registeredWith.add(suspenseContext);
@@ -162,7 +153,7 @@ export function query<S, T>(
     return value();
   }) as Query<T>;
 
-  read.loading = () => state() === "pending";
+  read.loading = () => state() === 'pending';
   read.error = () => error();
   read.latest = () => latest();
   read.refetch = () => {
@@ -179,9 +170,7 @@ export function query<S, T>(
 type LazyComponent<P> = (props: P) => Node;
 type LazyLoader<P> = () => Promise<{ default: LazyComponent<P> }>;
 
-export function lazy<P extends Record<string, any> = {}>(
-  loader: LazyLoader<P>
-): LazyComponent<P> {
+export function lazy<P extends Record<string, any> = {}>(loader: LazyLoader<P>): LazyComponent<P> {
   let cachedComponent: LazyComponent<P> | null = null;
   let loadPromise: Promise<void> | null = null;
 
@@ -190,7 +179,7 @@ export function lazy<P extends Record<string, any> = {}>(
       return cachedComponent(props);
     }
 
-    const placeholder = document.createComment("lazy");
+    const placeholder = document.createComment('lazy');
 
     const suspenseContext = getCurrentSuspense();
 

@@ -6,15 +6,15 @@
  */
 
 export type StreamPartType =
-  | "text"
-  | "object"
-  | "data"
-  | "error"
-  | "tool_call"
-  | "tool_result"
-  | "finish"
-  | "message_id"
-  | "unknown";
+  | 'text'
+  | 'object'
+  | 'data'
+  | 'error'
+  | 'tool_call'
+  | 'tool_result'
+  | 'finish'
+  | 'message_id'
+  | 'unknown';
 
 export interface StreamPart {
   type: StreamPartType;
@@ -25,16 +25,16 @@ export interface StreamPart {
  * Legacy prefix codes from AI SDK Data Stream Protocol
  */
 const LEGACY_PREFIX_MAP: Record<string, StreamPartType> = {
-  "0": "text", // Text content
-  "2": "data", // Custom data
-  "3": "error", // Error
-  "5": "object", // Partial object (streamObject)
-  "9": "tool_call", // Tool call
-  "a": "tool_result", // Tool result (hex for 10)
-  "c": "object", // Object chunk (hex for 12)
-  "e": "finish", // Finish event
-  "d": "finish", // Done signal (alternative finish)
-  "f": "message_id", // Message ID
+  '0': 'text', // Text content
+  '2': 'data', // Custom data
+  '3': 'error', // Error
+  '5': 'object', // Partial object (streamObject)
+  '9': 'tool_call', // Tool call
+  a: 'tool_result', // Tool result (hex for 10)
+  c: 'object', // Object chunk (hex for 12)
+  e: 'finish', // Finish event
+  d: 'finish', // Done signal (alternative finish)
+  f: 'message_id' // Message ID
 };
 
 /**
@@ -45,11 +45,11 @@ function parseLegacyLine(line: string): StreamPart | null {
   if (line.length < 2) return null;
 
   const prefix = line[0];
-  if (line[1] !== ":") return null;
+  if (line[1] !== ':') return null;
 
   const type = LEGACY_PREFIX_MAP[prefix];
   if (!type) {
-    return { type: "unknown", value: line.slice(2) };
+    return { type: 'unknown', value: line.slice(2) };
   }
 
   const jsonPart = line.slice(2);
@@ -67,12 +67,12 @@ function parseLegacyLine(line: string): StreamPart | null {
  * Format: data: {"type":"text-delta","delta":"..."} or data: [DONE]
  */
 function parseSSELine(line: string): StreamPart | null {
-  if (!line.startsWith("data: ")) return null;
+  if (!line.startsWith('data: ')) return null;
 
   const data = line.slice(6); // Remove "data: " prefix
 
-  if (data === "[DONE]") {
-    return { type: "finish", value: { finishReason: "stop" } };
+  if (data === '[DONE]') {
+    return { type: 'finish', value: { finishReason: 'stop' } };
   }
 
   try {
@@ -80,31 +80,31 @@ function parseSSELine(line: string): StreamPart | null {
 
     // Map SSE types to our StreamPartType
     switch (parsed.type) {
-      case "text-delta":
-        return { type: "text", value: parsed.delta };
-      case "text-start":
-      case "text-end":
-        return { type: "text", value: "" };
-      case "object":
-      case "object-delta":
+      case 'text-delta':
+        return { type: 'text', value: parsed.delta };
+      case 'text-start':
+      case 'text-end':
+        return { type: 'text', value: '' };
+      case 'object':
+      case 'object-delta':
         // Object streams send partial objects already parsed
-        return { type: "object", value: parsed.object ?? parsed.delta };
-      case "error":
-        return { type: "error", value: parsed.errorText || parsed.error };
-      case "finish":
-        return { type: "finish", value: parsed };
-      case "tool-input-available":
-        return { type: "tool_call", value: parsed };
-      case "tool-output-available":
-        return { type: "tool_result", value: parsed };
-      case "start":
-        return { type: "message_id", value: parsed.messageId };
+        return { type: 'object', value: parsed.object ?? parsed.delta };
+      case 'error':
+        return { type: 'error', value: parsed.errorText || parsed.error };
+      case 'finish':
+        return { type: 'finish', value: parsed };
+      case 'tool-input-available':
+        return { type: 'tool_call', value: parsed };
+      case 'tool-output-available':
+        return { type: 'tool_result', value: parsed };
+      case 'start':
+        return { type: 'message_id', value: parsed.messageId };
       default:
         // Handle data-* types
-        if (parsed.type?.startsWith("data-")) {
-          return { type: "data", value: parsed.data };
+        if (parsed.type?.startsWith('data-')) {
+          return { type: 'data', value: parsed.data };
         }
-        return { type: "unknown", value: parsed };
+        return { type: 'unknown', value: parsed };
     }
   } catch {
     return null;
@@ -119,12 +119,12 @@ export function parseStreamLine(line: string): StreamPart | null {
   if (!trimmed) return null;
 
   // Try SSE format first (starts with "data: ")
-  if (trimmed.startsWith("data:")) {
+  if (trimmed.startsWith('data:')) {
     return parseSSELine(trimmed);
   }
 
   // Try legacy prefix format (single char + colon)
-  if (trimmed.length >= 2 && trimmed[1] === ":") {
+  if (trimmed.length >= 2 && trimmed[1] === ':') {
     return parseLegacyLine(trimmed);
   }
 
@@ -138,7 +138,7 @@ export async function* parseStream(
   reader: ReadableStreamDefaultReader<Uint8Array>
 ): AsyncGenerator<StreamPart> {
   const decoder = new TextDecoder();
-  let buffer = "";
+  let buffer = '';
 
   while (true) {
     const { done, value } = await reader.read();
@@ -155,8 +155,8 @@ export async function* parseStream(
     buffer += decoder.decode(value, { stream: true });
 
     // Process complete lines
-    const lines = buffer.split("\n");
-    buffer = lines.pop() || ""; // Keep incomplete line in buffer
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || ''; // Keep incomplete line in buffer
 
     for (const line of lines) {
       const part = parseStreamLine(line);
@@ -184,26 +184,26 @@ export async function parseStreamWithCallbacks(
 ): Promise<void> {
   for await (const part of parseStream(reader)) {
     switch (part.type) {
-      case "text":
+      case 'text':
         callbacks.onText?.(String(part.value));
         break;
-      case "object":
+      case 'object':
         callbacks.onObject?.(part.value);
         break;
-      case "data":
+      case 'data':
         callbacks.onData?.(part.value);
         break;
-      case "error":
+      case 'error':
         callbacks.onError?.(String(part.value));
         break;
-      case "finish":
+      case 'finish':
         const finishData = part.value as { finishReason?: string } | undefined;
-        callbacks.onFinish?.(finishData?.finishReason || "stop");
+        callbacks.onFinish?.(finishData?.finishReason || 'stop');
         break;
-      case "tool_call":
+      case 'tool_call':
         callbacks.onToolCall?.(part.value);
         break;
-      case "tool_result":
+      case 'tool_result':
         callbacks.onToolResult?.(part.value);
         break;
     }
@@ -216,12 +216,12 @@ export async function parseStreamWithCallbacks(
 export async function extractTextFromStream(
   reader: ReadableStreamDefaultReader<Uint8Array>
 ): Promise<string> {
-  let text = "";
+  let text = '';
 
   await parseStreamWithCallbacks(reader, {
     onText: (chunk) => {
       text += chunk;
-    },
+    }
   });
 
   return text;

@@ -1,6 +1,6 @@
-import { run, fx, Suspense } from "@flickjs/runtime";
-import { currentPath, params, queryParams } from "./fx";
-import { matchRoute, type Route } from "./utils";
+import { run, fx, Suspense } from '@flickjs/runtime';
+import { currentPath, params, queryParams } from './fx';
+import { matchRoute, type Route } from './utils';
 
 /**
  * Update routing state from current URL
@@ -17,13 +17,12 @@ function updateRoutingState() {
 updateRoutingState();
 
 // Listen to browser back/forward buttons
-window.addEventListener("popstate", () => {
+window.addEventListener('popstate', () => {
   updateRoutingState();
 });
 
-
 function DefaultFallback(): Node {
-  const div = document.createElement("div");
+  const div = document.createElement('div');
   // div.textContent = "Loading...";
   return div;
 }
@@ -38,7 +37,7 @@ export interface RouterProps {
  * Integrates with Suspense for loading states
  */
 export function Router(props: RouterProps) {
-  const container = document.createElement("div");
+  const container = document.createElement('div');
   const currentComponent = fx<{ fn: () => Node } | null>(null);
   const routeError = fx<Error | null>(null);
 
@@ -59,7 +58,7 @@ export function Router(props: RouterProps) {
           currentComponent.set({ fn: module.default });
         })
         .catch((error) => {
-          console.error("Failed to load route component:", error);
+          console.error('Failed to load route component:', error);
           routeError.set(error);
           currentComponent.set(null);
         });
@@ -67,10 +66,10 @@ export function Router(props: RouterProps) {
       // No match - render 404
       currentComponent.set({
         fn: () => {
-          const div = document.createElement("div");
+          const div = document.createElement('div');
           div.innerHTML = `<div><h1>404</h1><p>Page not found: ${path}</p></div>`;
           return div.firstElementChild as Node;
-        },
+        }
       });
     }
   });
@@ -84,8 +83,8 @@ export function Router(props: RouterProps) {
       const error = routeError();
 
       if (error) {
-        const errorDiv = document.createElement("div");
-        errorDiv.textContent = "Error loading page";
+        const errorDiv = document.createElement('div');
+        errorDiv.textContent = 'Error loading page';
         return errorDiv;
       }
 
@@ -93,16 +92,16 @@ export function Router(props: RouterProps) {
         try {
           return component.fn();
         } catch (err) {
-          console.error("Error rendering component:", err);
-          const errorDiv = document.createElement("div");
-          errorDiv.textContent = "Error rendering component";
+          console.error('Error rendering component:', err);
+          const errorDiv = document.createElement('div');
+          errorDiv.textContent = 'Error rendering component';
           return errorDiv;
         }
       }
 
       // Return empty placeholder while waiting for first route match
-      return document.createComment("router-placeholder");
-    },
+      return document.createComment('router-placeholder');
+    }
   });
 
   container.appendChild(suspenseContent);
@@ -115,29 +114,25 @@ export function Router(props: RouterProps) {
  */
 export function navigate(to: string, options?: { replace?: boolean }) {
   const url = new URL(to, window.location.origin);
-  const method = options?.replace ? "replaceState" : "pushState";
+  const method = options?.replace ? 'replaceState' : 'pushState';
 
-  window.history[method]({}, "", url.pathname + url.search);
+  window.history[method]({}, '', url.pathname + url.search);
   updateRoutingState();
 }
 
 /**
  * Link component that intercepts clicks and uses client-side navigation
  */
-export function Link(props: {
-  href: string;
-  children?: any;
-  [key: string]: any;
-}) {
+export function Link(props: { href: string; children?: any; [key: string]: any }) {
   const { href, children, ...rest } = props;
-  const anchor = document.createElement("a");
+  const anchor = document.createElement('a');
   anchor.href = href;
 
   // Copy other attributes
   Object.entries(rest).forEach(([key, value]) => {
-    if (key === "class") {
+    if (key === 'class') {
       anchor.className = value as string;
-    } else if (key.startsWith("on")) {
+    } else if (key.startsWith('on')) {
       // Handle event handlers
       const eventName = key.slice(2).toLowerCase();
       anchor.addEventListener(eventName, value as EventListener);
@@ -147,7 +142,7 @@ export function Link(props: {
   });
 
   // Intercept clicks for same-origin navigation
-  anchor.addEventListener("click", (e) => {
+  anchor.addEventListener('click', (e) => {
     const url = new URL(href, window.location.origin);
     if (url.origin === window.location.origin) {
       e.preventDefault();
@@ -157,22 +152,22 @@ export function Link(props: {
 
   // Append children - handle various types
   if (children !== undefined) {
-    if (typeof children === "string") {
+    if (typeof children === 'string') {
       anchor.textContent = children;
     } else if (children instanceof Node) {
       anchor.appendChild(children);
-    } else if (typeof children === "function") {
+    } else if (typeof children === 'function') {
       // Handle fx-based or function children
       try {
         const childValue = children();
-        if (typeof childValue === "string") {
+        if (typeof childValue === 'string') {
           anchor.textContent = childValue;
         } else if (childValue instanceof Node) {
           anchor.appendChild(childValue);
         } else if (Array.isArray(childValue)) {
           // Handle arrays of children
           childValue.forEach((child) => {
-            if (typeof child === "string") {
+            if (typeof child === 'string') {
               anchor.appendChild(document.createTextNode(child));
             } else if (child instanceof Node) {
               anchor.appendChild(child);
@@ -184,14 +179,14 @@ export function Link(props: {
         run(() => {
           try {
             const childValue = children();
-            anchor.innerHTML = "";
-            if (typeof childValue === "string") {
+            anchor.innerHTML = '';
+            if (typeof childValue === 'string') {
               anchor.textContent = childValue;
             } else if (childValue instanceof Node) {
               anchor.appendChild(childValue);
             } else if (Array.isArray(childValue)) {
               childValue.forEach((child) => {
-                if (typeof child === "string") {
+                if (typeof child === 'string') {
                   anchor.appendChild(document.createTextNode(child));
                 } else if (child instanceof Node) {
                   anchor.appendChild(child);
@@ -206,7 +201,7 @@ export function Link(props: {
     } else if (Array.isArray(children)) {
       // Handle arrays of children
       children.forEach((child) => {
-        if (typeof child === "string") {
+        if (typeof child === 'string') {
           anchor.appendChild(document.createTextNode(child));
         } else if (child instanceof Node) {
           anchor.appendChild(child);

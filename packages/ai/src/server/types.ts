@@ -1,4 +1,4 @@
-import type { LanguageModel, CoreMessage } from "ai";
+import type { LanguageModel, CoreMessage } from 'ai';
 
 /**
  * Options for createTextStream()
@@ -47,11 +47,7 @@ export interface TextStreamOptions {
   tools?: Record<string, unknown>;
 
   /** How the model should choose tools: 'auto', 'none', 'required', or { type: 'tool', toolName: string } */
-  toolChoice?:
-    | "auto"
-    | "none"
-    | "required"
-    | { type: "tool"; toolName: string };
+  toolChoice?: 'auto' | 'none' | 'required' | { type: 'tool'; toolName: string };
 
   /** Maximum number of steps for multi-step tool execution */
   maxSteps?: number;
@@ -77,13 +73,7 @@ export interface TextStreamResult {
   text: string;
 
   /** Reason why generation stopped */
-  finishReason:
-    | "stop"
-    | "length"
-    | "content-filter"
-    | "tool-calls"
-    | "error"
-    | "other";
+  finishReason: 'stop' | 'length' | 'content-filter' | 'tool-calls' | 'error' | 'other';
 
   /** Token usage statistics */
   usage?: {
@@ -101,7 +91,7 @@ export interface ObjectStreamOptions<T> {
   model: LanguageModel;
 
   /** Zod schema for the object */
-  schema: import("zod").ZodType<T>;
+  schema: import('zod').ZodType<T>;
 
   /** System prompt */
   system?: string;
@@ -111,7 +101,7 @@ export interface ObjectStreamOptions<T> {
   messages?: CoreMessage[];
 
   /** Schema mode - 'auto' lets the model decide */
-  mode?: "auto" | "json" | "tool";
+  mode?: 'auto' | 'json' | 'tool';
 
   /** Maximum tokens to generate (AI SDK v4) */
   maxTokens?: number;
@@ -140,13 +130,7 @@ export interface ObjectStreamResult<T> {
   object: T;
 
   /** Reason why generation stopped */
-  finishReason:
-    | "stop"
-    | "length"
-    | "content-filter"
-    | "tool-calls"
-    | "error"
-    | "other";
+  finishReason: 'stop' | 'length' | 'content-filter' | 'tool-calls' | 'error' | 'other';
 
   /** Token usage statistics */
   usage?: {

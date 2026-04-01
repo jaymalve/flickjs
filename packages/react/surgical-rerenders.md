@@ -6,9 +6,9 @@ Take a typical chat app:
 
 ```tsx
 function ChatApp() {
-  const [messages, setMessages] = useState([])
-  const [input, setInput] = useState('')
-  const [status, setStatus] = useState('idle')
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [status, setStatus] = useState('idle');
 
   return (
     <div>
@@ -17,7 +17,7 @@ function ChatApp() {
       <TypingIndicator status={status} />
       <InputBar input={input} onChange={setInput} onSubmit={handleSubmit} />
     </div>
-  )
+  );
 }
 ```
 
@@ -42,8 +42,8 @@ You can optimize with `React.memo`:
 
 ```tsx
 const MessageList = React.memo(({ messages }) => {
-  return messages.map(m => <div key={m.id}>{m.content}</div>)
-})
+  return messages.map((m) => <div key={m.id}>{m.content}</div>);
+});
 ```
 
 But `React.memo` is **opt-in per component**, does a shallow comparison of all props every render, and the parent still re-executes. It reduces DOM work, but not JS work.
@@ -51,12 +51,12 @@ But `React.memo` is **opt-in per component**, does a shallow comparison of all p
 ## How fx + useFx works (surgical re-renders)
 
 ```tsx
-import { fx, useFx } from '@flickjs/react'
+import { fx, useFx } from '@flickjs/react';
 
 // State lives OUTSIDE components — just plain JS
-const messages = fx([])
-const input = fx('')
-const status = fx('idle')
+const messages = fx([]);
+const input = fx('');
+const status = fx('idle');
 
 function ChatApp() {
   return (
@@ -66,27 +66,27 @@ function ChatApp() {
       <TypingIndicator />
       <InputBar />
     </div>
-  )
+  );
 }
 
 function Header() {
-  const s = useFx(status)    // subscribes to status only
-  return <div>{s}</div>
+  const s = useFx(status); // subscribes to status only
+  return <div>{s}</div>;
 }
 
 function MessageList() {
-  const msgs = useFx(messages)  // subscribes to messages only
-  return msgs.map(m => <div key={m.id}>{m.content}</div>)
+  const msgs = useFx(messages); // subscribes to messages only
+  return msgs.map((m) => <div key={m.id}>{m.content}</div>);
 }
 
 function TypingIndicator() {
-  const s = useFx(status)    // subscribes to status only
-  return s === 'streaming' ? <div>AI is typing...</div> : null
+  const s = useFx(status); // subscribes to status only
+  return s === 'streaming' ? <div>AI is typing...</div> : null;
 }
 
 function InputBar() {
-  const value = useFx(input)  // subscribes to input only
-  return <input value={value} onChange={e => input.set(e.target.value)} />
+  const value = useFx(input); // subscribes to input only
+  return <input value={value} onChange={(e) => input.set(e.target.value)} />;
 }
 ```
 

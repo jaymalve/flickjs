@@ -20,11 +20,11 @@ bun add @flickjs/router
 Create or update `vite.config.js`:
 
 ```js
-import { defineConfig } from "vite";
-import flick from "@flickjs/vite-plugin";
+import { defineConfig } from 'vite';
+import flick from '@flickjs/vite-plugin';
 
 export default defineConfig({
-  plugins: [flick()],
+  plugins: [flick()]
 });
 ```
 
@@ -52,7 +52,7 @@ Create an `index.html`:
 Create `src/main.tsx`:
 
 ```tsx
-import { fx, mount } from "@flickjs/runtime";
+import { fx, mount } from '@flickjs/runtime';
 
 function App() {
   const count = fx(0);
@@ -67,7 +67,7 @@ function App() {
   );
 }
 
-mount(App, document.getElementById("app"));
+mount(App, document.getElementById('app'));
 ```
 
 ## TypeScript Configuration

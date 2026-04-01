@@ -16,32 +16,27 @@ export interface MatchResult {
  *   pages/users/[id].tsx -> /users/:id
  *   pages/posts/[...slug].tsx -> /posts/*slug
  */
-export function filePathToRoute(
-  filePath: string,
-  pagesDir: string = "pages"
-): string {
+export function filePathToRoute(filePath: string, pagesDir: string = 'pages'): string {
   // Remove pages directory prefix and file extension
-  let route = filePath
-    .replace(new RegExp(`^${pagesDir}/`), "")
-    .replace(/\.[jt]sx?$/, "");
+  let route = filePath.replace(new RegExp(`^${pagesDir}/`), '').replace(/\.[jt]sx?$/, '');
 
   // Handle index files
-  if (route === "index" || route.endsWith("/index")) {
-    route = route.replace(/\/?index$/, "") || "/";
+  if (route === 'index' || route.endsWith('/index')) {
+    route = route.replace(/\/?index$/, '') || '/';
   }
 
   // Convert [param] to :param
   route = route.replace(/\[([^\]]+)\]/g, (_, param) => {
     // Handle catch-all [...slug]
-    if (param.startsWith("...")) {
+    if (param.startsWith('...')) {
       return `*${param.slice(3)}`;
     }
     return `:${param}`;
   });
 
   // Ensure leading slash
-  if (!route.startsWith("/")) {
-    route = "/" + route;
+  if (!route.startsWith('/')) {
+    route = '/' + route;
   }
 
   return route;
@@ -58,10 +53,10 @@ export function filePathToRoute(
 export function pathToRegex(pattern: string): RegExp {
   // Escape special regex characters except : and *
   let regex = pattern
-    .replace(/\//g, "\\/")
-    .replace(/\*([^\/\*]+)/g, "(.+)") // *param -> (.+) - catch-all with name
-    .replace(/\*/g, ".*") // standalone * -> .*
-    .replace(/:([^\/\*]+)/g, "([^\\/]+)"); // :param -> ([^\/]+) - single segment param
+    .replace(/\//g, '\\/')
+    .replace(/\*([^\/\*]+)/g, '(.+)') // *param -> (.+) - catch-all with name
+    .replace(/\*/g, '.*') // standalone * -> .*
+    .replace(/:([^\/\*]+)/g, '([^\\/]+)'); // :param -> ([^\/]+) - single segment param
 
   return new RegExp(`^${regex}$`);
 }
@@ -77,7 +72,7 @@ export function extractParamNames(pattern: string): string[] {
   while ((match = paramRegex.exec(pattern)) !== null) {
     const paramName = match[1];
     // Remove ... prefix for catch-all params
-    params.push(paramName.startsWith("...") ? paramName.slice(3) : paramName);
+    params.push(paramName.startsWith('...') ? paramName.slice(3) : paramName);
   }
 
   return params;
@@ -97,7 +92,7 @@ export function matchRoute(path: string, routes: Route[]): MatchResult | null {
 
       // Extract parameter values from regex match groups
       paramNames.forEach((name, index) => {
-        params[name] = match[index + 1] || "";
+        params[name] = match[index + 1] || '';
       });
 
       return { route, params };
@@ -106,5 +101,3 @@ export function matchRoute(path: string, routes: Route[]): MatchResult | null {
 
   return null;
 }
-
-

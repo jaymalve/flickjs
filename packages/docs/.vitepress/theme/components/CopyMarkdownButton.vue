@@ -1,55 +1,55 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useData } from 'vitepress'
+import { ref, computed } from 'vue';
+import { useData } from 'vitepress';
 
-const { page } = useData()
-const copied = ref(false)
-let copyTimeout: ReturnType<typeof setTimeout> | null = null
+const { page } = useData();
+const copied = ref(false);
+let copyTimeout: ReturnType<typeof setTimeout> | null = null;
 
-const rawMarkdown = computed(() => (page.value as any).rawMarkdown)
+const rawMarkdown = computed(() => (page.value as any).rawMarkdown);
 
 const shouldShow = computed(() => {
-  return rawMarkdown.value && rawMarkdown.value.length > 0
-})
+  return rawMarkdown.value && rawMarkdown.value.length > 0;
+});
 
 async function copyToClipboard() {
-  if (!rawMarkdown.value) return
+  if (!rawMarkdown.value) return;
 
   try {
-    await navigator.clipboard.writeText(rawMarkdown.value)
-    copied.value = true
+    await navigator.clipboard.writeText(rawMarkdown.value);
+    copied.value = true;
 
     if (copyTimeout) {
-      clearTimeout(copyTimeout)
+      clearTimeout(copyTimeout);
     }
 
     copyTimeout = setTimeout(() => {
-      copied.value = false
-    }, 2000)
+      copied.value = false;
+    }, 2000);
   } catch (err) {
-    fallbackCopy(rawMarkdown.value)
+    fallbackCopy(rawMarkdown.value);
   }
 }
 
 function fallbackCopy(text: string) {
-  const textarea = document.createElement('textarea')
-  textarea.value = text
-  textarea.style.position = 'fixed'
-  textarea.style.opacity = '0'
-  document.body.appendChild(textarea)
-  textarea.select()
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
 
   try {
-    document.execCommand('copy')
-    copied.value = true
+    document.execCommand('copy');
+    copied.value = true;
     copyTimeout = setTimeout(() => {
-      copied.value = false
-    }, 2000)
+      copied.value = false;
+    }, 2000);
   } catch (err) {
-    console.error('Failed to copy:', err)
+    console.error('Failed to copy:', err);
   }
 
-  document.body.removeChild(textarea)
+  document.body.removeChild(textarea);
 }
 </script>
 

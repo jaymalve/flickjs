@@ -1,9 +1,9 @@
-import fs from "fs-extra";
-import path from "path";
+import fs from 'fs-extra';
+import path from 'path';
 
 export function createAboutPage(root: string) {
   fs.writeFileSync(
-    path.join(root, "src/pages/about.tsx"),
+    path.join(root, 'src/pages/about.tsx'),
     `import { lazy, Suspense } from "@flickjs/runtime";
 import { Link } from "@flickjs/router";
 

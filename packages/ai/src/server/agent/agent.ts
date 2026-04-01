@@ -1,7 +1,7 @@
-import { streamText, generateText, type LanguageModel } from "ai";
-import type { CoreMessage } from "ai";
-import { resolveModel } from "../providers/registry";
-import type { Agent, AgentConfig, AgentChatOptions, AgentResult } from "./types";
+import { streamText, generateText, type LanguageModel } from 'ai';
+import type { CoreMessage } from 'ai';
+import { resolveModel } from '../providers/registry';
+import type { Agent, AgentConfig, AgentChatOptions, AgentResult } from './types';
 
 /**
  * Create a reusable AI agent with pre-configured settings
@@ -57,7 +57,7 @@ export function agent(config: AgentConfig): Agent {
     maxSteps = 1,
     temperature,
     maxTokens,
-    toolChoice,
+    toolChoice
   } = config;
 
   // Resolve model once at creation time
@@ -66,15 +66,12 @@ export function agent(config: AgentConfig): Agent {
   /**
    * Stream a chat response
    */
-  async function chat(
-    messages: CoreMessage[],
-    options: AgentChatOptions = {}
-  ): Promise<Response> {
+  async function chat(messages: CoreMessage[], options: AgentChatOptions = {}): Promise<Response> {
     const result = streamText({
       model,
       system: options.system ?? system,
       messages,
-      tools: tools as Parameters<typeof streamText>[0]["tools"],
+      tools: tools as Parameters<typeof streamText>[0]['tools'],
       maxSteps,
       toolChoice,
       temperature: options.temperature ?? temperature,
@@ -82,7 +79,7 @@ export function agent(config: AgentConfig): Agent {
       abortSignal: options.abortSignal,
       onChunk: options.onText
         ? ({ chunk }) => {
-            if (chunk.type === "text-delta" && chunk.textDelta) {
+            if (chunk.type === 'text-delta' && chunk.textDelta) {
               options.onText!(chunk.textDelta);
             }
           }
@@ -91,7 +88,7 @@ export function agent(config: AgentConfig): Agent {
         ? (event) => {
             options.onFinish!({
               text: event.text,
-              finishReason: event.finishReason as AgentResult["finishReason"],
+              finishReason: event.finishReason as AgentResult['finishReason'],
               usage: event.usage
                 ? {
                     promptTokens:
@@ -102,21 +99,18 @@ export function agent(config: AgentConfig): Agent {
                       (event.usage as Record<string, number>).completionTokens ??
                       (event.usage as Record<string, number>).outputTokens ??
                       0,
-                    totalTokens:
-                      (event.usage as Record<string, number>).totalTokens ?? 0,
+                    totalTokens: (event.usage as Record<string, number>).totalTokens ?? 0
                   }
-                : undefined,
+                : undefined
             });
           }
-        : undefined,
+        : undefined
     });
 
     try {
       const awaited = await result;
       return awaited.toDataStreamResponse({
-        headers: options.headers
-          ? Object.fromEntries(new Headers(options.headers))
-          : undefined,
+        headers: options.headers ? Object.fromEntries(new Headers(options.headers)) : undefined
       });
     } catch (error) {
       if (options.onError && error instanceof Error) {
@@ -138,17 +132,17 @@ export function agent(config: AgentConfig): Agent {
         model,
         system: options.system ?? system,
         messages,
-        tools: tools as Parameters<typeof generateText>[0]["tools"],
+        tools: tools as Parameters<typeof generateText>[0]['tools'],
         maxSteps,
         toolChoice,
         temperature: options.temperature ?? temperature,
         maxTokens: options.maxTokens ?? maxTokens,
-        abortSignal: options.abortSignal,
+        abortSignal: options.abortSignal
       });
 
       return {
         text: result.text,
-        finishReason: result.finishReason as AgentResult["finishReason"],
+        finishReason: result.finishReason as AgentResult['finishReason'],
         usage: result.usage
           ? {
               promptTokens:
@@ -159,10 +153,9 @@ export function agent(config: AgentConfig): Agent {
                 (result.usage as Record<string, number>).completionTokens ??
                 (result.usage as Record<string, number>).outputTokens ??
                 0,
-              totalTokens:
-                (result.usage as Record<string, number>).totalTokens ?? 0,
+              totalTokens: (result.usage as Record<string, number>).totalTokens ?? 0
             }
-          : undefined,
+          : undefined
       };
     } catch (error) {
       if (options.onError && error instanceof Error) {
@@ -177,6 +170,6 @@ export function agent(config: AgentConfig): Agent {
     stream: chat, // Alias
     run,
     getModel: () => model,
-    getConfig: () => config,
+    getConfig: () => config
   };
 }

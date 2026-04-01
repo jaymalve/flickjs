@@ -1,41 +1,41 @@
-import { Check, X } from "lucide-react";
+import { Check, X } from 'lucide-react';
 
 const comparisonData = [
   {
-    feature: "Runtime Size",
-    flick: "~300B",
-    solid: "~7KB",
-    vue: "~33KB",
-    react: "~40KB",
+    feature: 'Runtime Size',
+    flick: '~300B',
+    solid: '~7KB',
+    vue: '~33KB',
+    react: '~40KB'
   },
   {
-    feature: "Virtual DOM",
+    feature: 'Virtual DOM',
     flick: false,
     solid: false,
     vue: true,
-    react: true,
+    react: true
   },
   {
-    feature: "Fine-grained Reactivity",
+    feature: 'Fine-grained Reactivity',
     flick: true,
     solid: true,
     vue: true,
-    react: false,
+    react: false
   },
   {
-    feature: "Zero Dependencies",
+    feature: 'Zero Dependencies',
     flick: true,
     solid: true,
     vue: false,
-    react: false,
+    react: false
   },
   {
-    feature: "Template Literals",
+    feature: 'Template Literals',
     flick: true,
     solid: false,
     vue: false,
-    react: false,
-  },
+    react: false
+  }
 ];
 
 const Comparison = () => {
@@ -90,16 +90,22 @@ const Comparison = () => {
   );
 };
 
-const CellValue = ({ value, highlight = false }: { value: string | boolean; highlight?: boolean }) => {
-  if (typeof value === "boolean") {
+const CellValue = ({
+  value,
+  highlight = false
+}: {
+  value: string | boolean;
+  highlight?: boolean;
+}) => {
+  if (typeof value === 'boolean') {
     return value ? (
-      <Check className={`h-4 w-4 mx-auto ${highlight ? "text-accent" : "text-muted-foreground"}`} />
+      <Check className={`h-4 w-4 mx-auto ${highlight ? 'text-accent' : 'text-muted-foreground'}`} />
     ) : (
       <X className="h-4 w-4 mx-auto text-muted-foreground/50" />
     );
   }
   return (
-    <span className={highlight ? "text-accent font-semibold" : "text-muted-foreground"}>
+    <span className={highlight ? 'text-accent font-semibold' : 'text-muted-foreground'}>
       {value}
     </span>
   );

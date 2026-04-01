@@ -1,4 +1,4 @@
-import type { Agent } from "../server/agent/types";
+import type { Agent } from '../server/agent/types';
 
 /**
  * Agent router - a collection of named agents
@@ -7,7 +7,7 @@ export interface AgentRouter<T extends Record<string, Agent>> {
   /** Internal map of agent names to agent instances */
   _agents: T;
   /** Type discriminator */
-  _type: "agentRouter";
+  _type: 'agentRouter';
 }
 
 /**

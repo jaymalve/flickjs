@@ -1,9 +1,9 @@
-import fs from "fs-extra";
-import path from "path";
+import fs from 'fs-extra';
+import path from 'path';
 
 export function createTodoChip(root: string) {
   fs.writeFileSync(
-    path.join(root, "src/components/TodoChip.tsx"),
+    path.join(root, 'src/components/TodoChip.tsx'),
     `import type { Todo } from "../types/todo.interface";
 
 interface TodoChipProps {

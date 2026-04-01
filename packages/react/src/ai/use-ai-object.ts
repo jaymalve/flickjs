@@ -1,7 +1,7 @@
-import { useRef } from "react";
-import { aiObject } from "@flickjs/ai";
-import type { AiObjectOptions } from "@flickjs/ai";
-import { useFxValue } from "../internal/use-fx-value";
+import { useRef } from 'react';
+import { aiObject } from '@flickjs/ai';
+import type { AiObjectOptions } from '@flickjs/ai';
+import { useFxValue } from '../internal/use-fx-value';
 
 export interface UseAiObjectReturn<T> {
   object: Partial<T> | undefined;
@@ -41,7 +41,7 @@ export interface UseAiObjectReturn<T> {
  * ```
  */
 export function useAiObject<T>(
-  options: Omit<AiObjectOptions<T>, "suspense">
+  options: Omit<AiObjectOptions<T>, 'suspense'>
 ): UseAiObjectReturn<T> {
   const objRef = useRef<ReturnType<typeof aiObject<T>> | null>(null);
   if (objRef.current === null) {
@@ -58,6 +58,6 @@ export function useAiObject<T>(
     error,
     isLoading: loading,
     submit: obj.submit,
-    stop: obj.stop,
+    stop: obj.stop
   };
 }

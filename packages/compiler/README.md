@@ -22,7 +22,7 @@ Create a `babel.config.js` file:
 
 ```javascript
 export default {
-  plugins: ["@flickjs/compiler"],
+  plugins: ['@flickjs/compiler']
 };
 ```
 
@@ -30,7 +30,7 @@ Or in CommonJS format:
 
 ```javascript
 module.exports = {
-  plugins: ["@flickjs/compiler"],
+  plugins: ['@flickjs/compiler']
 };
 ```
 
@@ -53,17 +53,17 @@ bun add -d vite-plugin-babel
 Then in `vite.config.js`:
 
 ```javascript
-import { defineConfig } from "vite";
-import babel from "vite-plugin-babel";
+import { defineConfig } from 'vite';
+import babel from 'vite-plugin-babel';
 
 export default defineConfig({
   plugins: [
     babel({
       babelConfig: {
-        plugins: ["@flickjs/compiler"],
-      },
-    }),
-  ],
+        plugins: ['@flickjs/compiler']
+      }
+    })
+  ]
 });
 ```
 
@@ -85,14 +85,14 @@ module.exports = {
         test: /\.(js|jsx|ts|tsx)$/,
         exclude: /node_modules/,
         use: {
-          loader: "babel-loader",
+          loader: 'babel-loader',
           options: {
-            plugins: ["@flickjs/compiler"],
-          },
-        },
-      },
-    ],
-  },
+            plugins: ['@flickjs/compiler']
+          }
+        }
+      }
+    ]
+  }
 };
 ```
 
@@ -116,10 +116,10 @@ The compiler transforms JSX elements into vanilla DOM operations and wraps react
 
 ```javascript
 (() => {
-  const el = document.createElement("div");
-  el.className = "container";
-  const child = document.createElement("h1");
-  child.textContent = "Hello World";
+  const el = document.createElement('div');
+  el.className = 'container';
+  const child = document.createElement('h1');
+  child.textContent = 'Hello World';
   el.append(child);
   return el;
 })();
@@ -137,9 +137,9 @@ The compiler transforms JSX elements into vanilla DOM operations and wraps react
 
 ```javascript
 (() => {
-  const el = document.createElement("h1");
-  const text1 = document.createTextNode("Count: ");
-  const text2 = document.createTextNode("");
+  const el = document.createElement('h1');
+  const text1 = document.createTextNode('Count: ');
+  const text2 = document.createTextNode('');
   el.append(text1, text2);
 
   effect(() => {
@@ -162,9 +162,9 @@ The compiler transforms JSX elements into vanilla DOM operations and wraps react
 
 ```javascript
 (() => {
-  const el = document.createElement("button");
+  const el = document.createElement('button');
   el.onclick = () => count.set(count() + 1);
-  el.textContent = "Click me";
+  el.textContent = 'Click me';
   return el;
 })();
 ```
@@ -181,7 +181,7 @@ The compiler transforms JSX elements into vanilla DOM operations and wraps react
 
 ```javascript
 (() => {
-  const el = document.createElement("input");
+  const el = document.createElement('input');
 
   effect(() => {
     el.value = name();
@@ -211,13 +211,13 @@ function App() {
 
 ```javascript
 function Button({ label }) {
-  const el = document.createElement("button");
+  const el = document.createElement('button');
   el.textContent = label;
   return el;
 }
 
 function App() {
-  return Button({ label: "Click" });
+  return Button({ label: 'Click' });
 }
 ```
 
@@ -271,9 +271,7 @@ Since JSX compiles to functions, you can use regular JavaScript for conditionals
 
 ```tsx
 function Greeting({ isLoggedIn }) {
-  return (
-    <div>{isLoggedIn ? <h1>Welcome back!</h1> : <h1>Please sign in</h1>}</div>
-  );
+  return <div>{isLoggedIn ? <h1>Welcome back!</h1> : <h1>Please sign in</h1>}</div>;
 }
 ```
 
@@ -283,9 +281,7 @@ Or with signals:
 function Greeting() {
   const isLoggedIn = signal(false);
 
-  return (
-    <div>{isLoggedIn() ? <h1>Welcome back!</h1> : <h1>Please sign in</h1>}</div>
-  );
+  return <div>{isLoggedIn() ? <h1>Welcome back!</h1> : <h1>Please sign in</h1>}</div>;
 }
 ```
 
@@ -296,8 +292,8 @@ Use `.map()` to render lists:
 ```tsx
 function TodoList() {
   const todos = signal([
-    { id: 1, text: "Learn Flick" },
-    { id: 2, text: "Build app" },
+    { id: 1, text: 'Learn Flick' },
+    { id: 2, text: 'Build app' }
   ]);
 
   return (
@@ -331,9 +327,9 @@ You can pass style objects directly:
 
 ```tsx
 function StyledDiv() {
-  const color = signal("red");
+  const color = signal('red');
 
-  return <div style={{ color: color(), fontSize: "16px" }}>Styled text</div>;
+  return <div style={{ color: color(), fontSize: '16px' }}>Styled text</div>;
 }
 ```
 
@@ -370,8 +366,8 @@ npx babel src/main.tsx --plugins @flickjs/compiler
 
 ```tsx
 function LoginForm() {
-  const email = signal("");
-  const password = signal("");
+  const email = signal('');
+  const password = signal('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -405,10 +401,7 @@ function Button({ active }) {
   const isActive = signal(active);
 
   return (
-    <button
-      class={isActive() ? "btn btn-active" : "btn"}
-      onclick={() => isActive.set(!isActive())}
-    >
+    <button class={isActive() ? 'btn btn-active' : 'btn'} onclick={() => isActive.set(!isActive())}>
       Toggle
     </button>
   );

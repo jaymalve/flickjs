@@ -11,7 +11,7 @@ bun add @flickjs/runtime
 Creates a reactive fx.
 
 ```tsx
-import { fx } from "@flickjs/runtime";
+import { fx } from '@flickjs/runtime';
 
 const count = fx(0);
 
@@ -36,9 +36,9 @@ interface Fx<T> {
 
 ### Parameters
 
-| Parameter      | Type | Description                  |
-| -------------- | ---- | ---------------------------- |
-| `initialValue` | `T`  | The initial value of the fx  |
+| Parameter      | Type | Description                 |
+| -------------- | ---- | --------------------------- |
+| `initialValue` | `T`  | The initial value of the fx |
 
 ### Returns
 
@@ -51,12 +51,12 @@ A fx object that can be called to read the value and has a `set` method to updat
 Runs a side effect when its dependencies change.
 
 ```tsx
-import { fx, run } from "@flickjs/runtime";
+import { fx, run } from '@flickjs/runtime';
 
 const count = fx(0);
 
 run(() => {
-  console.log("Count is:", count());
+  console.log('Count is:', count());
 });
 
 count.set(1); // Logs: "Count is: 1"
@@ -70,9 +70,9 @@ function run(fn: () => void): void;
 
 ### Parameters
 
-| Parameter | Type         | Description           |
-| --------- | ------------ | --------------------- |
-| `fn`      | `() => void` | The run function      |
+| Parameter | Type         | Description      |
+| --------- | ------------ | ---------------- |
+| `fn`      | `() => void` | The run function |
 
 ---
 
@@ -81,13 +81,13 @@ function run(fn: () => void): void;
 Mounts a component to a DOM element.
 
 ```tsx
-import { mount } from "@flickjs/runtime";
+import { mount } from '@flickjs/runtime';
 
 function App() {
   return <h1>Hello World</h1>;
 }
 
-mount(App, document.getElementById("app"));
+mount(App, document.getElementById('app'));
 ```
 
 ### Type Signature
@@ -110,7 +110,7 @@ function mount(component: () => Element, container: Element | null): void;
 A component that shows fallback content while async operations are pending.
 
 ```tsx
-import { Suspense, query } from "@flickjs/runtime";
+import { Suspense, query } from '@flickjs/runtime';
 
 function UserProfile() {
   const user = query(() => fetchUser());
@@ -140,16 +140,14 @@ function App() {
 Creates an async data fetcher that integrates with Suspense.
 
 ```tsx
-import { fx, query } from "@flickjs/runtime";
+import { fx, query } from '@flickjs/runtime';
 
 // Simple query
-const posts = query(() => fetch("/api/posts").then((res) => res.json()));
+const posts = query(() => fetch('/api/posts').then((res) => res.json()));
 
 // Query with reactive source
 const userId = fx(1);
-const user = query(userId, (id) =>
-  fetch(`/api/users/${id}`).then((r) => r.json())
-);
+const user = query(userId, (id) => fetch(`/api/users/${id}`).then((r) => r.json()));
 ```
 
 ### Type Signature
@@ -159,10 +157,7 @@ const user = query(userId, (id) =>
 function query<T>(fetcher: () => Promise<T>): Query<T>;
 
 // With source
-function query<T, S>(
-  source: () => S,
-  fetcher: (source: S) => Promise<T>
-): Query<T>;
+function query<T, S>(source: () => S, fetcher: (source: S) => Promise<T>): Query<T>;
 
 interface Query<T> {
   (): T | undefined; // Current value
@@ -190,9 +185,9 @@ interface Query<T> {
 Lazily loads a component for code splitting.
 
 ```tsx
-import { lazy, Suspense } from "@flickjs/runtime";
+import { lazy, Suspense } from '@flickjs/runtime';
 
-const HeavyComponent = lazy(() => import("./HeavyComponent"));
+const HeavyComponent = lazy(() => import('./HeavyComponent'));
 
 function App() {
   return (

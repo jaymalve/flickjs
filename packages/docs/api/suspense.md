@@ -7,10 +7,10 @@ Flick provides built-in support for handling asynchronous operations with `Suspe
 The `Suspense` component displays a fallback UI while async operations are pending.
 
 ```tsx
-import { mount, Suspense, query } from "@flickjs/runtime";
+import { mount, Suspense, query } from '@flickjs/runtime';
 
 function UserProfile() {
-  const user = query(() => fetch("/api/user").then((res) => res.json()));
+  const user = query(() => fetch('/api/user').then((res) => res.json()));
 
   return (
     <div>
@@ -28,7 +28,7 @@ function App() {
   );
 }
 
-mount(App, document.getElementById("app"));
+mount(App, document.getElementById('app'));
 ```
 
 ### Key Points
@@ -46,9 +46,9 @@ mount(App, document.getElementById("app"));
 ### Simple Query
 
 ```tsx
-import { query, Suspense } from "@flickjs/runtime";
+import { query, Suspense } from '@flickjs/runtime';
 
-const posts = query(() => fetch("/api/posts").then((res) => res.json()));
+const posts = query(() => fetch('/api/posts').then((res) => res.json()));
 
 function PostList() {
   return (
@@ -66,7 +66,7 @@ function PostList() {
 When the source fx changes, the query automatically refetches:
 
 ```tsx
-import { fx, query, Suspense } from "@flickjs/runtime";
+import { fx, query, Suspense } from '@flickjs/runtime';
 
 function UserPosts() {
   const userId = fx(1);
@@ -95,13 +95,13 @@ function UserPosts() {
 
 ### Query API
 
-| Method           | Returns              | Description                                   |
-| ---------------- | -------------------- | --------------------------------------------- |
-| `query()`        | `T \| undefined`     | Current value (undefined while loading)       |
-| `query.loading()`| `boolean`            | True while fetching                           |
-| `query.error()`  | `Error \| undefined` | Error if fetch failed                         |
-| `query.latest()` | `T \| undefined`     | Last successful value (useful during refetch) |
-| `query.refetch()`| `void`               | Manually trigger a refetch                    |
+| Method            | Returns              | Description                                   |
+| ----------------- | -------------------- | --------------------------------------------- |
+| `query()`         | `T \| undefined`     | Current value (undefined while loading)       |
+| `query.loading()` | `boolean`            | True while fetching                           |
+| `query.error()`   | `Error \| undefined` | Error if fetch failed                         |
+| `query.latest()`  | `T \| undefined`     | Last successful value (useful during refetch) |
+| `query.refetch()` | `void`               | Manually trigger a refetch                    |
 
 ---
 
@@ -110,11 +110,11 @@ function UserPosts() {
 Use `lazy` for code splitting - components are loaded only when needed:
 
 ```tsx
-import { mount, Suspense, lazy } from "@flickjs/runtime";
+import { mount, Suspense, lazy } from '@flickjs/runtime';
 
 // Component is loaded only when rendered
-const HeavyChart = lazy(() => import("./components/HeavyChart"));
-const Settings = lazy(() => import("./pages/Settings"));
+const HeavyChart = lazy(() => import('./components/HeavyChart'));
+const Settings = lazy(() => import('./pages/Settings'));
 
 function App() {
   const showChart = fx(false);
@@ -132,7 +132,7 @@ function App() {
   );
 }
 
-mount(App, document.getElementById("app"));
+mount(App, document.getElementById('app'));
 ```
 
 ---
@@ -170,13 +170,13 @@ function Dashboard() {
 Here's a full example combining Suspense, query, and lazy:
 
 ```tsx
-import { fx, mount, Suspense, query, lazy } from "@flickjs/runtime";
+import { fx, mount, Suspense, query, lazy } from '@flickjs/runtime';
 
 // Lazy load the chart component
-const Chart = lazy(() => import("./Chart"));
+const Chart = lazy(() => import('./Chart'));
 
 function Dashboard() {
-  const timeRange = fx("week");
+  const timeRange = fx('week');
 
   // Query that refetches when timeRange changes
   const stats = query(
@@ -208,7 +208,7 @@ function Dashboard() {
   );
 }
 
-mount(Dashboard, document.getElementById("app"));
+mount(Dashboard, document.getElementById('app'));
 ```
 
 ---

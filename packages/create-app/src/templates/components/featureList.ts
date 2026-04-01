@@ -1,9 +1,9 @@
-import fs from "fs-extra";
-import path from "path";
+import fs from 'fs-extra';
+import path from 'path';
 
 export function createFeatureList(root: string) {
   fs.writeFileSync(
-    path.join(root, "src/components/FeatureList.tsx"),
+    path.join(root, 'src/components/FeatureList.tsx'),
     `export default function FeatureList() {
   const features = [
     { name: "fx()", description: "Fine-grained reactive state" },

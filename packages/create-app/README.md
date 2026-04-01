@@ -56,7 +56,7 @@ A simple HTML file with a mount point and module script:
 A basic counter example to get you started:
 
 ```tsx
-import { mount } from "@flickjs/runtime";
+import { mount } from '@flickjs/runtime';
 
 function App() {
   let count = 0;
@@ -64,7 +64,7 @@ function App() {
   return <button onclick={() => count++}>Count: {count}</button>;
 }
 
-mount(App, document.getElementById("app"));
+mount(App, document.getElementById('app'));
 ```
 
 ## Usage
@@ -148,17 +148,17 @@ bun add -d vite vite-plugin-babel
 Create `vite.config.js`:
 
 ```javascript
-import { defineConfig } from "vite";
-import babel from "vite-plugin-babel";
+import { defineConfig } from 'vite';
+import babel from 'vite-plugin-babel';
 
 export default defineConfig({
   plugins: [
     babel({
       babelConfig: {
-        plugins: ["@flickjs/compiler"],
-      },
-    }),
-  ],
+        plugins: ['@flickjs/compiler']
+      }
+    })
+  ]
 });
 ```
 
@@ -238,7 +238,7 @@ If you want full TypeScript support, create a `tsconfig.json`:
 Edit `src/main.tsx` to add more features:
 
 ```tsx
-import { signal, mount } from "@flickjs/runtime";
+import { signal, mount } from '@flickjs/runtime';
 
 function App() {
   const count = signal(0);
@@ -257,31 +257,27 @@ function App() {
   );
 }
 
-mount(App, document.getElementById("app"));
+mount(App, document.getElementById('app'));
 ```
 
 ### Todo List
 
 ```tsx
-import { signal, mount } from "@flickjs/runtime";
+import { signal, mount } from '@flickjs/runtime';
 
 function App() {
-  const todos = signal([{ id: 1, text: "Learn Flick", done: false }]);
-  const input = signal("");
+  const todos = signal([{ id: 1, text: 'Learn Flick', done: false }]);
+  const input = signal('');
 
   const addTodo = () => {
     if (input().trim()) {
       todos.set([...todos(), { id: Date.now(), text: input(), done: false }]);
-      input.set("");
+      input.set('');
     }
   };
 
   const toggleTodo = (id) => {
-    todos.set(
-      todos().map((todo) =>
-        todo.id === id ? { ...todo, done: !todo.done } : todo
-      )
-    );
+    todos.set(todos().map((todo) => (todo.id === id ? { ...todo, done: !todo.done } : todo)));
   };
 
   return (
@@ -299,7 +295,7 @@ function App() {
         {todos().map((todo) => (
           <li
             onclick={() => toggleTodo(todo.id)}
-            style={{ textDecoration: todo.done ? "line-through" : "none" }}
+            style={{ textDecoration: todo.done ? 'line-through' : 'none' }}
           >
             {todo.text}
           </li>
@@ -309,7 +305,7 @@ function App() {
   );
 }
 
-mount(App, document.getElementById("app"));
+mount(App, document.getElementById('app'));
 ```
 
 ## Troubleshooting
@@ -328,7 +324,7 @@ Ensure you have a `babel.config.js` file:
 
 ```javascript
 export default {
-  plugins: ["@flickjs/compiler"],
+  plugins: ['@flickjs/compiler']
 };
 ```
 
@@ -363,12 +359,12 @@ Create a `babel.config.js` with additional plugins:
 ```javascript
 export default {
   plugins: [
-    "@flickjs/compiler",
+    '@flickjs/compiler'
     // Add more Babel plugins here
   ],
   presets: [
     // Add Babel presets here
-  ],
+  ]
 };
 ```
 
@@ -392,7 +388,7 @@ Add a `<link>` to your `index.html`:
 Or import CSS in your component (if your bundler supports it):
 
 ```tsx
-import "./style.css";
+import './style.css';
 ```
 
 ### Multiple Pages

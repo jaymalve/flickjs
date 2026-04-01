@@ -21,20 +21,17 @@
  * ```
  */
 
-import { metricsStore, type TimelineEntry, type RenderStats } from "./metrics";
-import { depGraph, type GraphJSON } from "./dependency-graph";
-import {
-  overlayManager,
-  type AnimationSpeed as OverlayAnimationSpeed,
-} from "./overlay";
-import { toolbar } from "./toolbar";
-import { __registerHooks, __unregisterHooks } from "../index";
+import { metricsStore, type TimelineEntry, type RenderStats } from './metrics';
+import { depGraph, type GraphJSON } from './dependency-graph';
+import { overlayManager, type AnimationSpeed as OverlayAnimationSpeed } from './overlay';
+import { toolbar } from './toolbar';
+import { __registerHooks, __unregisterHooks } from '../index';
 
 /*
  * Type Definitions
  */
 
-export type AnimationSpeed = "off" | "fast" | "slow";
+export type AnimationSpeed = 'off' | 'fast' | 'slow';
 
 export interface DevToolsOptions {
   /** Show visual overlays around updated elements. Default: true */
@@ -76,8 +73,8 @@ export interface FlickDevTools {
 
 let devtoolsEnabled = false;
 let devtoolsInstance: FlickDevTools | null = null;
-let originalFx: typeof import("../index").fx | null = null;
-let originalRun: typeof import("../index").run | null = null;
+let originalFx: typeof import('../index').fx | null = null;
+let originalRun: typeof import('../index').run | null = null;
 
 /*
  * Main API
@@ -95,9 +92,7 @@ let originalRun: typeof import("../index").run | null = null;
 export function enableDevTools(options: DevToolsOptions = {}): FlickDevTools {
   // Return existing instance if already enabled
   if (devtoolsInstance) {
-    console.warn(
-      "[Flick DevTools] Already enabled. Returning existing instance."
-    );
+    console.warn('[Flick DevTools] Already enabled. Returning existing instance.');
     return devtoolsInstance;
   }
 
@@ -105,10 +100,10 @@ export function enableDevTools(options: DevToolsOptions = {}): FlickDevTools {
     overlay: options.overlay ?? true,
     toolbar: options.toolbar ?? true,
     logToConsole: options.logToConsole ?? false,
-    animationSpeed: options.animationSpeed ?? "fast",
+    animationSpeed: options.animationSpeed ?? 'fast'
   };
 
-  console.log("[Flick DevTools] Initializing...", config);
+  console.log('[Flick DevTools] Initializing...', config);
 
   devtoolsEnabled = true;
 
@@ -126,16 +121,11 @@ export function enableDevTools(options: DevToolsOptions = {}): FlickDevTools {
       console.log(`[Flick DevTools] Effect START: #${runId}`);
     },
 
-    onEffectEnd: (
-      runId: number,
-      duration: number,
-      domNodes: Set<Node>,
-      componentName?: string
-    ) => {
+    onEffectEnd: (runId: number, duration: number, domNodes: Set<Node>, componentName?: string) => {
       console.log(
         `[Flick DevTools] Effect END: #${runId} - ${duration.toFixed(2)}ms, ${
           domNodes.size
-        } DOM nodes${componentName ? `, component: ${componentName}` : ""}`
+        } DOM nodes${componentName ? `, component: ${componentName}` : ''}`
       );
 
       // Debug: log each DOM node
@@ -143,7 +133,7 @@ export function enableDevTools(options: DevToolsOptions = {}): FlickDevTools {
         console.log(
           `[Flick DevTools]   Node:`,
           node,
-          node instanceof Element ? node.tagName : "TEXT"
+          node instanceof Element ? node.tagName : 'TEXT'
         );
       }
 
@@ -153,7 +143,7 @@ export function enableDevTools(options: DevToolsOptions = {}): FlickDevTools {
         duration,
         timestamp: performance.now(),
         domNodesAffected: domNodes.size,
-        dependencies: [],
+        dependencies: []
       });
 
       // Record stats for each DOM node
@@ -169,7 +159,7 @@ export function enableDevTools(options: DevToolsOptions = {}): FlickDevTools {
         overlayManager.showUpdates(domNodes, {
           duration,
           signalName: lastSignalName,
-          componentName,
+          componentName
         });
       } else {
         console.log(
@@ -178,16 +168,11 @@ export function enableDevTools(options: DevToolsOptions = {}): FlickDevTools {
       }
     },
 
-    onSignalUpdate: (
-      fxId: number,
-      prevValue: unknown,
-      nextValue: unknown,
-      name?: string
-    ) => {
+    onSignalUpdate: (fxId: number, prevValue: unknown, nextValue: unknown, name?: string) => {
       console.log(
-        `[Flick DevTools] Signal UPDATE: #${fxId}${name ? ` (${name})` : ""}`,
+        `[Flick DevTools] Signal UPDATE: #${fxId}${name ? ` (${name})` : ''}`,
         prevValue,
-        "->",
+        '->',
         nextValue
       );
 
@@ -200,9 +185,9 @@ export function enableDevTools(options: DevToolsOptions = {}): FlickDevTools {
         name,
         prevValue,
         nextValue,
-        timestamp: performance.now(),
+        timestamp: performance.now()
       });
-    },
+    }
   });
 
   // Initialize toolbar
@@ -214,19 +199,19 @@ export function enableDevTools(options: DevToolsOptions = {}): FlickDevTools {
   devtoolsInstance = {
     pause() {
       metricsStore.paused = true;
-      console.log("[Flick DevTools] Paused");
+      console.log('[Flick DevTools] Paused');
     },
 
     resume() {
       metricsStore.paused = false;
-      console.log("[Flick DevTools] Resumed");
+      console.log('[Flick DevTools] Resumed');
     },
 
     clear() {
       metricsStore.clear();
       depGraph.clear();
       overlayManager.clearAll();
-      console.log("[Flick DevTools] Cleared");
+      console.log('[Flick DevTools] Cleared');
     },
 
     getTimeline() {
@@ -247,9 +232,7 @@ export function enableDevTools(options: DevToolsOptions = {}): FlickDevTools {
 
     setOverlayEnabled(enabled: boolean) {
       overlayManager.setEnabled(enabled);
-      console.log(
-        `[Flick DevTools] Overlay ${enabled ? "enabled" : "disabled"}`
-      );
+      console.log(`[Flick DevTools] Overlay ${enabled ? 'enabled' : 'disabled'}`);
     },
 
     setAnimationSpeed(speed: AnimationSpeed) {
@@ -271,15 +254,13 @@ export function enableDevTools(options: DevToolsOptions = {}): FlickDevTools {
       depGraph.clear();
       devtoolsEnabled = false;
       devtoolsInstance = null;
-      console.log("[Flick DevTools] Destroyed");
-    },
+      console.log('[Flick DevTools] Destroyed');
+    }
   };
 
-  console.log("[Flick DevTools] Ready!");
-  console.log("[Flick DevTools] Use devtools.getTimeline() to see events");
-  console.log(
-    "[Flick DevTools] Use devtools.getDependencyGraph() to see signal/effect graph"
-  );
+  console.log('[Flick DevTools] Ready!');
+  console.log('[Flick DevTools] Use devtools.getTimeline() to see events');
+  console.log('[Flick DevTools] Use devtools.getDependencyGraph() to see signal/effect graph');
 
   return devtoolsInstance;
 }
@@ -302,5 +283,5 @@ export function getDevToolsInstance(): FlickDevTools | null {
  * Re-exports
  */
 
-export type { TimelineEntry, RenderStats } from "./metrics";
-export type { GraphJSON, GraphNode, GraphEdge } from "./dependency-graph";
+export type { TimelineEntry, RenderStats } from './metrics';
+export type { GraphJSON, GraphNode, GraphEdge } from './dependency-graph';

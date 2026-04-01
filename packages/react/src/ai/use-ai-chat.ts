@@ -1,7 +1,7 @@
-import { useRef, useCallback } from "react";
-import { aiChat } from "@flickjs/ai";
-import type { AiChatOptions, Message } from "@flickjs/ai";
-import { useFxValue } from "../internal/use-fx-value";
+import { useRef, useCallback } from 'react';
+import { aiChat } from '@flickjs/ai';
+import type { AiChatOptions, Message } from '@flickjs/ai';
+import { useFxValue } from '../internal/use-fx-value';
 
 export interface UseAiChatReturn {
   messages: Message[];
@@ -12,13 +12,9 @@ export interface UseAiChatReturn {
   submit: (message?: string) => Promise<void>;
   stop: () => void;
   reload: () => Promise<void>;
-  setMessages: (
-    msgs: Message[] | ((prev: Message[]) => Message[])
-  ) => void;
+  setMessages: (msgs: Message[] | ((prev: Message[]) => Message[])) => void;
   handleSubmit: (e: React.FormEvent) => void;
-  handleInputChange: (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => void;
+  handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
 }
 
 /**
@@ -45,9 +41,7 @@ export interface UseAiChatReturn {
  * }
  * ```
  */
-export function useAiChat(
-  options: Omit<AiChatOptions, "suspense">
-): UseAiChatReturn {
+export function useAiChat(options: Omit<AiChatOptions, 'suspense'>): UseAiChatReturn {
   const chatRef = useRef<ReturnType<typeof aiChat> | null>(null);
   if (chatRef.current === null) {
     chatRef.current = aiChat({ ...options, suspense: false });
@@ -59,12 +53,9 @@ export function useAiChat(
   const status = useFxValue(chat.status);
   const error = useFxValue(chat.error);
 
-  const isLoading = status === "submitting" || status === "streaming";
+  const isLoading = status === 'submitting' || status === 'streaming';
 
-  const setInput = useCallback(
-    (value: string) => chat.input.set(value),
-    [chat]
-  );
+  const setInput = useCallback((value: string) => chat.input.set(value), [chat]);
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -92,6 +83,6 @@ export function useAiChat(
     reload: chat.reload,
     setMessages: chat.setMessages,
     handleSubmit,
-    handleInputChange,
+    handleInputChange
   };
 }

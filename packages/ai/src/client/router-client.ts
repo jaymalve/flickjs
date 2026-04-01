@@ -1,15 +1,15 @@
-import type { Agent, AgentResult } from "../server/agent/types";
-import type { AgentRouter, InferAgentRouter } from "../router/types";
+import type { Agent, AgentResult } from '../server/agent/types';
+import type { AgentRouter, InferAgentRouter } from '../router/types';
 import type {
   AgentClient,
   AgentClientMethods,
   AgentClientOptions,
   ChatOptions,
   RunOptions,
-  StreamOptions,
-} from "./router-client-types";
-import type { AiChat, Message } from "./types";
-import { aiChat } from "./chat";
+  StreamOptions
+} from './router-client-types';
+import type { AiChat, Message } from './types';
+import { aiChat } from './chat';
 
 /**
  * Get the base URL for the agent API
@@ -21,7 +21,7 @@ function getBaseUrl(options: AgentClientOptions): string {
 
   // Check environment variables
   // Node.js / Bun
-  if (typeof process !== "undefined" && process.env) {
+  if (typeof process !== 'undefined' && process.env) {
     if (process.env.FLICK_AI_URL) {
       return process.env.FLICK_AI_URL;
     }
@@ -31,7 +31,7 @@ function getBaseUrl(options: AgentClientOptions): string {
   // We use a try-catch because import.meta.env may not exist in all environments
   try {
     // @ts-expect-error - import.meta.env is Vite-specific
-    if (typeof import.meta !== "undefined" && import.meta.env?.VITE_FLICK_AI_URL) {
+    if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FLICK_AI_URL) {
       // @ts-expect-error - import.meta.env is Vite-specific
       return import.meta.env.VITE_FLICK_AI_URL;
     }
@@ -40,7 +40,7 @@ function getBaseUrl(options: AgentClientOptions): string {
   }
 
   // Default fallback
-  return "/api/ai";
+  return '/api/ai';
 }
 
 /**
@@ -56,7 +56,7 @@ function createAgentProxy(baseUrl: string, agentName: string): AgentClientMethod
     chat(options: ChatOptions = {}): AiChat {
       return aiChat({
         api: agentUrl,
-        ...options,
+        ...options
       });
     },
 
@@ -65,18 +65,18 @@ function createAgentProxy(baseUrl: string, agentName: string): AgentClientMethod
      */
     async run(options: RunOptions): Promise<AgentResult> {
       const response = await fetch(agentUrl, {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
         },
         body: JSON.stringify({
           messages: options.messages.map((m: Message) => ({
             role: m.role,
-            content: m.content,
+            content: m.content
           })),
-          stream: false,
-        }),
+          stream: false
+        })
       });
 
       if (!response.ok) {
@@ -93,9 +93,9 @@ function createAgentProxy(baseUrl: string, agentName: string): AgentClientMethod
     stream(options: StreamOptions = {}): AiChat {
       return aiChat({
         api: agentUrl,
-        initialMessages: options.messages,
+        initialMessages: options.messages
       });
-    },
+    }
   };
 }
 
@@ -150,7 +150,7 @@ export function createAgentClient<T extends AgentRouter<Record<string, Agent>>>(
   return new Proxy({} as AgentClient<InferAgentRouter<T>>, {
     get(_, agentName: string) {
       // Skip internal properties
-      if (typeof agentName !== "string" || agentName.startsWith("_")) {
+      if (typeof agentName !== 'string' || agentName.startsWith('_')) {
         return undefined;
       }
       return createAgentProxy(baseUrl, agentName);
@@ -164,8 +164,8 @@ export function createAgentClient<T extends AgentRouter<Record<string, Agent>>>(
     getOwnPropertyDescriptor() {
       return {
         enumerable: true,
-        configurable: true,
+        configurable: true
       };
-    },
+    }
   });
 }

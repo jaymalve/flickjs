@@ -1,6 +1,6 @@
-import { useRef, useCallback } from "react";
-import { useSyncExternalStore } from "react";
-import { run } from "@flickjs/runtime";
+import { useRef, useCallback } from 'react';
+import { useSyncExternalStore } from 'react';
+import { run } from '@flickjs/runtime';
 
 /**
  * Create a derived value that auto-tracks FlickJS signals.

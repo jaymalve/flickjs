@@ -1,11 +1,11 @@
-import type { Plugin } from "vite";
-import { readdir, stat } from "fs/promises";
-import { existsSync } from "fs";
-import { join, relative, resolve } from "path";
-import { filePathToRoute, type Route } from "./utils";
+import type { Plugin } from 'vite';
+import { readdir, stat } from 'fs/promises';
+import { existsSync } from 'fs';
+import { join, relative, resolve } from 'path';
+import { filePathToRoute, type Route } from './utils';
 
-const VIRTUAL_MODULE_ID = "virtual:flick-routes";
-const RESOLVED_VIRTUAL_MODULE_ID = "\0" + VIRTUAL_MODULE_ID;
+const VIRTUAL_MODULE_ID = 'virtual:flick-routes';
+const RESOLVED_VIRTUAL_MODULE_ID = '\0' + VIRTUAL_MODULE_ID;
 
 interface RouteFile {
   path: string;
@@ -19,7 +19,7 @@ interface RouteFile {
 async function scanPagesDirectory(
   dir: string,
   baseDir: string,
-  pagesDir: string = "pages"
+  pagesDir: string = 'pages'
 ): Promise<RouteFile[]> {
   const routes: RouteFile[] = [];
   const entries = await readdir(dir);
@@ -37,12 +37,12 @@ async function scanPagesDirectory(
       const relativePath = relative(baseDir, fullPath);
       const route = filePathToRoute(relativePath, pagesDir);
       // Use @/ alias for portable imports
-      const importPath = "@/" + relativePath.replace(/\\/g, "/");
+      const importPath = '@/' + relativePath.replace(/\\/g, '/');
 
       routes.push({
         path: fullPath,
         importPath,
-        route,
+        route
       });
     }
   }
@@ -61,29 +61,26 @@ function generateRouteManifest(routes: RouteFile[]): string {
           r.route
         )}, component: () => import(${JSON.stringify(r.importPath)}) }`
     )
-    .join(",\n");
+    .join(',\n');
 
   return `export const routes = [\n${routeImports}\n];\n`;
 }
 
-export function flickRouter(options?: {
-  pagesDir?: string;
-  root?: string;
-}): Plugin {
-  const pagesDir = options?.pagesDir || "pages";
+export function flickRouter(options?: { pagesDir?: string; root?: string }): Plugin {
+  const pagesDir = options?.pagesDir || 'pages';
   const root = options?.root || process.cwd();
 
   return {
-    name: "flick-router",
+    name: 'flick-router',
     config(userConfig) {
-      const srcPath = resolve(root, "src");
+      const srcPath = resolve(root, 'src');
       return {
         resolve: {
           alias: {
-            "@": srcPath,
-            ...userConfig.resolve?.alias,
-          },
-        },
+            '@': srcPath,
+            ...userConfig.resolve?.alias
+          }
+        }
       };
     },
     resolveId(id) {
@@ -94,7 +91,7 @@ export function flickRouter(options?: {
     async load(id) {
       if (id === RESOLVED_VIRTUAL_MODULE_ID) {
         // Find src directory (common in Vite projects)
-        const srcDir = resolve(root, "src");
+        const srcDir = resolve(root, 'src');
         const pagesPath = join(srcDir, pagesDir);
 
         // Check if pages directory exists
@@ -106,11 +103,7 @@ export function flickRouter(options?: {
         }
 
         try {
-          const routeFiles = await scanPagesDirectory(
-            pagesPath,
-            srcDir,
-            pagesDir
-          );
+          const routeFiles = await scanPagesDirectory(pagesPath, srcDir, pagesDir);
 
           if (routeFiles.length === 0) {
             console.warn(
@@ -121,10 +114,10 @@ export function flickRouter(options?: {
 
           // Sort routes: exact matches first, then dynamic, then catch-all
           routeFiles.sort((a, b) => {
-            const aHasParams = a.route.includes(":");
-            const bHasParams = b.route.includes(":");
-            const aHasCatchAll = a.route.includes("*");
-            const bHasCatchAll = b.route.includes("*");
+            const aHasParams = a.route.includes(':');
+            const bHasParams = b.route.includes(':');
+            const aHasCatchAll = a.route.includes('*');
+            const bHasCatchAll = b.route.includes('*');
 
             if (aHasCatchAll && !bHasCatchAll) return 1;
             if (!aHasCatchAll && bHasCatchAll) return -1;
@@ -136,15 +129,10 @@ export function flickRouter(options?: {
           return generateRouteManifest(routeFiles);
         } catch (error: any) {
           // Handle case where directory doesn't exist or can't be read
-          if (error.code === "ENOENT") {
-            console.warn(
-              `[flick-router] Pages directory not found at ${pagesPath}.`
-            );
+          if (error.code === 'ENOENT') {
+            console.warn(`[flick-router] Pages directory not found at ${pagesPath}.`);
           } else {
-            console.error(
-              `[flick-router] Error scanning pages directory:`,
-              error
-            );
+            console.error(`[flick-router] Error scanning pages directory:`, error);
           }
           return `export const routes = [];\n`;
         }
@@ -152,10 +140,10 @@ export function flickRouter(options?: {
     },
     configureServer(server) {
       // Watch for file changes in pages directory
-      const pagesPath = resolve(root, "src", pagesDir);
+      const pagesPath = resolve(root, 'src', pagesDir);
       if (existsSync(pagesPath)) {
         server.watcher.add(pagesPath);
       }
-    },
+    }
   };
 }

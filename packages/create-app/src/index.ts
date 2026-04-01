@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import fs from "fs-extra";
-import path from "path";
+import fs from 'fs-extra';
+import path from 'path';
 import {
   createPackageJson,
   createGitignore,
@@ -17,19 +17,19 @@ import {
   createAboutPage,
   createFeatureList,
   createTodoChip,
-  createTodoInterface,
-} from "./templates";
+  createTodoInterface
+} from './templates';
 
-const name = process.argv[2] || "flick-app";
+const name = process.argv[2] || 'flick-app';
 const root = path.join(process.cwd(), name);
 
 // Create directories
 fs.ensureDirSync(root);
-fs.ensureDirSync(path.join(root, "src"));
-fs.ensureDirSync(path.join(root, "src/pages"));
-fs.ensureDirSync(path.join(root, "src/pages/todos"));
-fs.ensureDirSync(path.join(root, "src/components"));
-fs.ensureDirSync(path.join(root, "src/types"));
+fs.ensureDirSync(path.join(root, 'src'));
+fs.ensureDirSync(path.join(root, 'src/pages'));
+fs.ensureDirSync(path.join(root, 'src/pages/todos'));
+fs.ensureDirSync(path.join(root, 'src/components'));
+fs.ensureDirSync(path.join(root, 'src/types'));
 
 // Create config files
 createPackageJson(root, name);
@@ -58,9 +58,9 @@ createTodoChip(root);
 createTodoInterface(root);
 
 // Output success message
-console.log("Updated Flick app created!");
-console.log("");
-console.log("Next steps:");
+console.log('Updated Flick app created!');
+console.log('');
+console.log('Next steps:');
 console.log(`  cd ${name}`);
-console.log("  bun install");
-console.log("  bun dev");
+console.log('  bun install');
+console.log('  bun dev');

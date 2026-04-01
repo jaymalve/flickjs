@@ -1,4 +1,4 @@
-import type { CoreMessage, LanguageModel } from "ai";
+import type { CoreMessage, LanguageModel } from 'ai';
 
 /**
  * Model specification - either a string shortcut or LanguageModel instance
@@ -32,7 +32,7 @@ export interface AgentConfig {
   maxTokens?: number;
 
   /** Tool choice configuration */
-  toolChoice?: "auto" | "none" | "required" | { type: "tool"; toolName: string };
+  toolChoice?: 'auto' | 'none' | 'required' | { type: 'tool'; toolName: string };
 }
 
 /**
@@ -72,13 +72,7 @@ export interface AgentResult {
   text: string;
 
   /** Reason why generation stopped */
-  finishReason:
-    | "stop"
-    | "length"
-    | "tool-calls"
-    | "content-filter"
-    | "error"
-    | "other";
+  finishReason: 'stop' | 'length' | 'tool-calls' | 'content-filter' | 'error' | 'other';
 
   /** Token usage statistics */
   usage?: {
@@ -108,10 +102,7 @@ export interface Agent {
   /**
    * Stream a chat response (alias for chat)
    */
-  stream(
-    messages: CoreMessage[],
-    options?: AgentChatOptions
-  ): Promise<Response>;
+  stream(messages: CoreMessage[], options?: AgentChatOptions): Promise<Response>;
 
   /**
    * Non-streaming execution - returns final result

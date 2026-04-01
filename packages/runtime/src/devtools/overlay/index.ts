@@ -7,14 +7,14 @@
  * - Coordinates canvas and animations
  */
 
-import { CanvasOverlay, type OverlayDrawData } from "./canvas";
+import { CanvasOverlay, type OverlayDrawData } from './canvas';
 import {
   AnimationController,
   type AnimationSpeed,
   getPerformanceColor,
   type OverlayColors,
-  DEFAULT_COLORS,
-} from "./animations";
+  DEFAULT_COLORS
+} from './animations';
 
 /*
  * Types
@@ -68,11 +68,11 @@ class OverlayManager {
 
   constructor() {
     this.canvas = new CanvasOverlay();
-    this.animationController = new AnimationController("fast");
+    this.animationController = new AnimationController('fast');
     this.config = {
-      animationSpeed: "fast",
+      animationSpeed: 'fast',
       enabled: true,
-      colors: DEFAULT_COLORS,
+      colors: DEFAULT_COLORS
     };
   }
 
@@ -83,13 +83,13 @@ class OverlayManager {
   /**
    * Initialize the overlay system
    */
-  initialize(speed: AnimationSpeed = "fast"): void {
+  initialize(speed: AnimationSpeed = 'fast'): void {
     this.config.animationSpeed = speed;
     this.animationController.setSpeed(speed);
     this.canvas.attach();
     this.startRenderLoop();
 
-    console.log("[Flick DevTools] Overlay system initialized");
+    console.log('[Flick DevTools] Overlay system initialized');
   }
 
   /**
@@ -100,7 +100,7 @@ class OverlayManager {
     this.canvas.detach();
     this.activeOverlays.clear();
 
-    console.log("[Flick DevTools] Overlay system destroyed");
+    console.log('[Flick DevTools] Overlay system destroyed');
   }
 
   /*
@@ -192,11 +192,7 @@ class OverlayManager {
     );
 
     // Determine color based on performance
-    const color = getPerformanceColor(
-      metadata.duration,
-      metadata.renderCount,
-      this.config.colors
-    );
+    const color = getPerformanceColor(metadata.duration, metadata.renderCount, this.config.colors);
 
     // Check if we already have an overlay for this node
     const existing = this.activeOverlays.get(node);
@@ -222,7 +218,7 @@ class OverlayManager {
         lastDuration: metadata.duration,
         signalName: metadata.signalName,
         componentName: metadata.componentName,
-        startTime: performance.now(),
+        startTime: performance.now()
       });
     }
   }
@@ -253,13 +249,11 @@ class OverlayManager {
         duration: metadata.duration,
         renderCount,
         signalName: metadata.signalName,
-        componentName: metadata.componentName,
+        componentName: metadata.componentName
       });
     }
 
-    console.log(
-      `[Flick Overlay] Active overlays after update: ${this.activeOverlays.size}`
-    );
+    console.log(`[Flick Overlay] Active overlays after update: ${this.activeOverlays.size}`);
   }
 
   /**
@@ -323,9 +317,7 @@ class OverlayManager {
 
     // Debug: log if we have active overlays
     if (this.activeOverlays.size > 0) {
-      console.log(
-        `[Flick Overlay] renderFrame: drawing ${this.activeOverlays.size} overlays`
-      );
+      console.log(`[Flick Overlay] renderFrame: drawing ${this.activeOverlays.size} overlays`);
     }
 
     // Update and draw each overlay
@@ -361,7 +353,7 @@ class OverlayManager {
         renderCount: state.renderCount,
         lastDuration: state.lastDuration,
         signalName: state.signalName,
-        componentName: state.componentName,
+        componentName: state.componentName
       };
 
       this.canvas.drawOverlay(drawData);
@@ -415,5 +407,5 @@ class OverlayManager {
 export const overlayManager = new OverlayManager();
 
 // Re-export types
-export type { AnimationSpeed } from "./animations";
-export { DEFAULT_COLORS, type OverlayColors } from "./animations";
+export type { AnimationSpeed } from './animations';
+export { DEFAULT_COLORS, type OverlayColors } from './animations';

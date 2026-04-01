@@ -11,11 +11,11 @@ bun add @flickjs/router
 ### Vite Configuration
 
 ```js
-import { defineConfig } from "vite";
-import { flickRouter } from "@flickjs/router/vite";
+import { defineConfig } from 'vite';
+import { flickRouter } from '@flickjs/router/vite';
 
 export default defineConfig({
-  plugins: [flickPlugin(), flickRouter({ pagesDir: "pages" })],
+  plugins: [flickPlugin(), flickRouter({ pagesDir: 'pages' })]
 });
 ```
 
@@ -40,8 +40,8 @@ src/
 The main router component that renders the current route.
 
 ```tsx
-import { Router } from "@flickjs/router";
-import { routes } from "virtual:flick-routes";
+import { Router } from '@flickjs/router';
+import { routes } from 'virtual:flick-routes';
 
 function App() {
   return (
@@ -68,7 +68,7 @@ function App() {
 A navigation link component for client-side routing.
 
 ```tsx
-import { Link } from "@flickjs/router";
+import { Link } from '@flickjs/router';
 
 function Navigation() {
   return (
@@ -95,12 +95,12 @@ function Navigation() {
 Programmatically navigate to a route.
 
 ```tsx
-import { navigate } from "@flickjs/router";
+import { navigate } from '@flickjs/router';
 
 function LoginForm() {
   const handleSubmit = async () => {
     await login();
-    navigate("/dashboard");
+    navigate('/dashboard');
   };
 
   return (
@@ -131,7 +131,7 @@ function navigate(path: string): void;
 Get the current route information.
 
 ```tsx
-import { currentPath } from "@flickjs/router";
+import { currentPath } from '@flickjs/router';
 
 function Breadcrumb() {
   const route = currentPath();
@@ -151,15 +151,13 @@ A function that returns the current route object with `path` and `params`.
 Get the current route parameters.
 
 ```tsx
-import { params } from "@flickjs/router";
+import { params } from '@flickjs/router';
 
 // For route /blog/[slug].tsx
 function BlogPost() {
-
   return <h1>Blog Post: {params().slug}</h1>;
 }
 ```
-
 
 ### Returns
 
@@ -209,9 +207,9 @@ pages/docs/[...path].tsx    → /docs/* (nested docs)
 
 ```tsx
 // src/main.tsx
-import { mount } from "@flickjs/runtime";
-import { Router, Link } from "@flickjs/router";
-import { routes } from "virtual:flick-routes";
+import { mount } from '@flickjs/runtime';
+import { Router, Link } from '@flickjs/router';
+import { routes } from 'virtual:flick-routes';
 
 function App() {
   return (
@@ -229,7 +227,7 @@ function App() {
   );
 }
 
-mount(App, document.getElementById("app"));
+mount(App, document.getElementById('app'));
 ```
 
 ```tsx
@@ -241,7 +239,7 @@ export default function Home() {
 
 ```tsx
 // src/pages/blog/[slug].tsx
-import { params } from "@flickjs/router";
+import { params } from '@flickjs/router';
 
 export default function BlogPost() {
   return <h1>Blog Post: {params().slug}</h1>;

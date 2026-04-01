@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { run } from "@flickjs/runtime";
+import { useEffect, useRef } from 'react';
+import { run } from '@flickjs/runtime';
 
 /**
  * Run a side effect that auto-tracks FlickJS signals.

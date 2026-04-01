@@ -5,21 +5,17 @@ Run executes side effects when fx change. They automatically track which fx they
 ## Basic Usage
 
 ```tsx
-import { fx, run, mount } from "@flickjs/runtime";
+import { fx, run, mount } from '@flickjs/runtime';
 
 function Logger() {
   const count = fx(0);
 
   // Runs whenever count changes
   run(() => {
-    console.log("Count changed to:", count());
+    console.log('Count changed to:', count());
   });
 
-  return (
-    <button onclick={() => count.set(count() + 1)}>
-      Click me ({count()})
-    </button>
-  );
+  return <button onclick={() => count.set(count() + 1)}>Click me ({count()})</button>;
 }
 ```
 
@@ -32,7 +28,7 @@ function Debug() {
   const data = fx(null);
 
   run(() => {
-    console.log("Data updated:", data());
+    console.log('Data updated:', data());
   });
 
   // ...
@@ -43,14 +39,14 @@ function Debug() {
 
 ```tsx
 function LocalStorageSync() {
-  const theme = fx(localStorage.getItem("theme") || "light");
+  const theme = fx(localStorage.getItem('theme') || 'light');
 
   run(() => {
-    localStorage.setItem("theme", theme());
+    localStorage.setItem('theme', theme());
   });
 
   return (
-    <button onclick={() => theme.set(theme() === "light" ? "dark" : "light")}>
+    <button onclick={() => theme.set(theme() === 'light' ? 'dark' : 'light')}>
       Toggle Theme ({theme()})
     </button>
   );
@@ -61,7 +57,7 @@ function LocalStorageSync() {
 
 ```tsx
 function PageTitle() {
-  const title = fx("Home");
+  const title = fx('Home');
 
   run(() => {
     document.title = title();
@@ -69,10 +65,7 @@ function PageTitle() {
 
   return (
     <div>
-      <input
-        value={title()}
-        oninput={(e) => title.set(e.target.value)}
-      />
+      <input value={title()} oninput={(e) => title.set(e.target.value)} />
     </div>
   );
 }
@@ -129,15 +122,15 @@ Run should handle one specific side effect:
 ```tsx
 // Too much in one run
 run(() => {
-  localStorage.setItem("user", user());
+  localStorage.setItem('user', user());
   document.title = user().name;
-  analytics.track("user_update", user());
+  analytics.track('user_update', user());
 });
 
 // Separate concerns
-run(() => localStorage.setItem("user", user()));
-run(() => document.title = user().name);
-run(() => analytics.track("user_update", user()));
+run(() => localStorage.setItem('user', user()));
+run(() => (document.title = user().name));
+run(() => analytics.track('user_update', user()));
 ```
 
 ### 3. Avoid Circular Dependencies

@@ -1,5 +1,5 @@
-import type { Agent } from "../server/agent/types";
-import type { AgentRouter } from "./types";
+import type { Agent } from '../server/agent/types';
+import type { AgentRouter } from './types';
 
 /**
  * Create an agent router - a collection of named agents
@@ -22,11 +22,9 @@ import type { AgentRouter } from "./types";
  * export type Agents = typeof agents;
  * ```
  */
-export function agentRouter<T extends Record<string, Agent>>(
-  agents: T
-): AgentRouter<T> {
+export function agentRouter<T extends Record<string, Agent>>(agents: T): AgentRouter<T> {
   return {
     _agents: agents,
-    _type: "agentRouter" as const,
+    _type: 'agentRouter' as const
   };
 }

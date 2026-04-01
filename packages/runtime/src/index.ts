@@ -17,12 +17,7 @@ interface RuntimeHooks {
     domNodes: Set<Node>,
     componentName?: string
   ) => void;
-  onSignalUpdate?: (
-    fxId: number,
-    prevValue: unknown,
-    nextValue: unknown,
-    name?: string
-  ) => void;
+  onSignalUpdate?: (fxId: number, prevValue: unknown, nextValue: unknown, name?: string) => void;
 }
 
 let hooks: RuntimeHooks = {};
@@ -69,7 +64,7 @@ export function fx<T>(value: T, name?: string): Fx<T> {
 
   read.set = (next: T | ((v: T) => T)) => {
     const prevValue = value;
-    value = typeof next === "function" ? (next as any)(value) : next;
+    value = typeof next === 'function' ? (next as any)(value) : next;
 
     // Notify devtools hook
     if (hooks.onSignalUpdate) {
@@ -103,7 +98,7 @@ export function run(fn: Run, componentName?: string): () => void {
 
     // Set up DOM mutation observer if hooks are registered
     let observer: MutationObserver | null = null;
-    if (hooks.onEffectEnd && typeof MutationObserver !== "undefined") {
+    if (hooks.onEffectEnd && typeof MutationObserver !== 'undefined') {
       observer = new MutationObserver((mutations) => {
         for (const mutation of mutations) {
           domNodes.add(mutation.target);
@@ -116,7 +111,7 @@ export function run(fn: Run, componentName?: string): () => void {
             childList: true,
             subtree: true,
             attributes: true,
-            characterData: true,
+            characterData: true
           });
         }
       } catch {
@@ -421,7 +416,7 @@ declare global {
 
 // This ensures JSX types are loaded when the module is imported
 // Users don't need to do anything - types are automatically available
-export const jsxTypes = Symbol("jsx-types");
+export const jsxTypes = Symbol('jsx-types');
 
-export { Suspense, getCurrentSuspense, query, lazy } from "./suspense";
-export type { SuspenseContext, SuspenseProps, Query } from "./suspense";
+export { Suspense, getCurrentSuspense, query, lazy } from './suspense';
+export type { SuspenseContext, SuspenseProps, Query } from './suspense';

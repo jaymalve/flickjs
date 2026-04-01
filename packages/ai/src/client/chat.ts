@@ -1,6 +1,6 @@
-import { fx, getCurrentSuspense } from "@flickjs/runtime";
-import type { AiChat, AiChatOptions, ChatStatus, Message } from "./types";
-import { parseStream } from "../utils/stream-parser";
+import { fx, getCurrentSuspense } from '@flickjs/runtime';
+import type { AiChat, AiChatOptions, ChatStatus, Message } from './types';
+import { parseStream } from '../utils/stream-parser';
 
 /**
  * Generate a unique ID for messages
@@ -32,7 +32,7 @@ export function aiChat(options: AiChatOptions): AiChat {
   const {
     api,
     initialMessages = [],
-    initialInput = "",
+    initialInput = '',
     headers,
     body,
     onFinish,
@@ -40,13 +40,13 @@ export function aiChat(options: AiChatOptions): AiChat {
     onResponse,
     suspense = false,
     generateId: customGenerateId = generateId,
-    credentials,
+    credentials
   } = options;
 
   // Reactive state
   const messages = fx<Message[]>(initialMessages);
   const input = fx<string>(initialInput);
-  const status = fx<ChatStatus>("idle");
+  const status = fx<ChatStatus>('idle');
   const error = fx<Error | undefined>(undefined);
 
   // Track current abort controller for cancellation
@@ -57,7 +57,7 @@ export function aiChat(options: AiChatOptions): AiChat {
    */
   const isLoading = (): boolean => {
     const s = status();
-    return s === "submitting" || s === "streaming";
+    return s === 'submitting' || s === 'streaming';
   };
 
   /**
@@ -70,15 +70,15 @@ export function aiChat(options: AiChatOptions): AiChat {
 
     // Clear input immediately
     if (!message) {
-      input.set("");
+      input.set('');
     }
 
     // Create user message
     const userMessage: Message = {
       id: customGenerateId(),
-      role: "user",
+      role: 'user',
       content: content.trim(),
-      createdAt: new Date(),
+      createdAt: new Date()
     };
 
     // Add user message to list
@@ -87,15 +87,15 @@ export function aiChat(options: AiChatOptions): AiChat {
     // Create placeholder for assistant response
     const assistantMessage: Message = {
       id: customGenerateId(),
-      role: "assistant",
-      content: "",
-      createdAt: new Date(),
+      role: 'assistant',
+      content: '',
+      createdAt: new Date()
     };
 
     messages.set((prev: Message[]) => [...prev, assistantMessage]);
 
     // Update status
-    status.set("submitting");
+    status.set('submitting');
     error.set(undefined);
 
     // Create abort controller
@@ -105,20 +105,20 @@ export function aiChat(options: AiChatOptions): AiChat {
     const streamPromise = (async () => {
       try {
         const response = await fetch(api, {
-          method: "POST",
+          method: 'POST',
           headers: {
-            "Content-Type": "application/json",
-            ...headers,
+            'Content-Type': 'application/json',
+            ...headers
           },
           body: JSON.stringify({
             messages: messages().map((m: Message) => ({
               role: m.role,
-              content: m.content,
+              content: m.content
             })),
-            ...body,
+            ...body
           }),
           signal: abortController!.signal,
-          credentials,
+          credentials
         });
 
         onResponse?.(response);
@@ -128,57 +128,56 @@ export function aiChat(options: AiChatOptions): AiChat {
         }
 
         if (!response.body) {
-          throw new Error("Response body is empty");
+          throw new Error('Response body is empty');
         }
 
-        status.set("streaming");
+        status.set('streaming');
 
         const reader = response.body.getReader();
-        let accumulatedText = "";
+        let accumulatedText = '';
 
         // Parse the stream
         for await (const part of parseStream(reader)) {
-          if (part.type === "text") {
+          if (part.type === 'text') {
             accumulatedText += String(part.value);
 
             // Update assistant message reactively
             messages.set((prev: Message[]) => {
               const updated = [...prev];
               const lastIndex = updated.length - 1;
-              if (lastIndex >= 0 && updated[lastIndex].role === "assistant") {
+              if (lastIndex >= 0 && updated[lastIndex].role === 'assistant') {
                 updated[lastIndex] = {
                   ...updated[lastIndex],
-                  content: accumulatedText,
+                  content: accumulatedText
                 };
               }
               return updated;
             });
-          } else if (part.type === "error") {
+          } else if (part.type === 'error') {
             throw new Error(String(part.value));
           }
         }
 
         // Finalize
-        status.set("idle");
+        status.set('idle');
         abortController = null;
 
         // Get the final assistant message
         const finalMessages = messages();
         const finalAssistant = finalMessages[finalMessages.length - 1];
-        if (finalAssistant && finalAssistant.role === "assistant") {
+        if (finalAssistant && finalAssistant.role === 'assistant') {
           onFinish?.(finalAssistant);
         }
       } catch (err) {
         // Handle abort
-        if (err instanceof Error && err.name === "AbortError") {
-          status.set("idle");
+        if (err instanceof Error && err.name === 'AbortError') {
+          status.set('idle');
           return;
         }
 
-        const errorInstance =
-          err instanceof Error ? err : new Error(String(err));
+        const errorInstance = err instanceof Error ? err : new Error(String(err));
         error.set(errorInstance);
-        status.set("error");
+        status.set('error');
         onError?.(errorInstance);
 
         // Remove the empty assistant message on error
@@ -187,7 +186,7 @@ export function aiChat(options: AiChatOptions): AiChat {
           const lastIndex = updated.length - 1;
           if (
             lastIndex >= 0 &&
-            updated[lastIndex].role === "assistant" &&
+            updated[lastIndex].role === 'assistant' &&
             !updated[lastIndex].content
           ) {
             updated.pop();
@@ -215,7 +214,7 @@ export function aiChat(options: AiChatOptions): AiChat {
     if (abortController) {
       abortController.abort();
       abortController = null;
-      status.set("idle");
+      status.set('idle');
     }
   };
 
@@ -228,7 +227,7 @@ export function aiChat(options: AiChatOptions): AiChat {
     // Find the last user message
     let lastUserIndex = -1;
     for (let i = currentMessages.length - 1; i >= 0; i--) {
-      if (currentMessages[i].role === "user") {
+      if (currentMessages[i].role === 'user') {
         lastUserIndex = i;
         break;
       }
@@ -247,10 +246,8 @@ export function aiChat(options: AiChatOptions): AiChat {
   /**
    * Set messages directly
    */
-  const setMessages = (
-    newMessages: Message[] | ((prev: Message[]) => Message[])
-  ): void => {
-    if (typeof newMessages === "function") {
+  const setMessages = (newMessages: Message[] | ((prev: Message[]) => Message[])): void => {
+    if (typeof newMessages === 'function') {
       messages.set(newMessages);
     } else {
       messages.set(newMessages);
@@ -284,6 +281,6 @@ export function aiChat(options: AiChatOptions): AiChat {
     reload,
     setMessages,
     handleSubmit,
-    handleInputChange,
+    handleInputChange
   };
 }

@@ -5,7 +5,7 @@
  * with crisp rendering on HiDPI displays.
  */
 
-import { applyOpacity } from "./animations";
+import { applyOpacity } from './animations';
 
 /*
  * Types
@@ -40,7 +40,7 @@ export class CanvasOverlay {
   private labelConfig: LabelConfig = {
     showName: true,
     showCount: true,
-    showDuration: true,
+    showDuration: true
   };
 
   /*
@@ -53,29 +53,29 @@ export class CanvasOverlay {
   attach(): void {
     if (this.canvas) return;
 
-    this.canvas = document.createElement("canvas");
-    this.canvas.id = "flick-devtools-overlay";
+    this.canvas = document.createElement('canvas');
+    this.canvas.id = 'flick-devtools-overlay';
 
     // Style the canvas as a fixed, non-interactive overlay
     Object.assign(this.canvas.style, {
-      position: "fixed",
-      top: "0",
-      left: "0",
-      pointerEvents: "none",
-      zIndex: "999999",
+      position: 'fixed',
+      top: '0',
+      left: '0',
+      pointerEvents: 'none',
+      zIndex: '999999'
     });
 
     // Append to body first
     document.body.appendChild(this.canvas);
 
     // Get 2D context with alpha
-    this.ctx = this.canvas.getContext("2d", { alpha: true });
+    this.ctx = this.canvas.getContext('2d', { alpha: true });
 
     // Now update size (which applies DPR scaling to context)
     this.updateCanvasSize();
 
     // Handle window resize
-    window.addEventListener("resize", this.handleResize);
+    window.addEventListener('resize', this.handleResize);
   }
 
   /**
@@ -83,7 +83,7 @@ export class CanvasOverlay {
    */
   detach(): void {
     if (this.canvas) {
-      window.removeEventListener("resize", this.handleResize);
+      window.removeEventListener('resize', this.handleResize);
       this.canvas.remove();
       this.canvas = null;
       this.ctx = null;
@@ -126,15 +126,7 @@ export class CanvasOverlay {
   drawOverlay(data: OverlayDrawData): void {
     if (!this.ctx) return;
 
-    const {
-      rect,
-      opacity,
-      color,
-      renderCount,
-      lastDuration,
-      signalName,
-      componentName,
-    } = data;
+    const { rect, opacity, color, renderCount, lastDuration, signalName, componentName } = data;
 
     // Skip if fully transparent
     if (opacity <= 0) return;
@@ -148,14 +140,7 @@ export class CanvasOverlay {
     this.drawBorder(rect, colorWithOpacity);
 
     // Draw label
-    this.drawLabel(
-      rect,
-      opacity,
-      renderCount,
-      lastDuration,
-      signalName,
-      componentName
-    );
+    this.drawLabel(rect, opacity, renderCount, lastDuration, signalName, componentName);
   }
 
   /**
@@ -193,18 +178,13 @@ export class CanvasOverlay {
     if (!this.ctx) return;
 
     const ctx = this.ctx;
-    const labelText = this.buildLabelText(
-      renderCount,
-      duration,
-      signalName,
-      componentName
-    );
+    const labelText = this.buildLabelText(renderCount, duration, signalName, componentName);
 
     if (!labelText) return;
 
     // Font settings
     const fontSize = 11;
-    const fontFamily = "monospace";
+    const fontFamily = 'monospace';
     ctx.font = `${fontSize}px ${fontFamily}`;
 
     // Measure text
@@ -225,13 +205,13 @@ export class CanvasOverlay {
     }
 
     // Draw background
-    ctx.fillStyle = applyOpacity("rgba(0, 0, 0, 0.85)", opacity);
+    ctx.fillStyle = applyOpacity('rgba(0, 0, 0, 0.85)', opacity);
     ctx.beginPath();
     this.roundRect(ctx, labelX, labelY, labelWidth, labelHeight, 3);
     ctx.fill();
 
     // Draw text
-    ctx.fillStyle = applyOpacity("rgba(255, 255, 255, 1)", opacity);
+    ctx.fillStyle = applyOpacity('rgba(255, 255, 255, 1)', opacity);
     ctx.fillText(labelText, labelX + padding, labelY + fontSize + padding - 2);
   }
 
@@ -254,10 +234,7 @@ export class CanvasOverlay {
     const displayName = componentName || signalName;
     if (this.labelConfig.showName && displayName) {
       // Truncate long names
-      const name =
-        displayName.length > 15
-          ? displayName.slice(0, 12) + "..."
-          : displayName;
+      const name = displayName.length > 15 ? displayName.slice(0, 12) + '...' : displayName;
       parts.push(name);
     }
 
@@ -268,13 +245,11 @@ export class CanvasOverlay {
     if (this.labelConfig.showDuration) {
       // Format duration nicely
       const durationStr =
-        duration < 1
-          ? `${(duration * 1000).toFixed(0)}μs`
-          : `${duration.toFixed(1)}ms`;
+        duration < 1 ? `${(duration * 1000).toFixed(0)}μs` : `${duration.toFixed(1)}ms`;
       parts.push(durationStr);
     }
 
-    return parts.join(" · ");
+    return parts.join(' · ');
   }
 
   /**

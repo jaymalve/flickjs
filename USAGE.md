@@ -49,11 +49,11 @@ bun add @flickjs/router
 Create or update `vite.config.js`:
 
 ```js
-import { defineConfig } from "vite";
-import flick from "@flickjs/vite-plugin";
+import { defineConfig } from 'vite';
+import flick from '@flickjs/vite-plugin';
 
 export default defineConfig({
-  plugins: [flick()],
+  plugins: [flick()]
 });
 ```
 
@@ -66,7 +66,7 @@ export default defineConfig({
 Fx are reactive values that automatically update the UI when changed.
 
 ```tsx
-import { fx, mount } from "@flickjs/runtime";
+import { fx, mount } from '@flickjs/runtime';
 
 function Counter() {
   const count = fx(0);
@@ -80,7 +80,7 @@ function Counter() {
   );
 }
 
-mount(Counter, document.getElementById("app"));
+mount(Counter, document.getElementById('app'));
 ```
 
 **Key points:**
@@ -118,19 +118,17 @@ function PriceCalculator() {
 Run side effects when fx change:
 
 ```tsx
-import { fx, run, mount } from "@flickjs/runtime";
+import { fx, run, mount } from '@flickjs/runtime';
 
 function Logger() {
   const count = fx(0);
 
   // Runs whenever count changes
   run(() => {
-    console.log("Count changed to:", count());
+    console.log('Count changed to:', count());
   });
 
-  return (
-    <button onclick={() => count.set(count() + 1)}>Click me ({count()})</button>
-  );
+  return <button onclick={() => count.set(count() + 1)}>Click me ({count()})</button>;
 }
 ```
 
@@ -198,8 +196,8 @@ function Toggle() {
 ```tsx
 function TodoList() {
   const todos = fx([
-    { id: 1, text: "Learn Flick" },
-    { id: 2, text: "Build something" },
+    { id: 1, text: 'Learn Flick' },
+    { id: 2, text: 'Build something' }
   ]);
 
   return (
@@ -220,22 +218,18 @@ Use lowercase event names (standard DOM events):
 
 ```tsx
 function Form() {
-  const value = fx("");
+  const value = fx('');
 
   return (
     <div>
-      <input
-        type="text"
-        value={value()}
-        oninput={(e) => value.set(e.target.value)}
-      />
+      <input type="text" value={value()} oninput={(e) => value.set(e.target.value)} />
       <p>You typed: {value()}</p>
 
-      <button onclick={() => alert("Clicked!")}>Click me</button>
+      <button onclick={() => alert('Clicked!')}>Click me</button>
 
       <div
-        onmouseenter={() => console.log("Mouse entered")}
-        onmouseleave={() => console.log("Mouse left")}
+        onmouseenter={() => console.log('Mouse entered')}
+        onmouseleave={() => console.log('Mouse left')}
       >
         Hover over me
       </div>
@@ -257,7 +251,7 @@ function StyledComponent() {
   const isActive = fx(false);
 
   return (
-    <div class={isActive() ? "active" : "inactive"}>
+    <div class={isActive() ? 'active' : 'inactive'}>
       <button class="btn btn-primary" onclick={() => isActive.set(!isActive())}>
         Toggle
       </button>
@@ -270,12 +264,12 @@ function StyledComponent() {
 
 ```tsx
 function ColorBox() {
-  const color = fx("red");
+  const color = fx('red');
 
   return (
     <div style={`background-color: ${color()}; padding: 20px;`}>
-      <button onclick={() => color.set("blue")}>Make Blue</button>
-      <button onclick={() => color.set("red")}>Make Red</button>
+      <button onclick={() => color.set('blue')}>Make Blue</button>
+      <button onclick={() => color.set('red')}>Make Red</button>
     </div>
   );
 }
@@ -296,26 +290,26 @@ bun add -D tailwindcss @tailwindcss/vite
 **1. Create `src/index.css`:**
 
 ```css
-@import "tailwindcss";
+@import 'tailwindcss';
 ```
 
 **2. Update `vite.config.js`:**
 
 ```js
-import { defineConfig } from "vite";
-import flick from "@flickjs/vite-plugin";
-import tailwindcss from "@tailwindcss/vite";
+import { defineConfig } from 'vite';
+import flick from '@flickjs/vite-plugin';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
-  plugins: [flick(), tailwindcss()],
+  plugins: [flick(), tailwindcss()]
 });
 ```
 
 **3. Import CSS in `src/main.tsx`:**
 
 ```tsx
-import "./index.css";
-import { fx, mount } from "@flickjs/runtime";
+import './index.css';
+import { fx, mount } from '@flickjs/runtime';
 
 // ... rest of your app
 ```
@@ -323,8 +317,8 @@ import { fx, mount } from "@flickjs/runtime";
 ### Usage Example
 
 ```tsx
-import "./index.css";
-import { fx, mount } from "@flickjs/runtime";
+import './index.css';
+import { fx, mount } from '@flickjs/runtime';
 
 function Counter() {
   const count = fx(0);
@@ -352,7 +346,7 @@ function Counter() {
   );
 }
 
-mount(Counter, document.getElementById("app"));
+mount(Counter, document.getElementById('app'));
 ```
 
 ---
@@ -366,10 +360,10 @@ Flick provides built-in support for handling asynchronous operations with `Suspe
 The `Suspense` component displays a fallback UI while async operations are pending:
 
 ```tsx
-import { mount, Suspense, query } from "@flickjs/runtime";
+import { mount, Suspense, query } from '@flickjs/runtime';
 
 function UserProfile() {
-  const user = query(() => fetch("/api/user").then((res) => res.json()));
+  const user = query(() => fetch('/api/user').then((res) => res.json()));
 
   return (
     <div>
@@ -387,7 +381,7 @@ function App() {
   );
 }
 
-mount(App, document.getElementById("app"));
+mount(App, document.getElementById('app'));
 ```
 
 **Key points:**
@@ -401,10 +395,10 @@ mount(App, document.getElementById("app"));
 `query` creates an async data fetcher that integrates with Suspense:
 
 ```tsx
-import { fx, query, Suspense } from "@flickjs/runtime";
+import { fx, query, Suspense } from '@flickjs/runtime';
 
 // Simple query (no source)
-const posts = query(() => fetch("/api/posts").then((res) => res.json()));
+const posts = query(() => fetch('/api/posts').then((res) => res.json()));
 
 // Query with reactive source
 function UserPosts() {
@@ -445,11 +439,11 @@ function UserPosts() {
 Use `lazy` for code splitting - components are loaded only when needed:
 
 ```tsx
-import { mount, Suspense, lazy } from "@flickjs/runtime";
+import { mount, Suspense, lazy } from '@flickjs/runtime';
 
 // Component is loaded only when rendered
-const HeavyChart = lazy(() => import("./components/HeavyChart"));
-const Settings = lazy(() => import("./pages/Settings"));
+const HeavyChart = lazy(() => import('./components/HeavyChart'));
+const Settings = lazy(() => import('./pages/Settings'));
 
 function App() {
   const showChart = fx(false);
@@ -467,7 +461,7 @@ function App() {
   );
 }
 
-mount(App, document.getElementById("app"));
+mount(App, document.getElementById('app'));
 ```
 
 ### Complete Example
@@ -475,13 +469,13 @@ mount(App, document.getElementById("app"));
 Here's a full example combining Suspense, query, and lazy:
 
 ```tsx
-import { fx, mount, Suspense, query, lazy } from "@flickjs/runtime";
+import { fx, mount, Suspense, query, lazy } from '@flickjs/runtime';
 
 // Lazy load the chart component
-const Chart = lazy(() => import("./Chart"));
+const Chart = lazy(() => import('./Chart'));
 
 function Dashboard() {
-  const timeRange = fx("week");
+  const timeRange = fx('week');
 
   // Query that refetches when timeRange changes
   const stats = query(
@@ -513,7 +507,7 @@ function Dashboard() {
   );
 }
 
-mount(Dashboard, document.getElementById("app"));
+mount(Dashboard, document.getElementById('app'));
 ```
 
 ---
@@ -533,12 +527,12 @@ bun add @flickjs/router
 Update `vite.config.js`:
 
 ```js
-import { defineConfig } from "vite";
-import flick from "@flickjs/vite-plugin";
-import { flickRouter } from "@flickjs/router/vite";
+import { defineConfig } from 'vite';
+import flick from '@flickjs/vite-plugin';
+import { flickRouter } from '@flickjs/router/vite';
 
 export default defineConfig({
-  plugins: [flick(), flickRouter({ pagesDir: "pages" })],
+  plugins: [flick(), flickRouter({ pagesDir: 'pages' })]
 });
 ```
 
@@ -560,9 +554,9 @@ src/
 
 ```tsx
 // src/main.tsx
-import { mount } from "@flickjs/runtime";
-import { Router, Link } from "@flickjs/router";
-import { routes } from "virtual:flick-routes";
+import { mount } from '@flickjs/runtime';
+import { Router, Link } from '@flickjs/router';
+import { routes } from 'virtual:flick-routes';
 
 function App() {
   return (
@@ -580,7 +574,7 @@ function App() {
   );
 }
 
-mount(App, document.getElementById("app"));
+mount(App, document.getElementById('app'));
 ```
 
 ### Page Components
@@ -597,7 +591,7 @@ export default function About() {
 }
 
 // src/pages/blog/[slug].tsx
-import { params } from "@flickjs/router";
+import { params } from '@flickjs/router';
 
 export default function BlogPost() {
   return <h1>Blog Post: {params().slug}</h1>;
@@ -607,7 +601,7 @@ export default function BlogPost() {
 ### Navigation
 
 ```tsx
-import { Link, navigate } from "@flickjs/router";
+import { Link, navigate } from '@flickjs/router';
 
 function Navigation() {
   return (
@@ -617,7 +611,7 @@ function Navigation() {
       <Link href="/about">About</Link>
 
       {/* Programmatic navigation */}
-      <button onclick={() => navigate("/contact")}>Go to Contact</button>
+      <button onclick={() => navigate('/contact')}>Go to Contact</button>
     </nav>
   );
 }
@@ -626,7 +620,7 @@ function Navigation() {
 ### Get Current Route
 
 ```tsx
-import { currentPath } from "@flickjs/router";
+import { currentPath } from '@flickjs/router';
 
 function Breadcrumb() {
   const route = currentPath();
@@ -659,7 +653,7 @@ Flick works with TypeScript out of the box. Add a `tsconfig.json`:
 ### Typing Fx
 
 ```tsx
-import { fx } from "@flickjs/runtime";
+import { fx } from '@flickjs/runtime';
 
 // Type is inferred
 const count = fx(0); // Fx<number>
@@ -668,7 +662,7 @@ const count = fx(0); // Fx<number>
 const user = fx<{ name: string; age: number } | null>(null);
 
 // Update with type safety
-user.set({ name: "John", age: 30 });
+user.set({ name: 'John', age: 30 });
 ```
 
 ---

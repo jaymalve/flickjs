@@ -30,7 +30,7 @@ This creates a new project with:
 ## Your First Component
 
 ```tsx
-import { fx, mount } from "@flickjs/runtime";
+import { fx, mount } from '@flickjs/runtime';
 
 function Counter() {
   const count = fx(0);
@@ -44,7 +44,7 @@ function Counter() {
   );
 }
 
-mount(Counter, document.getElementById("app"));
+mount(Counter, document.getElementById('app'));
 ```
 
 ## Key Concepts

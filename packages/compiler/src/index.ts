@@ -1,5 +1,5 @@
-import * as t from "@babel/types"; // jsx parser
-import { PluginObj, NodePath } from "@babel/core";
+import * as t from '@babel/types'; // jsx parser
+import { PluginObj, NodePath } from '@babel/core';
 
 // Detection utilities for list expressions
 function isMapCallExpression(expr: t.Expression): boolean {
@@ -7,7 +7,7 @@ function isMapCallExpression(expr: t.Expression): boolean {
     t.isCallExpression(expr) &&
     t.isMemberExpression(expr.callee) &&
     t.isIdentifier(expr.callee.property) &&
-    expr.callee.property.name === "map"
+    expr.callee.property.name === 'map'
   );
 }
 
@@ -25,7 +25,7 @@ function isConditionalExpression(expr: t.Expression): boolean {
 }
 
 function isLogicalAndExpression(expr: t.Expression): boolean {
-  return t.isLogicalExpression(expr) && expr.operator === "&&";
+  return t.isLogicalExpression(expr) && expr.operator === '&&';
 }
 
 // Check if an expression might return JSX (heuristic)
@@ -36,9 +36,7 @@ function mightReturnJSX(expr: t.Expression): boolean {
 function isConditionalWithJSX(expr: t.Expression): boolean {
   if (isConditionalExpression(expr)) {
     const condExpr = expr as t.ConditionalExpression;
-    return (
-      mightReturnJSX(condExpr.consequent) || mightReturnJSX(condExpr.alternate)
-    );
+    return mightReturnJSX(condExpr.consequent) || mightReturnJSX(condExpr.alternate);
   }
   if (isLogicalAndExpression(expr)) {
     const logicalExpr = expr as t.LogicalExpression;
@@ -57,9 +55,7 @@ export default function flickJSX(): PluginObj {
 
   // Helper to get current component name
   function getCurrentComponentName(): string | null {
-    return componentNameStack.length > 0
-      ? componentNameStack[componentNameStack.length - 1]
-      : null;
+    return componentNameStack.length > 0 ? componentNameStack[componentNameStack.length - 1] : null;
   }
 
   // Helper to check if a function contains JSX
@@ -73,10 +69,7 @@ export default function flickJSX(): PluginObj {
     // Check return statements for JSX
     for (const stmt of body.body) {
       if (t.isReturnStatement(stmt) && stmt.argument) {
-        if (
-          t.isJSXElement(stmt.argument) ||
-          t.isCallExpression(stmt.argument)
-        ) {
+        if (t.isJSXElement(stmt.argument) || t.isCallExpression(stmt.argument)) {
           return true;
         }
       }
@@ -88,7 +81,7 @@ export default function flickJSX(): PluginObj {
       JSXElement() {
         hasJSX = true;
         path.stop();
-      },
+      }
     });
     return hasJSX;
   }
@@ -100,7 +93,7 @@ export default function flickJSX(): PluginObj {
         const { callee, arguments: args } = path.node;
 
         // Only handle fx() calls
-        if (!t.isIdentifier(callee) || callee.name !== "fx") return;
+        if (!t.isIdentifier(callee) || callee.name !== 'fx') return;
 
         // Skip if name already provided
         if (args.length >= 2) return;
@@ -130,7 +123,7 @@ export default function flickJSX(): PluginObj {
           ) {
             componentNameStack.pop();
           }
-        },
+        }
       },
 
       FunctionExpression: {
@@ -148,7 +141,7 @@ export default function flickJSX(): PluginObj {
           ) {
             componentNameStack.pop();
           }
-        },
+        }
       },
 
       ArrowFunctionExpression: {
@@ -168,7 +161,7 @@ export default function flickJSX(): PluginObj {
             }
             // Check if exported as default
             else if (t.isExportDefaultDeclaration(parent)) {
-              componentName = "default";
+              componentName = 'default';
             }
 
             if (componentName) {
@@ -183,24 +176,20 @@ export default function flickJSX(): PluginObj {
 
             if (t.isVariableDeclarator(parent) && t.isIdentifier(parent.id)) {
               componentName = parent.id.name;
-            } else if (
-              t.isObjectProperty(parent) &&
-              t.isIdentifier(parent.key)
-            ) {
+            } else if (t.isObjectProperty(parent) && t.isIdentifier(parent.key)) {
               componentName = parent.key.name;
             } else if (t.isExportDefaultDeclaration(parent)) {
-              componentName = "default";
+              componentName = 'default';
             }
 
             if (
               componentName &&
-              componentNameStack[componentNameStack.length - 1] ===
-                componentName
+              componentNameStack[componentNameStack.length - 1] === componentName
             ) {
               componentNameStack.pop();
             }
           }
-        },
+        }
       },
 
       Program: {
@@ -211,18 +200,12 @@ export default function flickJSX(): PluginObj {
           needsRenderConditionalImport = false;
         },
         exit(path: NodePath<t.Program>) {
-          if (
-            !needsRunImport &&
-            !needsRenderListImport &&
-            !needsRenderConditionalImport
-          )
-            return;
+          if (!needsRunImport && !needsRenderListImport && !needsRenderConditionalImport) return;
 
           // Find existing @flickjs/runtime import
           const existingImport = path.node.body.find(
             (node): node is t.ImportDeclaration =>
-              t.isImportDeclaration(node) &&
-              node.source.value === "@flickjs/runtime"
+              t.isImportDeclaration(node) && node.source.value === '@flickjs/runtime'
           );
 
           // Check which imports already exist
@@ -230,46 +213,41 @@ export default function flickJSX(): PluginObj {
             (spec) =>
               t.isImportSpecifier(spec) &&
               t.isIdentifier(spec.imported) &&
-              spec.imported.name === "run"
+              spec.imported.name === 'run'
           );
 
           const hasRenderListImport = existingImport?.specifiers.some(
             (spec) =>
               t.isImportSpecifier(spec) &&
               t.isIdentifier(spec.imported) &&
-              spec.imported.name === "renderList"
+              spec.imported.name === 'renderList'
           );
 
           const hasRenderConditionalImport = existingImport?.specifiers.some(
             (spec) =>
               t.isImportSpecifier(spec) &&
               t.isIdentifier(spec.imported) &&
-              spec.imported.name === "renderConditional"
+              spec.imported.name === 'renderConditional'
           );
 
           // Build list of specifiers to add
           const specsToAdd: t.ImportSpecifier[] = [];
 
           if (needsRunImport && !hasRunImport) {
-            specsToAdd.push(
-              t.importSpecifier(t.identifier("run"), t.identifier("run"))
-            );
+            specsToAdd.push(t.importSpecifier(t.identifier('run'), t.identifier('run')));
           }
 
           if (needsRenderListImport && !hasRenderListImport) {
             specsToAdd.push(
-              t.importSpecifier(
-                t.identifier("renderList"),
-                t.identifier("renderList")
-              )
+              t.importSpecifier(t.identifier('renderList'), t.identifier('renderList'))
             );
           }
 
           if (needsRenderConditionalImport && !hasRenderConditionalImport) {
             specsToAdd.push(
               t.importSpecifier(
-                t.identifier("renderConditional"),
-                t.identifier("renderConditional")
+                t.identifier('renderConditional'),
+                t.identifier('renderConditional')
               )
             );
           }
@@ -281,13 +259,10 @@ export default function flickJSX(): PluginObj {
             existingImport.specifiers.push(...specsToAdd);
           } else {
             // Create new import
-            const importDecl = t.importDeclaration(
-              specsToAdd,
-              t.stringLiteral("@flickjs/runtime")
-            );
+            const importDecl = t.importDeclaration(specsToAdd, t.stringLiteral('@flickjs/runtime'));
             path.node.body.unshift(importDecl);
           }
-        },
+        }
       },
       JSXElement: {
         exit(path: NodePath<t.JSXElement>) {
@@ -325,7 +300,7 @@ export default function flickJSX(): PluginObj {
             });
 
             // Process children
-            const childPaths = path.get("children");
+            const childPaths = path.get('children');
             const childNodes: t.Expression[] = [];
 
             childPaths.forEach((childPath) => {
@@ -335,14 +310,12 @@ export default function flickJSX(): PluginObj {
                 const trimmed = child.value.trim();
                 if (trimmed) {
                   // Normalize whitespace in text content
-                  const normalized = child.value.replace(/\s+/g, " ").trim();
+                  const normalized = child.value.replace(/\s+/g, ' ').trim();
                   childNodes.push(t.stringLiteral(normalized));
                 }
               } else if (t.isJSXExpressionContainer(child)) {
                 if (!t.isJSXEmptyExpression(child.expression)) {
-                  childNodes.push(
-                    t.cloneNode(child.expression as t.Expression)
-                  );
+                  childNodes.push(t.cloneNode(child.expression as t.Expression));
                 }
               } else if (t.isCallExpression(child)) {
                 // Already transformed nested JSX element
@@ -363,38 +336,29 @@ export default function flickJSX(): PluginObj {
               // Wrap Suspense children in arrow function for deferred execution
               // This ensures children are evaluated inside Suspense's effect,
               // when the suspense context is on the stack
-              if (tagName === "Suspense") {
+              if (tagName === 'Suspense') {
                 childrenValue = t.arrowFunctionExpression([], childrenValue);
               }
 
-              props.push(
-                t.objectProperty(t.identifier("children"), childrenValue)
-              );
+              props.push(t.objectProperty(t.identifier('children'), childrenValue));
             }
 
             // Call the component: Component({ ...props })
-            path.replaceWith(
-              t.callExpression(t.identifier(tagName), [
-                t.objectExpression(props),
-              ])
-            );
+            path.replaceWith(t.callExpression(t.identifier(tagName), [t.objectExpression(props)]));
           } else {
             // Handle DOM elements: <div /> -> document.createElement("div")
-            const el = path.scope.generateUidIdentifier("el");
+            const el = path.scope.generateUidIdentifier('el');
 
             const statements: t.Statement[] = [
-              t.variableDeclaration("const", [
+              t.variableDeclaration('const', [
                 t.variableDeclarator(
                   el,
                   t.callExpression(
-                    t.memberExpression(
-                      t.identifier("document"),
-                      t.identifier("createElement")
-                    ),
+                    t.memberExpression(t.identifier('document'), t.identifier('createElement')),
                     [t.stringLiteral(tagName)]
                   )
-                ),
-              ]),
+                )
+              ])
             ];
 
             // Process JSX attributes
@@ -421,12 +385,12 @@ export default function flickJSX(): PluginObj {
               // For event handlers (onclick, onchange, etc.) and properties, use direct assignment
               // el.onclick = handler
               // Special case: "class" attribute maps to "className" property in DOM
-              const propName = attrName === "class" ? "className" : attrName;
+              const propName = attrName === 'class' ? 'className' : attrName;
 
               statements.push(
                 t.expressionStatement(
                   t.assignmentExpression(
-                    "=",
+                    '=',
                     t.memberExpression(t.cloneNode(el), t.identifier(propName)),
                     attrValue
                   )
@@ -435,7 +399,7 @@ export default function flickJSX(): PluginObj {
             });
 
             // Use path.get('children') to get the transformed children
-            const childPaths = path.get("children");
+            const childPaths = path.get('children');
             childPaths.forEach((childPath) => {
               const child = childPath.node;
 
@@ -446,10 +410,7 @@ export default function flickJSX(): PluginObj {
                   statements.push(
                     t.expressionStatement(
                       t.callExpression(
-                        t.memberExpression(
-                          t.cloneNode(el),
-                          t.identifier("append")
-                        ),
+                        t.memberExpression(t.cloneNode(el), t.identifier('append')),
                         [t.stringLiteral(child.value)]
                       )
                     )
@@ -466,21 +427,21 @@ export default function flickJSX(): PluginObj {
                   needsRenderListImport = true;
                   needsRunImport = true;
 
-                  const anchor = path.scope.generateUidIdentifier("anchor");
+                  const anchor = path.scope.generateUidIdentifier('anchor');
 
                   // Create comment anchor: const _anchor = document.createComment("list")
                   statements.push(
-                    t.variableDeclaration("const", [
+                    t.variableDeclaration('const', [
                       t.variableDeclarator(
                         anchor,
                         t.callExpression(
                           t.memberExpression(
-                            t.identifier("document"),
-                            t.identifier("createComment")
+                            t.identifier('document'),
+                            t.identifier('createComment')
                           ),
-                          [t.stringLiteral("list")]
+                          [t.stringLiteral('list')]
                         )
-                      ),
+                      )
                     ])
                   );
 
@@ -488,10 +449,7 @@ export default function flickJSX(): PluginObj {
                   statements.push(
                     t.expressionStatement(
                       t.callExpression(
-                        t.memberExpression(
-                          t.cloneNode(el),
-                          t.identifier("append")
-                        ),
+                        t.memberExpression(t.cloneNode(el), t.identifier('append')),
                         [t.cloneNode(anchor)]
                       )
                     )
@@ -511,9 +469,7 @@ export default function flickJSX(): PluginObj {
                       t.isArrowFunctionExpression(mapCallback) ||
                       t.isFunctionExpression(mapCallback)
                     ) {
-                      const callbackBody = t.isArrowFunctionExpression(
-                        mapCallback
-                      )
+                      const callbackBody = t.isArrowFunctionExpression(mapCallback)
                         ? mapCallback.body
                         : mapCallback.body;
 
@@ -522,39 +478,25 @@ export default function flickJSX(): PluginObj {
 
                       if (t.isJSXElement(callbackBody)) {
                         jsxElement = callbackBody;
-                      } else if (
-                        t.isBlockStatement(callbackBody) &&
-                        callbackBody.body.length > 0
-                      ) {
-                        const lastStmt =
-                          callbackBody.body[callbackBody.body.length - 1];
-                        if (
-                          t.isReturnStatement(lastStmt) &&
-                          t.isJSXElement(lastStmt.argument)
-                        ) {
+                      } else if (t.isBlockStatement(callbackBody) && callbackBody.body.length > 0) {
+                        const lastStmt = callbackBody.body[callbackBody.body.length - 1];
+                        if (t.isReturnStatement(lastStmt) && t.isJSXElement(lastStmt.argument)) {
                           jsxElement = lastStmt.argument;
                         }
                       }
 
                       // Extract key prop if present
                       if (jsxElement) {
-                        const keyAttr =
-                          jsxElement.openingElement.attributes.find(
-                            (attr): attr is t.JSXAttribute =>
-                              t.isJSXAttribute(attr) &&
-                              t.isJSXIdentifier(attr.name) &&
-                              attr.name.name === "key"
-                          );
+                        const keyAttr = jsxElement.openingElement.attributes.find(
+                          (attr): attr is t.JSXAttribute =>
+                            t.isJSXAttribute(attr) &&
+                            t.isJSXIdentifier(attr.name) &&
+                            attr.name.name === 'key'
+                        );
 
-                        if (
-                          keyAttr &&
-                          t.isJSXExpressionContainer(keyAttr.value)
-                        ) {
-                          const keyExpr = keyAttr.value
-                            .expression as t.Expression;
-                          const params = t.isArrowFunctionExpression(
-                            mapCallback
-                          )
+                        if (keyAttr && t.isJSXExpressionContainer(keyAttr.value)) {
+                          const keyExpr = keyAttr.value.expression as t.Expression;
+                          const params = t.isArrowFunctionExpression(mapCallback)
                             ? mapCallback.params
                             : (mapCallback as t.FunctionExpression).params;
 
@@ -571,7 +513,7 @@ export default function flickJSX(): PluginObj {
                                 !(
                                   t.isJSXAttribute(attr) &&
                                   t.isJSXIdentifier(attr.name) &&
-                                  attr.name.name === "key"
+                                  attr.name.name === 'key'
                                 )
                             );
                         }
@@ -583,7 +525,7 @@ export default function flickJSX(): PluginObj {
                       t.cloneNode(el),
                       t.cloneNode(anchor),
                       t.arrowFunctionExpression([], t.cloneNode(arrayExpr)),
-                      t.cloneNode(mapCallback),
+                      t.cloneNode(mapCallback)
                     ];
 
                     if (keyExtractor) {
@@ -593,10 +535,7 @@ export default function flickJSX(): PluginObj {
                     // renderList(el, anchor, () => array, mapFn, keyFn?)
                     statements.push(
                       t.expressionStatement(
-                        t.callExpression(
-                          t.identifier("renderList"),
-                          renderListArgs
-                        )
+                        t.callExpression(t.identifier('renderList'), renderListArgs)
                       )
                     );
                   } else if (isArrayLiteral(expr)) {
@@ -606,14 +545,11 @@ export default function flickJSX(): PluginObj {
 
                     statements.push(
                       t.expressionStatement(
-                        t.callExpression(t.identifier("renderList"), [
+                        t.callExpression(t.identifier('renderList'), [
                           t.cloneNode(el),
                           t.cloneNode(anchor),
                           t.arrowFunctionExpression([], t.cloneNode(arrayExpr)),
-                          t.arrowFunctionExpression(
-                            [t.identifier("item")],
-                            t.identifier("item")
-                          ),
+                          t.arrowFunctionExpression([t.identifier('item')], t.identifier('item'))
                         ])
                       )
                     );
@@ -623,21 +559,21 @@ export default function flickJSX(): PluginObj {
                   needsRenderConditionalImport = true;
                   needsRunImport = true;
 
-                  const anchor = path.scope.generateUidIdentifier("anchor");
+                  const anchor = path.scope.generateUidIdentifier('anchor');
 
                   // Create anchor comment: const _anchor = document.createComment("cond")
                   statements.push(
-                    t.variableDeclaration("const", [
+                    t.variableDeclaration('const', [
                       t.variableDeclarator(
                         anchor,
                         t.callExpression(
                           t.memberExpression(
-                            t.identifier("document"),
-                            t.identifier("createComment")
+                            t.identifier('document'),
+                            t.identifier('createComment')
                           ),
-                          [t.stringLiteral("cond")]
+                          [t.stringLiteral('cond')]
                         )
-                      ),
+                      )
                     ])
                   );
 
@@ -645,10 +581,7 @@ export default function flickJSX(): PluginObj {
                   statements.push(
                     t.expressionStatement(
                       t.callExpression(
-                        t.memberExpression(
-                          t.cloneNode(el),
-                          t.identifier("append")
-                        ),
+                        t.memberExpression(t.cloneNode(el), t.identifier('append')),
                         [t.cloneNode(anchor)]
                       )
                     )
@@ -661,21 +594,12 @@ export default function flickJSX(): PluginObj {
                     // renderConditional(el, anchor, () => condition, () => consequent, () => alternate)
                     statements.push(
                       t.expressionStatement(
-                        t.callExpression(t.identifier("renderConditional"), [
+                        t.callExpression(t.identifier('renderConditional'), [
                           t.cloneNode(el),
                           t.cloneNode(anchor),
-                          t.arrowFunctionExpression(
-                            [],
-                            t.cloneNode(condExpr.test)
-                          ),
-                          t.arrowFunctionExpression(
-                            [],
-                            t.cloneNode(condExpr.consequent)
-                          ),
-                          t.arrowFunctionExpression(
-                            [],
-                            t.cloneNode(condExpr.alternate)
-                          ),
+                          t.arrowFunctionExpression([], t.cloneNode(condExpr.test)),
+                          t.arrowFunctionExpression([], t.cloneNode(condExpr.consequent)),
+                          t.arrowFunctionExpression([], t.cloneNode(condExpr.alternate))
                         ])
                       )
                     );
@@ -687,17 +611,11 @@ export default function flickJSX(): PluginObj {
                     // No alternate provided - will render nothing when false
                     statements.push(
                       t.expressionStatement(
-                        t.callExpression(t.identifier("renderConditional"), [
+                        t.callExpression(t.identifier('renderConditional'), [
                           t.cloneNode(el),
                           t.cloneNode(anchor),
-                          t.arrowFunctionExpression(
-                            [],
-                            t.cloneNode(logicalExpr.left)
-                          ),
-                          t.arrowFunctionExpression(
-                            [],
-                            t.cloneNode(logicalExpr.right)
-                          ),
+                          t.arrowFunctionExpression([], t.cloneNode(logicalExpr.left)),
+                          t.arrowFunctionExpression([], t.cloneNode(logicalExpr.right))
                         ])
                       )
                     );
@@ -706,30 +624,27 @@ export default function flickJSX(): PluginObj {
                   // TEXT NODE PATH (original behavior)
                   needsRunImport = true;
 
-                  const text = path.scope.generateUidIdentifier("text");
+                  const text = path.scope.generateUidIdentifier('text');
 
                   statements.push(
-                    t.variableDeclaration("const", [
+                    t.variableDeclaration('const', [
                       t.variableDeclarator(
                         text,
                         t.callExpression(
                           t.memberExpression(
-                            t.identifier("document"),
-                            t.identifier("createTextNode")
+                            t.identifier('document'),
+                            t.identifier('createTextNode')
                           ),
-                          [t.stringLiteral("")]
+                          [t.stringLiteral('')]
                         )
-                      ),
+                      )
                     ])
                   );
 
                   statements.push(
                     t.expressionStatement(
                       t.callExpression(
-                        t.memberExpression(
-                          t.cloneNode(el),
-                          t.identifier("append")
-                        ),
+                        t.memberExpression(t.cloneNode(el), t.identifier('append')),
                         [t.cloneNode(text)]
                       )
                     )
@@ -740,22 +655,19 @@ export default function flickJSX(): PluginObj {
                     t.arrowFunctionExpression(
                       [],
                       t.assignmentExpression(
-                        "=",
-                        t.memberExpression(
-                          t.cloneNode(text),
-                          t.identifier("data")
-                        ),
+                        '=',
+                        t.memberExpression(t.cloneNode(text), t.identifier('data')),
                         t.cloneNode(expr)
                       )
-                    ),
+                    )
                   ];
 
                   // Inject component name as second argument if available
                   const componentName = getCurrentComponentName();
                   console.log(
-                    "[Babel Plugin] Generating run() call, componentName:",
+                    '[Babel Plugin] Generating run() call, componentName:',
                     componentName,
-                    "stack:",
+                    'stack:',
                     componentNameStack
                   );
                   if (componentName) {
@@ -763,22 +675,16 @@ export default function flickJSX(): PluginObj {
                   }
 
                   statements.push(
-                    t.expressionStatement(
-                      t.callExpression(t.identifier("run"), runArgs)
-                    )
+                    t.expressionStatement(t.callExpression(t.identifier('run'), runArgs))
                   );
                 }
               } else if (t.isCallExpression(child)) {
                 // This is a transformed nested JSX element (already an IIFE)
                 statements.push(
                   t.expressionStatement(
-                    t.callExpression(
-                      t.memberExpression(
-                        t.cloneNode(el),
-                        t.identifier("append")
-                      ),
-                      [t.cloneNode(child)]
-                    )
+                    t.callExpression(t.memberExpression(t.cloneNode(el), t.identifier('append')), [
+                      t.cloneNode(child)
+                    ])
                   )
                 );
               }
@@ -787,14 +693,11 @@ export default function flickJSX(): PluginObj {
             statements.push(t.returnStatement(t.cloneNode(el)));
 
             path.replaceWith(
-              t.callExpression(
-                t.arrowFunctionExpression([], t.blockStatement(statements)),
-                []
-              )
+              t.callExpression(t.arrowFunctionExpression([], t.blockStatement(statements)), [])
             );
           }
-        },
-      },
-    },
+        }
+      }
+    }
   };
 }

@@ -1,9 +1,9 @@
-import fs from "fs-extra";
-import path from "path";
+import fs from 'fs-extra';
+import path from 'path';
 
 export function createIndexHtml(root: string) {
   fs.writeFileSync(
-    path.join(root, "index.html"),
+    path.join(root, 'index.html'),
     `<!doctype html>
 <html lang="en">
   <head>

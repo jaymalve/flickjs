@@ -1,5 +1,5 @@
-import { streamObject } from "ai";
-import type { ObjectStreamOptions } from "./types";
+import { streamObject } from 'ai';
+import type { ObjectStreamOptions } from './types';
 
 /**
  * Create a streaming object response using the Vercel AI SDK
@@ -28,9 +28,7 @@ import type { ObjectStreamOptions } from "./types";
  * }
  * ```
  */
-export async function createObjectStream<T>(
-  options: ObjectStreamOptions<T>
-): Promise<Response> {
+export async function createObjectStream<T>(options: ObjectStreamOptions<T>): Promise<Response> {
   const {
     model,
     schema,
@@ -43,7 +41,7 @@ export async function createObjectStream<T>(
     temperature,
     abortSignal,
     headers,
-    onFinish,
+    onFinish
   } = options;
 
   const result = (streamObject as any)({
@@ -61,34 +59,36 @@ export async function createObjectStream<T>(
       ? (event: any) => {
           // temporary fix for the finishReason type
           let finishReason:
-            | "stop"
-            | "length"
-            | "content-filter"
-            | "tool-calls"
-            | "error"
-            | "other" = "stop";
+            | 'stop'
+            | 'length'
+            | 'content-filter'
+            | 'tool-calls'
+            | 'error'
+            | 'other' = 'stop';
 
           if (event.error) {
-            finishReason = "error";
+            finishReason = 'error';
           } else if (event.object === undefined) {
-            finishReason = "other";
+            finishReason = 'other';
           }
           onFinish({
             object: event.object as T,
             finishReason: finishReason,
             usage: event.usage
               ? {
-                  promptTokens: (event.usage as any).promptTokens ?? (event.usage as any).inputTokens ?? 0,
-                  completionTokens: (event.usage as any).completionTokens ?? (event.usage as any).outputTokens ?? 0,
-                  totalTokens: (event.usage as any).totalTokens ?? 0,
+                  promptTokens:
+                    (event.usage as any).promptTokens ?? (event.usage as any).inputTokens ?? 0,
+                  completionTokens:
+                    (event.usage as any).completionTokens ?? (event.usage as any).outputTokens ?? 0,
+                  totalTokens: (event.usage as any).totalTokens ?? 0
                 }
-              : undefined,
+              : undefined
           });
         }
-      : undefined,
+      : undefined
   });
 
   return (await result).toDataStreamResponse({
-    headers: headers ? Object.fromEntries(new Headers(headers)) : undefined,
+    headers: headers ? Object.fromEntries(new Headers(headers)) : undefined
   });
 }

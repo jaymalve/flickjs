@@ -1,5 +1,5 @@
-import { streamText } from "ai";
-import type { TextStreamOptions } from "./types";
+import { streamText } from 'ai';
+import type { TextStreamOptions } from './types';
 
 /**
  * Create a streaming text response using the Vercel AI SDK
@@ -21,9 +21,7 @@ import type { TextStreamOptions } from "./types";
  * }
  * ```
  */
-export async function createTextStream(
-  options: TextStreamOptions
-): Promise<Response> {
+export async function createTextStream(options: TextStreamOptions): Promise<Response> {
   const {
     model,
     system,
@@ -44,17 +42,17 @@ export async function createTextStream(
     onStart,
     onText,
     onFinish,
-    onError,
+    onError
   } = options;
 
-  console.log("[createTextStream] Starting with options:", {
+  console.log('[createTextStream] Starting with options:', {
     hasModel: !!model,
     hasSystem: !!system,
     messagesCount: messages?.length,
     hasTools: !!tools,
     toolNames: tools ? Object.keys(tools) : [],
     toolChoice,
-    maxSteps,
+    maxSteps
   });
 
   const result = (streamText as any)({
@@ -74,17 +72,17 @@ export async function createTextStream(
     toolChoice,
     maxSteps,
     onStepFinish: (step: any) => {
-      console.log("[createTextStream] Step finished:", {
+      console.log('[createTextStream] Step finished:', {
         stepType: step.stepType,
         text: step.text?.substring(0, 100),
         toolCalls: step.toolCalls,
         toolResults: step.toolResults,
-        finishReason: step.finishReason,
+        finishReason: step.finishReason
       });
     },
     onChunk: onText
       ? ({ chunk }: { chunk: { type: string; textDelta?: string } }) => {
-          if (chunk.type === "text-delta" && chunk.textDelta) {
+          if (chunk.type === 'text-delta' && chunk.textDelta) {
             onText(chunk.textDelta);
           }
         }
@@ -94,40 +92,36 @@ export async function createTextStream(
           onFinish({
             text: event.text,
             finishReason: event.finishReason as
-              | "stop"
-              | "length"
-              | "content-filter"
-              | "tool-calls"
-              | "error"
-              | "other",
+              | 'stop'
+              | 'length'
+              | 'content-filter'
+              | 'tool-calls'
+              | 'error'
+              | 'other',
             usage: event.usage
               ? {
                   promptTokens:
-                    (event.usage as any).promptTokens ??
-                    (event.usage as any).inputTokens ??
-                    0,
+                    (event.usage as any).promptTokens ?? (event.usage as any).inputTokens ?? 0,
                   completionTokens:
-                    (event.usage as any).completionTokens ??
-                    (event.usage as any).outputTokens ??
-                    0,
-                  totalTokens: (event.usage as any).totalTokens ?? 0,
+                    (event.usage as any).completionTokens ?? (event.usage as any).outputTokens ?? 0,
+                  totalTokens: (event.usage as any).totalTokens ?? 0
                 }
-              : undefined,
+              : undefined
           });
         }
-      : undefined,
+      : undefined
   });
 
   onStart?.();
 
   try {
     const awaited = await result;
-    console.log("[createTextStream] Stream awaited successfully");
+    console.log('[createTextStream] Stream awaited successfully');
     return awaited.toDataStreamResponse({
-      headers: headers ? Object.fromEntries(new Headers(headers)) : undefined,
+      headers: headers ? Object.fromEntries(new Headers(headers)) : undefined
     });
   } catch (error) {
-    console.error("[createTextStream] Error:", error);
+    console.error('[createTextStream] Error:', error);
     throw error;
   }
 }

@@ -5,7 +5,7 @@ Fx are reactive values that automatically update the UI when changed. They are t
 ## Creating Fx
 
 ```tsx
-import { fx, mount } from "@flickjs/runtime";
+import { fx, mount } from '@flickjs/runtime';
 
 function Counter() {
   const count = fx(0);
@@ -19,7 +19,7 @@ function Counter() {
   );
 }
 
-mount(Counter, document.getElementById("app"));
+mount(Counter, document.getElementById('app'));
 ```
 
 ## Key Points
@@ -61,16 +61,16 @@ Fx can hold any type of value:
 ```tsx
 // Primitive values
 const count = fx(0);
-const name = fx("John");
+const name = fx('John');
 const isActive = fx(true);
 
 // Objects
-const user = fx({ name: "John", age: 30 });
+const user = fx({ name: 'John', age: 30 });
 
 // Arrays
 const todos = fx([
-  { id: 1, text: "Learn Flick" },
-  { id: 2, text: "Build something" },
+  { id: 1, text: 'Learn Flick' },
+  { id: 2, text: 'Build something' }
 ]);
 ```
 
@@ -79,24 +79,20 @@ const todos = fx([
 When updating objects or arrays, you need to create a new reference:
 
 ```tsx
-const todos = fx([{ id: 1, text: "Learn Flick" }]);
+const todos = fx([{ id: 1, text: 'Learn Flick' }]);
 
 // Add item
-todos.set([...todos(), { id: 2, text: "Build something" }]);
+todos.set([...todos(), { id: 2, text: 'Build something' }]);
 
 // Remove item
-todos.set(todos().filter(todo => todo.id !== 1));
+todos.set(todos().filter((todo) => todo.id !== 1));
 
 // Update item
-todos.set(
-  todos().map(todo =>
-    todo.id === 1 ? { ...todo, text: "Updated" } : todo
-  )
-);
+todos.set(todos().map((todo) => (todo.id === 1 ? { ...todo, text: 'Updated' } : todo)));
 ```
 
 ```tsx
-const user = fx({ name: "John", age: 30 });
+const user = fx({ name: 'John', age: 30 });
 
 // Update property
 user.set({ ...user(), age: 31 });

@@ -4,7 +4,7 @@
  * A small draggable pill that toggles the overlay on/off.
  */
 
-import { overlayManager } from "../overlay";
+import { overlayManager } from '../overlay';
 
 /*
  * Types
@@ -97,7 +97,7 @@ export class DevToolsToolbar {
   constructor(config: Partial<ToolbarConfig> = {}) {
     this.config = {
       position: { x: 20, y: 20 },
-      ...config,
+      ...config
     };
     this.loadPersistedConfig();
   }
@@ -111,8 +111,8 @@ export class DevToolsToolbar {
 
     this.injectStyles();
 
-    this.container = document.createElement("div");
-    this.container.id = "flick-devtools-pill";
+    this.container = document.createElement('div');
+    this.container.id = 'flick-devtools-pill';
     this.container.innerHTML = this.buildHTML();
 
     this.container.style.left = `${this.config.position.x}px`;
@@ -123,12 +123,12 @@ export class DevToolsToolbar {
     this.bindEvents();
 
     // Sync toggle state with overlay manager
-    const toggle = this.container.querySelector(".flick-pill-toggle");
+    const toggle = this.container.querySelector('.flick-pill-toggle');
     if (toggle && overlayManager.isEnabled()) {
-      toggle.classList.add("active");
+      toggle.classList.add('active');
     }
 
-    console.log("[Flick DevTools] Pill attached");
+    console.log('[Flick DevTools] Pill attached');
   }
 
   detach(): void {
@@ -137,10 +137,10 @@ export class DevToolsToolbar {
       this.container = null;
     }
 
-    const styleEl = document.getElementById("flick-devtools-styles");
+    const styleEl = document.getElementById('flick-devtools-styles');
     if (styleEl) styleEl.remove();
 
-    console.log("[Flick DevTools] Pill detached");
+    console.log('[Flick DevTools] Pill detached');
   }
 
   /*
@@ -159,10 +159,10 @@ export class DevToolsToolbar {
    */
 
   private injectStyles(): void {
-    if (document.getElementById("flick-devtools-styles")) return;
+    if (document.getElementById('flick-devtools-styles')) return;
 
-    const style = document.createElement("style");
-    style.id = "flick-devtools-styles";
+    const style = document.createElement('style');
+    style.id = 'flick-devtools-styles';
     style.textContent = TOOLBAR_STYLES;
     document.head.appendChild(style);
   }
@@ -175,12 +175,12 @@ export class DevToolsToolbar {
     if (!this.container) return;
 
     // Drag handling
-    this.container.addEventListener("mousedown", this.onDragStart as EventListener);
-    document.addEventListener("mousemove", this.onDragMove);
-    document.addEventListener("mouseup", this.onDragEnd);
+    this.container.addEventListener('mousedown', this.onDragStart as EventListener);
+    document.addEventListener('mousemove', this.onDragMove);
+    document.addEventListener('mouseup', this.onDragEnd);
 
     // Toggle overlay
-    this.container.addEventListener("click", (e) => {
+    this.container.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
       if (target.closest("[data-action='toggle-overlay']")) {
         this.toggleOverlay();
@@ -190,16 +190,16 @@ export class DevToolsToolbar {
 
   private onDragStart = (e: MouseEvent): void => {
     // Don't start drag if clicking the toggle button
-    if ((e.target as HTMLElement).closest("[data-action]")) return;
+    if ((e.target as HTMLElement).closest('[data-action]')) return;
 
     if (!this.container) return;
     this.isDragging = true;
     const rect = this.container.getBoundingClientRect();
     this.dragOffset = {
       x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
+      y: e.clientY - rect.top
     };
-    this.container.style.transition = "none";
+    this.container.style.transition = 'none';
   };
 
   private onDragMove = (e: MouseEvent): void => {
@@ -219,7 +219,7 @@ export class DevToolsToolbar {
       this.isDragging = false;
       this.persistConfig();
       if (this.container) {
-        this.container.style.transition = "";
+        this.container.style.transition = '';
       }
     }
   };
@@ -232,9 +232,9 @@ export class DevToolsToolbar {
     const isEnabled = overlayManager.isEnabled();
     overlayManager.setEnabled(!isEnabled);
 
-    const toggle = this.container?.querySelector(".flick-pill-toggle");
+    const toggle = this.container?.querySelector('.flick-pill-toggle');
     if (toggle) {
-      toggle.classList.toggle("active", !isEnabled);
+      toggle.classList.toggle('active', !isEnabled);
     }
   }
 
@@ -244,7 +244,7 @@ export class DevToolsToolbar {
 
   private loadPersistedConfig(): void {
     try {
-      const saved = localStorage.getItem("flick-devtools-toolbar");
+      const saved = localStorage.getItem('flick-devtools-toolbar');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.position) {
@@ -258,7 +258,7 @@ export class DevToolsToolbar {
 
   private persistConfig(): void {
     try {
-      localStorage.setItem("flick-devtools-toolbar", JSON.stringify(this.config));
+      localStorage.setItem('flick-devtools-toolbar', JSON.stringify(this.config));
     } catch {
       // Ignore errors
     }

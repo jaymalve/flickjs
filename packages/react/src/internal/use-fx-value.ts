@@ -1,6 +1,6 @@
-import { useCallback } from "react";
-import { useSyncExternalStore } from "react";
-import { run } from "@flickjs/runtime";
+import { useCallback } from 'react';
+import { useSyncExternalStore } from 'react';
+import { run } from '@flickjs/runtime';
 
 /**
  * Internal helper: subscribe to any fx-compatible getter via useSyncExternalStore.

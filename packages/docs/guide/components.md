@@ -63,11 +63,7 @@ function Toggle() {
 function Status() {
   const isOnline = fx(true);
 
-  return (
-    <div>
-      {isOnline() ? <span>Online</span> : <span>Offline</span>}
-    </div>
-  );
+  return <div>{isOnline() ? <span>Online</span> : <span>Offline</span>}</div>;
 }
 ```
 
@@ -78,8 +74,8 @@ Use `map()` to render lists:
 ```tsx
 function TodoList() {
   const todos = fx([
-    { id: 1, text: "Learn Flick" },
-    { id: 2, text: "Build something" },
+    { id: 1, text: 'Learn Flick' },
+    { id: 2, text: 'Build something' }
   ]);
 
   return (
@@ -98,22 +94,18 @@ Use lowercase event names (standard DOM events):
 
 ```tsx
 function Form() {
-  const value = fx("");
+  const value = fx('');
 
   return (
     <div>
-      <input
-        type="text"
-        value={value()}
-        oninput={(e) => value.set(e.target.value)}
-      />
+      <input type="text" value={value()} oninput={(e) => value.set(e.target.value)} />
       <p>You typed: {value()}</p>
 
-      <button onclick={() => alert("Clicked!")}>Click me</button>
+      <button onclick={() => alert('Clicked!')}>Click me</button>
 
       <div
-        onmouseenter={() => console.log("Mouse entered")}
-        onmouseleave={() => console.log("Mouse left")}
+        onmouseenter={() => console.log('Mouse entered')}
+        onmouseleave={() => console.log('Mouse left')}
       >
         Hover over me
       </div>
@@ -127,13 +119,13 @@ function Form() {
 Use `mount()` to render your root component:
 
 ```tsx
-import { mount } from "@flickjs/runtime";
+import { mount } from '@flickjs/runtime';
 
 function App() {
   return <h1>Hello World</h1>;
 }
 
-mount(App, document.getElementById("app"));
+mount(App, document.getElementById('app'));
 ```
 
 ## Component Organization
@@ -142,7 +134,7 @@ Keep components focused and reusable:
 
 ```tsx
 // Button.tsx
-export function Button({ children, onclick, variant = "primary" }) {
+export function Button({ children, onclick, variant = 'primary' }) {
   return (
     <button class={`btn btn-${variant}`} onclick={onclick}>
       {children}
@@ -151,12 +143,12 @@ export function Button({ children, onclick, variant = "primary" }) {
 }
 
 // App.tsx
-import { Button } from "./Button";
+import { Button } from './Button';
 
 function App() {
   return (
     <div>
-      <Button onclick={() => console.log("clicked")}>Click me</Button>
+      <Button onclick={() => console.log('clicked')}>Click me</Button>
       <Button variant="secondary">Secondary</Button>
     </div>
   );

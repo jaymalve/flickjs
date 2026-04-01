@@ -24,7 +24,7 @@ Add a `tsconfig.json`:
 ## Typing Fx
 
 ```tsx
-import { fx } from "@flickjs/runtime";
+import { fx } from '@flickjs/runtime';
 
 // Type is inferred
 const count = fx(0); // Fx<number>
@@ -33,7 +33,7 @@ const count = fx(0); // Fx<number>
 const user = fx<{ name: string; age: number } | null>(null);
 
 // Update with type safety
-user.set({ name: "John", age: 30 });
+user.set({ name: 'John', age: 30 });
 ```
 
 ## Typing Components
@@ -44,16 +44,11 @@ user.set({ name: "John", age: 30 });
 interface ButtonProps {
   children: any;
   onclick: () => void;
-  variant?: "primary" | "secondary" | "danger";
+  variant?: 'primary' | 'secondary' | 'danger';
   disabled?: boolean;
 }
 
-function Button({
-  children,
-  onclick,
-  variant = "primary",
-  disabled = false,
-}: ButtonProps) {
+function Button({ children, onclick, variant = 'primary', disabled = false }: ButtonProps) {
   return (
     <button class={`btn btn-${variant}`} onclick={onclick} disabled={disabled}>
       {children}
@@ -88,7 +83,7 @@ function List<T>({ items, renderItem }: ListProps<T>) {
 
 ```tsx
 function Form() {
-  const value = fx("");
+  const value = fx('');
 
   const handleInput = (e: Event) => {
     const target = e.target as HTMLInputElement;
@@ -97,7 +92,7 @@ function Form() {
 
   const handleSubmit = (e: Event) => {
     e.preventDefault();
-    console.log("Submitted:", value());
+    console.log('Submitted:', value());
   };
 
   return (
@@ -114,7 +109,7 @@ function Form() {
 When using the router, add type definitions for dynamic params:
 
 ```tsx
-import { params } from "@flickjs/router";
+import { params } from '@flickjs/router';
 
 interface BlogParams {
   slug: string;
@@ -130,7 +125,7 @@ function BlogPost() {
 ## Type Definitions for Queries
 
 ```tsx
-import { query } from "@flickjs/runtime";
+import { query } from '@flickjs/runtime';
 
 interface User {
   id: number;
@@ -138,7 +133,7 @@ interface User {
   email: string;
 }
 
-const user = query<User>(() => fetch("/api/user").then((res) => res.json()));
+const user = query<User>(() => fetch('/api/user').then((res) => res.json()));
 
 // user() returns User | undefined
 // user.loading() returns boolean

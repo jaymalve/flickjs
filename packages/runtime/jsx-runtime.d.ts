@@ -21,10 +21,7 @@ export interface SuspenseProps {
 }
 
 export declare function query<T>(fetcher: () => Promise<T>): Query<T>;
-export declare function query<S, T>(
-  source: () => S,
-  fetcher: (source: S) => Promise<T>
-): Query<T>;
+export declare function query<S, T>(source: () => S, fetcher: (source: S) => Promise<T>): Query<T>;
 
 export declare function renderList<T>(
   parent: Node,

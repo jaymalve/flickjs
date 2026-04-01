@@ -24,14 +24,7 @@ const Navigation = () => {
               strokeWidth="1.5"
               strokeLinejoin="round"
             />
-            <line
-              x1="16"
-              y1="16"
-              x2="16"
-              y2="28"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            />
+            <line x1="16" y1="16" x2="16" y2="28" stroke="currentColor" strokeWidth="1.5" />
             <path
               d="M20 6L26 10L20 14"
               stroke="currentColor"
@@ -40,9 +33,7 @@ const Navigation = () => {
               fill="none"
             />
           </svg>
-          <span className="text-sm font-semibold tracking-tighter text-foreground">
-            flickjs
-          </span>
+          <span className="text-sm font-semibold tracking-tighter text-foreground">flickjs</span>
         </a>
 
         <div className="flex items-center gap-4 text-sm text-stone-400">

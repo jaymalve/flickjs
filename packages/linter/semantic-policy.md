@@ -18,7 +18,7 @@ This is the best example because the rule is not just about syntax. It depends o
 Suppose Flint currently flags this:
 
 ```ts
-import type { Foo } from "./types";
+import type { Foo } from './types';
 
 type Bar = Foo;
 ```

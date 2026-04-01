@@ -1,42 +1,42 @@
-import { transformSync } from "@babel/core";
-import { createRequire } from "module";
-import { readFileSync, statSync } from "fs";
-import { resolve } from "path";
-import { gzipSync } from "zlib";
-import type { Plugin } from "vite";
+import { transformSync } from '@babel/core';
+import { createRequire } from 'module';
+import { readFileSync, statSync } from 'fs';
+import { resolve } from 'path';
+import { gzipSync } from 'zlib';
+import type { Plugin } from 'vite';
 
 const require = createRequire(import.meta.url);
-const flickCompiler = require("@flickjs/compiler").default;
+const flickCompiler = require('@flickjs/compiler').default;
 
 export default function flick(): Plugin {
   return {
-    name: "vite-plugin-flick",
-    enforce: "pre",
+    name: 'vite-plugin-flick',
+    enforce: 'pre',
     transform(code, id) {
       if (!/\.[jt]sx$/.test(id)) return null;
 
       const result = transformSync(code, {
         filename: id,
         plugins: [flickCompiler],
-        parserOpts: { plugins: ["jsx", "typescript"] },
+        parserOpts: { plugins: ['jsx', 'typescript'] },
         sourceMaps: true,
         cloneInputAst: false,
         configFile: false,
-        babelrc: false,
+        babelrc: false
       });
 
       if (!result?.code) return null;
       return { code: result.code, map: result.map };
     },
     writeBundle(options, bundle) {
-      const outputDir = options.dir || resolve(process.cwd(), "dist");
+      const outputDir = options.dir || resolve(process.cwd(), 'dist');
       let totalSize = 0;
       let totalGzipSize = 0;
       let assetCount = 0;
 
       // Calculate sizes for all assets
       for (const [fileName, chunk] of Object.entries(bundle)) {
-        if (chunk.type === "asset" || chunk.type === "chunk") {
+        if (chunk.type === 'asset' || chunk.type === 'chunk') {
           const filePath = resolve(outputDir, fileName);
           try {
             const stats = statSync(filePath);
@@ -45,11 +45,7 @@ export default function flick(): Plugin {
             assetCount++;
 
             // Calculate gzip size for compressible assets
-            if (
-              chunk.type === "chunk" ||
-              fileName.endsWith(".js") ||
-              fileName.endsWith(".css")
-            ) {
+            if (chunk.type === 'chunk' || fileName.endsWith('.js') || fileName.endsWith('.css')) {
               const content = readFileSync(filePath);
               const gzipped = gzipSync(content);
               totalGzipSize += gzipped.length;
@@ -71,15 +67,11 @@ export default function flick(): Plugin {
       };
 
       // Print summary
-      console.log("");
-      console.log("📦 Bundle Size Summary:");
+      console.log('');
+      console.log('📦 Bundle Size Summary:');
       console.log(`   Total assets: ${assetCount} files`);
-      console.log(
-        `   Total size: ${formatSize(totalSize)} │ gzip: ${formatSize(
-          totalGzipSize
-        )}`
-      );
-      console.log("");
-    },
+      console.log(`   Total size: ${formatSize(totalSize)} │ gzip: ${formatSize(totalGzipSize)}`);
+      console.log('');
+    }
   };
 }

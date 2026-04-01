@@ -4,7 +4,7 @@
  * Controls the timing and easing of overlay fade animations.
  */
 
-export type AnimationSpeed = "off" | "fast" | "slow";
+export type AnimationSpeed = 'off' | 'fast' | 'slow';
 
 /*
  * Animation Configuration
@@ -23,18 +23,18 @@ const ANIMATION_CONFIGS: Record<AnimationSpeed, AnimationConfig> = {
   off: {
     fadeDuration: 0,
     holdDuration: 0,
-    easing: () => 0,
+    easing: () => 0
   },
   fast: {
     fadeDuration: 1800,
     holdDuration: 1000,
-    easing: easeOutCubic,
+    easing: easeOutCubic
   },
   slow: {
     fadeDuration: 1500,
     holdDuration: 2000,
-    easing: easeOutCubic,
-  },
+    easing: easeOutCubic
+  }
 };
 
 /*
@@ -64,7 +64,7 @@ export class AnimationController {
   private speed: AnimationSpeed;
   private config: AnimationConfig;
 
-  constructor(speed: AnimationSpeed = "fast") {
+  constructor(speed: AnimationSpeed = 'fast') {
     this.speed = speed;
     this.config = ANIMATION_CONFIGS[speed];
   }
@@ -109,7 +109,7 @@ export class AnimationController {
    * Check if animations are enabled
    */
   isEnabled(): boolean {
-    return this.speed !== "off";
+    return this.speed !== 'off';
   }
 
   /**
@@ -167,10 +167,10 @@ export interface OverlayColors {
 }
 
 export const DEFAULT_COLORS: OverlayColors = {
-  fast: "rgba(34, 197, 94, 0.8)", // Green
-  medium: "rgba(147, 51, 234, 0.8)", // Purple (default)
-  slow: "rgba(239, 68, 68, 0.8)", // Red
-  frequent: "rgba(245, 158, 11, 0.8)", // Orange/Amber
+  fast: 'rgba(34, 197, 94, 0.8)', // Green
+  medium: 'rgba(147, 51, 234, 0.8)', // Purple (default)
+  slow: 'rgba(239, 68, 68, 0.8)', // Red
+  frequent: 'rgba(245, 158, 11, 0.8)' // Orange/Amber
 };
 
 /**
@@ -203,17 +203,17 @@ export function getPerformanceColor(
  */
 export function applyOpacity(color: string, opacity: number): string {
   // Handle rgba colors
-  if (color.startsWith("rgba")) {
+  if (color.startsWith('rgba')) {
     return color.replace(/,\s*[\d.]+\)$/, `, ${opacity})`);
   }
 
   // Handle rgb colors - convert to rgba
-  if (color.startsWith("rgb(")) {
-    return color.replace("rgb(", "rgba(").replace(")", `, ${opacity})`);
+  if (color.startsWith('rgb(')) {
+    return color.replace('rgb(', 'rgba(').replace(')', `, ${opacity})`);
   }
 
   // Handle hex colors
-  if (color.startsWith("#")) {
+  if (color.startsWith('#')) {
     const hex = color.slice(1);
     const r = parseInt(hex.slice(0, 2), 16);
     const g = parseInt(hex.slice(2, 4), 16);
