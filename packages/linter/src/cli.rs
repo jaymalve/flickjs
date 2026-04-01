@@ -7,10 +7,10 @@ use std::path::{Path, PathBuf};
 
 #[derive(Parser)]
 #[command(
-    name = "zarc",
-    about = "⚡ Zarc — The JavaScript Static Analysis Engine",
+    name = "flint",
+    about = "⚡ Flint — The JavaScript Static Analysis Engine",
     version,
-    after_help = "Examples:\n  zarc check ./src\n  zarc check . --format agent-json\n  zarc init"
+    after_help = "Examples:\n  flint check ./src\n  flint check . --format agent-json\n  flint init"
 )]
 pub struct Cli {
     #[command(subcommand)]
@@ -25,7 +25,7 @@ pub struct Cli {
 pub enum Command {
     /// Lint JavaScript and TypeScript files
     Check(CheckArgs),
-    /// Initialize zarc config in current directory
+    /// Initialize flint config in current directory
     Init,
 }
 
@@ -36,7 +36,7 @@ pub struct CheckArgs {
     pub path: PathBuf,
 
     /// Path to cache file
-    #[arg(long, default_value = ".zarc-cache.json")]
+    #[arg(long, default_value = ".flint-cache.json")]
     pub cache_path: PathBuf,
 
     /// Additional patterns to ignore
@@ -122,7 +122,7 @@ pub fn load_config() -> Result<Config> {
 }
 
 pub fn load_config_with_fingerprint() -> Result<LoadedConfig> {
-    let path = Path::new("zarc.json");
+    let path = Path::new("flint.json");
     if !path.exists() {
         return Ok(LoadedConfig {
             config: Config::default(),
@@ -132,7 +132,7 @@ pub fn load_config_with_fingerprint() -> Result<LoadedConfig> {
 
     let raw = std::fs::read_to_string(path).into_diagnostic()?;
     let config: Config = serde_json::from_str(&raw)
-        .map_err(|e| miette::miette!("Failed to parse zarc.json: {}", e))?;
+        .map_err(|e| miette::miette!("Failed to parse flint.json: {}", e))?;
 
     Ok(LoadedConfig {
         config,
@@ -189,12 +189,12 @@ fn is_ignored_path(path: &Path, patterns: &[&str]) -> bool {
     })
 }
 
-/// Initialize a zarc.json config file
+/// Initialize a flint.json config file
 pub fn init_config() -> Result<()> {
     use colored::*;
 
     let config = r#"{
-  "$schema": "https://zarc.dev/schema.json",
+  "$schema": "https://flickjs.dev/lint/schema.json",
   "rules": {
     "no-explicit-any": "warn",
     "no-unused-vars": "error",
@@ -228,17 +228,17 @@ pub fn init_config() -> Result<()> {
 }
 "#;
 
-    let path = Path::new("zarc.json");
+    let path = Path::new("flint.json");
     if path.exists() {
-        eprintln!("{} zarc.json already exists", "warning:".yellow().bold());
+        eprintln!("{} flint.json already exists", "warning:".yellow().bold());
         return Ok(());
     }
 
     std::fs::write(path, config).into_diagnostic()?;
-    println!("{} Created zarc.json", "✓".green().bold());
+    println!("{} Created flint.json", "✓".green().bold());
     println!(
         "  Edit the config and run {} to start linting",
-        "zarc check".cyan()
+        "flint check".cyan()
     );
 
     Ok(())

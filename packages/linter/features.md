@@ -1,14 +1,14 @@
 **Direction**
 
-Zarc already has the right kernel for an agent-native linter: one parse + semantic pass, perf-conscious execution, JSON output, and a latent fix model in [src/rules/mod.rs](/Users/jaymalave/Desktop/ZarcDev/cova/src/rules/mod.rs):31. What it does not have yet is a machine contract. Right now it mostly tells a human “here is a warning.” An agent needs “here is the problem, here are the valid edits, here is how safe they are, here is what to verify next.”
+Flint already has the right kernel for an agent-native linter: one parse + semantic pass, perf-conscious execution, JSON output, and a latent fix model in [src/rules/mod.rs](/Users/jaymalave/Desktop/FlickJS/flickjs/packages/linter/src/rules/mod.rs):31. What it does not have yet is a machine contract. Right now it mostly tells a human “here is a warning.” An agent needs “here is the problem, here are the valid edits, here is how safe they are, here is what to verify next.”
 
-Hard truth: “AI coding agent native” does not mean “chatty” or “natural-language rules.” Your own doc is already pointing in the better direction at [semantic-policy.md](/Users/jaymalave/Desktop/ZarcDev/cova/semantic-policy.md):179: explicit policy, tests, semantic intent, trustworthiness. Keep the core deterministic. Let the model choose among structured actions, not invent lint semantics on the fly.
+Hard truth: “AI coding agent native” does not mean “chatty” or “natural-language rules.” Your own doc is already pointing in the better direction at [semantic-policy.md](/Users/jaymalave/Desktop/FlickJS/flickjs/packages/linter/semantic-policy.md):179: explicit policy, tests, semantic intent, trustworthiness. Keep the core deterministic. Let the model choose among structured actions, not invent lint semantics on the fly.
 
 **Highest-Value Features**
 
-1. Replace `LintDiagnostic` with an agent-grade schema. The current shape in [src/rules/mod.rs](/Users/jaymalave/Desktop/ZarcDev/cova/src/rules/mod.rs):31 is too thin. Add stable issue ID, byte start/end, AST node kind, symbol/module refs, confidence, blast radius, root-cause group, and required verification steps.
+1. Replace `LintDiagnostic` with an agent-grade schema. The current shape in [src/rules/mod.rs](/Users/jaymalave/Desktop/FlickJS/flickjs/packages/linter/src/rules/mod.rs):31 is too thin. Add stable issue ID, byte start/end, AST node kind, symbol/module refs, confidence, blast radius, root-cause group, and required verification steps.
 2. Turn `fix: Option<Fix>` into `fixes: Vec<FixCandidate>`. Agents need ranked options, not one patch. Add safety classes like `exact_safe`, `semantic_safe`, `risky_refactor`, and `suppress_only`.
-3. Add `--format agent-json` or JSONL streaming instead of only human-oriented formats and raw serialized results in [src/lib.rs](/Users/jaymalave/Desktop/ZarcDev/cova/src/lib.rs):685. Stream `file_started`, `diagnostic`, `fix_candidate`, `verification_plan`, `summary`.
+3. Add `--format agent-json` or JSONL streaming instead of only human-oriented formats and raw serialized results in [src/lib.rs](/Users/jaymalave/Desktop/FlickJS/flickjs/packages/linter/src/lib.rs):685. Stream `file_started`, `diagnostic`, `fix_candidate`, `verification_plan`, `summary`.
 4. Add metadata to `LintRule`: `autofix_kind`, `cross_file`, `false_positive_risk`, `batch_safe`, `default_verify_steps`, `policy_version`.
 5. Support changed-range linting. Agents usually touched a few hunks and want “what did I introduce or fail to fix in these lines?” not “re-explain the whole repo.”
 6. Add baseline/debt mode so the agent can distinguish repo debt from regressions introduced by its patch.

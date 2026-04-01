@@ -1,43 +1,43 @@
-# Zarc
+# Flint
 
 Blazing-fast JavaScript and TypeScript linting with a deliberately narrow MVP surface.
 
 ## Current Product Direction
 
-Zarc is focused on one job:
+Flint is focused on one job:
 
 - lint JS/TS files fast
 - keep startup overhead low
 - keep the rule set small and high-value
 - optimize cold CLI performance first
 
-Code health scoring is intentionally out of scope. Zarc now also supports plain-English policies
+Code health scoring is intentionally out of scope. Flint now also supports plain-English policies
 that compile into deterministic native rule IR.
 
 ## Commands
 
 ```bash
 # Initialize config
-zarc init
+flint init
 
 # Lint the current project
-zarc check .
+flint check .
 
 # Lint a specific directory
-zarc check ./src
+flint check ./src
 
 # Print JSON output
-zarc check . --format json
+flint check . --format json
 
 # Skip the adaptive cache for a cold-run measurement
-zarc check . --no-cache --timing
+flint check . --no-cache --timing
 ```
 
-By default, `zarc check` uses an adaptive cache. It reuses cached results when that is predicted to beat a cold run and bypasses the cache when the cache overhead would likely lose.
+By default, `flint check` uses an adaptive cache. It reuses cached results when that is predicted to beat a cold run and bypasses the cache when the cache overhead would likely lose.
 
 ## Configuration
 
-Zarc uses `zarc.toml`:
+Flint uses `flint.toml`:
 
 ```toml
 [lint]
@@ -51,11 +51,11 @@ severity = "warn"
 exclude = ["node_modules", "dist", "build", ".git"]
 ```
 
-If you want broader natural-language compilation for English rules, add a Zarc API key in
-`.zarcrc`:
+If you want broader natural-language compilation for English rules, add a Flint API key in
+`.flintrc`:
 
 ```toml
-api_key = "zk_your_zarc_api_key"
+api_key = "zk_your_flint_api_key"
 ```
 
 Severity values:
@@ -76,7 +76,7 @@ All built-in rules are active. `prefer-const` and `no-unused-vars` currently use
 
 ## Plain-English Rules
 
-Custom English rules now compile into a typed native policy IR and then execute inside Zarc's
+Custom English rules now compile into a typed native policy IR and then execute inside Flint's
 normal OXC-backed lint pass. The hosted compiler is compile-time only: lint execution remains fully
 local, deterministic, and millisecond-scale. Compiled policy artifacts are cached, so there is no
 per-file remote call in the lint execution path.
@@ -106,7 +106,7 @@ Each English rule compiles to an ID like `policy/<category>/<kind>/<hash>`; plac
 `[lint].rules` to enable/disable the rule and choose `warn`/`error`. By default the rule uses the
 severity declared in the `[[lint.english_rules]]` block.
 
-`.zarcrc` is resolved project-first and then from `~/.zarcrc`. When a Zarc API key is available,
+`.flintrc` is resolved project-first and then from `~/.flintrc`. When a Flint API key is available,
 semantically equivalent phrasing can compile into the same native policy IR even if it does not
 match the canonical templates exactly. Unsupported or ambiguous English rules still fail fast
 during compilation instead of being approximated.
@@ -116,7 +116,7 @@ artifacts are treated as stale and will be regenerated under the new policy sche
 
 ## File Support
 
-Zarc currently discovers and lints:
+Flint currently discovers and lints:
 
 - `.js`
 - `.jsx`
@@ -130,13 +130,13 @@ Zarc currently discovers and lints:
 ## Architecture
 
 ```text
-zarc/
+flint/
 ├── src/
 │   ├── lib.rs            # CLI orchestration and output
 │   ├── main.rs           # Binary entrypoint
 │   ├── cli.rs            # CLI args, config loading, file discovery
 │   └── rules/            # Built-in rules, policy IR compiler, and runtime evaluators
-└── zarc-npm/             # npm wrapper package for native binaries
+└── flint-npm/             # npm wrapper package for native binaries
 ```
 
 ## Performance Priorities
@@ -149,10 +149,10 @@ zarc/
 
 ## Roadmap
 
-- [x] Rename public product surface to `zarc`
+- [x] Rename public product surface to `flint`
 - [x] Remove code health scoring from the MVP
 - [x] Support JS and TS file discovery
-- [x] Add a minimal `zarc.toml`
+- [x] Add a minimal `flint.toml`
 - [x] Add cached plain-English rule compilation for supported native checks
 - [ ] Replace the current heuristic rule implementations with proper AST/semantic analysis
 - [ ] Reduce the shipped rule set to the few rules we want to support extremely well

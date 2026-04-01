@@ -1,5 +1,5 @@
 {
-  "name": "zarc",
+  "name": "@flickjs/lint",
   "version": "0.1.0",
   "description": "⚡ Blazing-fast JavaScript and TypeScript linter",
   "keywords": [
@@ -13,10 +13,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/zarc"
+    "url": "https://github.com/aspect-build/flickjs"
   },
   "bin": {
-    "zarc": "./bin.js"
+    "flint": "./bin.js"
   },
   "files": [
     "bin.js",

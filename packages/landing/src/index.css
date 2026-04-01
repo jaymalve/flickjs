@@ -4,24 +4,23 @@
 
 @layer base {
   :root {
-    /* Flick Design System - Dark Mode Only (Zinc Theme) */
     --background: 0 0% 0%;
     --foreground: 0 0% 98%;
 
-    --card: 240 6% 3%;
+    --card: 0 0% 4%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 240 6% 3%;
+    --popover: 0 0% 4%;
     --popover-foreground: 0 0% 98%;
 
     --primary: 0 0% 100%;
     --primary-foreground: 0 0% 0%;
 
-    --secondary: 240 4% 10%;
+    --secondary: 0 0% 10%;
     --secondary-foreground: 0 0% 98%;
 
-    --muted: 240 4% 16%;
-    --muted-foreground: 240 5% 65%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 24 5% 55%;
 
     --accent: 0 0% 100%;
     --accent-foreground: 0 0% 0%;
@@ -29,17 +28,11 @@
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 240 4% 16%;
-    --input: 240 4% 16%;
+    --border: 0 0% 16%;
+    --input: 0 0% 16%;
     --ring: 0 0% 100%;
 
     --radius: 0.25rem;
-
-    /* Custom tokens */
-    --glow-gold: 0 0 60px hsl(0 0% 100% / 0.08);
-    --glow-subtle: 0 0 80px hsl(0 0% 0% / 0.5);
-    --gradient-radial: radial-gradient(ellipse at 50% 0%, hsl(240 6% 6%) 0%, hsl(0 0% 0%) 70%);
-    --gradient-code: linear-gradient(180deg, hsl(240 6% 4%) 0%, hsl(240 6% 3%) 100%);
   }
 }
 
@@ -54,7 +47,7 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: "Geist Mono", ui-monospace, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, monospace;
   }
 
   ::selection {
@@ -66,79 +59,15 @@
   .text-balance {
     text-wrap: balance;
   }
-
-  .tracking-tight {
-    letter-spacing: -0.02em;
-  }
-
-  .tracking-tighter {
-    letter-spacing: -0.04em;
-  }
 }
 
 @layer components {
-  .gradient-bg {
-    background: var(--gradient-radial);
+  /* Million.dev style link */
+  .link {
+    @apply underline decoration-stone-500 underline-offset-[2.5px] transition-colors duration-200;
   }
 
-  .code-block {
-    background: var(--gradient-code);
-    box-shadow: 
-      inset 0 1px 0 0 hsl(0 0% 100% / 0.03),
-      0 0 0 1px hsl(0 0% 100% / 0.06);
-  }
-
-  .card-glow {
-    box-shadow: 
-      inset 0 1px 0 0 hsl(0 0% 100% / 0.03),
-      0 0 0 1px hsl(0 0% 100% / 0.06);
-    transition: box-shadow 0.3s ease, transform 0.3s ease;
-  }
-
-  .card-glow:hover {
-    box-shadow: 
-      inset 0 1px 0 0 hsl(0 0% 100% / 0.05),
-      0 0 0 1px hsl(0 0% 100% / 0.1),
-      0 8px 32px -8px hsl(0 0% 0% / 0.4);
-    /* transform: translateY(-2px); */
-  }
-
-  .nav-link {
-    @apply text-muted-foreground transition-colors duration-200;
-  }
-
-  .nav-link:hover {
-    @apply text-foreground;
-  }
-
-  .animate-fade-up {
-    animation: fadeUp 0.6s ease-out forwards;
-    opacity: 0;
-  }
-
-  .animate-fade-up-delay-1 {
-    animation: fadeUp 0.6s ease-out 0.1s forwards;
-    opacity: 0;
-  }
-
-  .animate-fade-up-delay-2 {
-    animation: fadeUp 0.6s ease-out 0.2s forwards;
-    opacity: 0;
-  }
-
-  .animate-fade-up-delay-3 {
-    animation: fadeUp 0.6s ease-out 0.3s forwards;
-    opacity: 0;
-  }
-}
-
-@keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  .link:hover {
+    @apply decoration-stone-400;
   }
 }

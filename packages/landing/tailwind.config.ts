@@ -12,9 +12,9 @@ export default {
   theme: {
     container: {
       center: true,
-      padding: "1.5rem",
+      padding: "1.25rem",
       screens: {
-        "2xl": "1200px",
+        "2xl": "640px",
       },
     },
     extend: {
@@ -70,14 +70,17 @@ export default {
       },
       fontFamily: {
         sans: [
-          "system-ui",
-          "-apple-system",
-          "BlinkMacSystemFont",
-          '"Segoe UI"',
-          "Roboto",
-          "sans-serif",
+          '"Geist Mono"',
+          "ui-monospace",
+          "SFMono-Regular",
+          "SF Mono",
+          "Menlo",
+          "Monaco",
+          "Consolas",
+          "monospace",
         ],
         mono: [
+          '"Geist Mono"',
           "ui-monospace",
           "SFMono-Regular",
           "SF Mono",

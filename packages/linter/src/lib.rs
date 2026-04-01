@@ -40,7 +40,7 @@ pub fn run() -> Result<i32> {
     if cli.timing {
         match metrics {
             Some(metrics) => print_timing(&metrics),
-            None => eprintln!("\n⚡ Zarc finished in {:.2?}", process_start.elapsed()),
+            None => eprintln!("\n⚡ Flint finished in {:.2?}", process_start.elapsed()),
         }
     }
 
@@ -774,7 +774,7 @@ fn duration_ns(duration: Duration) -> u64 {
 }
 
 fn print_timing(metrics: &RunMetrics) {
-    eprintln!("\n⚡ Zarc finished in {:.2?}", metrics.total_runtime);
+    eprintln!("\n⚡ Flint finished in {:.2?}", metrics.total_runtime);
     eprintln!(
         "  cache mode={} decision={} reason={} hits={} hash_hits={} misses={} changed={} primed={}",
         metrics.cache_mode.as_str(),
