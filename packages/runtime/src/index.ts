@@ -76,7 +76,8 @@ export function fx<T>(value: T, name?: string): Fx<T> {
       hooks.onSignalUpdate(fxId, prevValue, value, name);
     }
 
-    subs.forEach((fn) => fn());
+    const toRun = [...subs];
+    toRun.forEach((fn) => fn());
   };
 
   // Store fxId and name for devtools lookup
