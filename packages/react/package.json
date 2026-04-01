@@ -1,0 +1,61 @@
+{
+  "name": "@flickjs/react",
+  "version": "0.0.1-beta.1",
+  "description": "FlickJS signals and AI hooks for React & Next.js",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./ai": {
+      "types": "./dist/ai.d.ts",
+      "import": "./dist/ai.js"
+    },
+    "./ai/server": {
+      "types": "./dist/ai-server.d.ts",
+      "import": "./dist/ai-server.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "react",
+    "signals",
+    "hooks",
+    "ai",
+    "flickjs",
+    "reactive",
+    "nextjs"
+  ],
+  "author": "Jay Malave",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jaymalave/flick.git",
+    "directory": "packages/react"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "@flickjs/runtime": ">=0.0.1-beta.3"
+  },
+  "peerDependenciesMeta": {
+    "@flickjs/ai": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "react": "^19.0.0",
+    "@flickjs/runtime": "workspace:*",
+    "@flickjs/ai": "workspace:*",
+    "@types/react": "^19.0.0",
+    "typescript": "^5.0.0"
+  }
+}

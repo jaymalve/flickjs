@@ -6,7 +6,7 @@ export declare type Fx<T> = (() => T) & {
 
 export declare function fx<T>(value: T): Fx<T>;
 
-export declare function run(fn: Run): void;
+export declare function run(fn: Run): () => void;
 
 export declare function mount(App: () => Node, el: HTMLElement): void;
 
