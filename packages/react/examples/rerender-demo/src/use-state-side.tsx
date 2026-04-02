@@ -18,7 +18,7 @@ function Badge({ n }: { n: number }) {
   );
 }
 
-function Header({ status }: { status: string }) {
+function Header() {
   const c = useRef(0);
   c.current++;
   counts.Header = c.current;
@@ -26,9 +26,9 @@ function Header({ status }: { status: string }) {
   return (
     <div style={card}>
       <Row label="Header" count={c.current} />
-      <span style={{ fontSize: 12, color: '#a6a6b8' }}>
+      {/* <span style={{ fontSize: 12, color: '#a6a6b8' }}>
         {status === 'streaming' ? '● AI Connected' : '○ Idle'}
-      </span>
+      </span> */}
     </div>
   );
 }
@@ -199,7 +199,7 @@ export function UseStateSide() {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <Header status={status} />
+        <Header />
         <MessageList messages={messages} />
         <TypingIndicator status={status} />
         <InputBar input={input} onChange={setInput} onSubmit={handleSubmit} />
