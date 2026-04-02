@@ -20,7 +20,7 @@ impl LintRule for NoUnusedVars {
                 if !should_check_symbol(flags) {
                     return None;
                 }
-                if has_meaningful_usage(ctx, symbol_id, flags) {
+                if has_meaningful_usage(ctx, symbol_id) {
                     return None;
                 }
                 let name = scoping.symbol_name(symbol_id);
@@ -55,16 +55,30 @@ fn is_supported_unused_var_declaration(
     while let Some(node_id) = current {
         match nodes.kind(node_id) {
             AstKind::VariableDeclarator(_)
-            | AstKind::FormalParameter(_)
-            | AstKind::FormalParameterRest(_)
             | AstKind::CatchParameter(_)
             | AstKind::ImportSpecifier(_)
             | AstKind::ImportDefaultSpecifier(_)
             | AstKind::ImportNamespaceSpecifier(_) => return true,
+            AstKind::FormalParameter(_) | AstKind::FormalParameterRest(_) => {
+                return !is_type_level_parameter(ctx, node_id);
+            }
             _ => current = Some(nodes.parent_id(node_id)),
         }
     }
     false
+}
+
+fn is_type_level_parameter(ctx: &LintContext, node_id: oxc_syntax::node::NodeId) -> bool {
+    ctx.semantic.nodes().ancestor_kinds(node_id).any(|kind| {
+        matches!(
+            kind,
+            AstKind::TSMethodSignature(_)
+                | AstKind::TSCallSignatureDeclaration(_)
+                | AstKind::TSFunctionType(_)
+                | AstKind::TSInterfaceDeclaration(_)
+                | AstKind::TSTypeAliasDeclaration(_)
+        )
+    })
 }
 
 fn is_exported_declaration(ctx: &LintContext, declaration_id: oxc_syntax::node::NodeId) -> bool {
@@ -83,15 +97,11 @@ fn should_check_symbol(flags: SymbolFlags) -> bool {
     flags.is_variable() || flags.is_catch_variable() || flags.is_import()
 }
 
-fn has_meaningful_usage(
-    ctx: &LintContext,
-    symbol_id: oxc_syntax::symbol::SymbolId,
-    flags: SymbolFlags,
-) -> bool {
+fn has_meaningful_usage(ctx: &LintContext, symbol_id: oxc_syntax::symbol::SymbolId) -> bool {
     ctx.semantic
         .scoping()
         .get_resolved_references(symbol_id)
-        .any(|reference| reference.is_read() || (flags.is_import() && reference.is_type()))
+        .any(|reference| reference.is_read() || reference.is_type())
 }
 
 #[cfg(test)]
@@ -182,6 +192,33 @@ mod tests {
     #[test]
     fn keeps_aliased_exported_local_bindings_used_via_specifiers() {
         let messages = unused_var_messages("test.ts", "const foo = 1;\nexport { foo as bar };\n");
+        assert!(messages.is_empty());
+    }
+
+    #[test]
+    fn keeps_variable_used_only_in_typeof() {
+        let messages = unused_var_messages(
+            "test.ts",
+            "const actionTypes = { ADD: 'ADD' } as const;\ntype ActionType = typeof actionTypes;\n",
+        );
+        assert!(messages.is_empty());
+    }
+
+    #[test]
+    fn ignores_interface_method_signature_parameters() {
+        let messages = unused_var_messages(
+            "test.ts",
+            "interface Response {\n  status(code: number): Response;\n  json(body: unknown): void;\n  setHeader(name: string, value: string): void;\n}\n",
+        );
+        assert!(messages.is_empty());
+    }
+
+    #[test]
+    fn ignores_function_type_alias_parameters() {
+        let messages = unused_var_messages(
+            "test.ts",
+            "type NextFunction = (err?: unknown) => void;\n",
+        );
         assert!(messages.is_empty());
     }
 }

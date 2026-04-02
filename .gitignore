@@ -68,3 +68,8 @@ benchmarks/
 
 # Test projects
 packages/create-app/test-project/
+
+# NPM packages
+*.tgz
+
+.flint-cache.json

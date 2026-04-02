@@ -25,7 +25,7 @@ function Badge({ n }: { n: number }) {
 }
 
 function Header() {
-  const s = useFx(status);
+  // const s = useFx(status);
   const c = useRef(0);
   c.current++;
   counts.Header = c.current;
@@ -33,9 +33,9 @@ function Header() {
   return (
     <div style={card}>
       <Row label="Header" count={c.current} />
-      <span style={{ fontSize: 12, color: '#a6a6b8' }}>
+      {/* <span style={{ fontSize: 12, color: '#a6a6b8' }}>
         {s === 'streaming' ? '● AI Connected' : '○ Idle'}
-      </span>
+      </span> */}
     </div>
   );
 }
@@ -65,7 +65,7 @@ function MessageList() {
 }
 
 function TypingIndicator() {
-  const s = useFx(status);
+  // const s = useFx(status);
   const c = useRef(0);
   c.current++;
   counts.Typing = c.current;
@@ -73,7 +73,7 @@ function TypingIndicator() {
   return (
     <div style={card}>
       <Row label="TypingIndicator" count={c.current} />
-      {s === 'streaming' && <span style={{ fontSize: 12, color: '#4ade80' }}>AI is typing...</span>}
+      {/* {s === 'streaming' && <span style={{ fontSize: 12, color: '#4ade80' }}>AI is typing...</span>} */}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 {
   "name": "@flickjs/lint",
-  "version": "0.1.0",
-  "description": "⚡ Blazing-fast JavaScript and TypeScript linter",
+  "version": "0.0.1-beta.2",
+  "description": "Hyper-fast JavaScript and TypeScript linter",
   "keywords": [
     "linter",
     "typescript",
@@ -13,18 +13,24 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/aspect-build/flickjs"
+    "url": "git+https://github.com/jaymalve/flick.git",
+    "directory": "packages/linter"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=16"
   },
   "bin": {
     "flint": "./bin.js"
   },
   "files": [
     "bin.js",
-    "binaries/"
+    "binaries/",
+    "README.md"
   ],
-  "scripts": {
-    "postinstall": "node bin.js --install"
-  },
+  "scripts": {},
   "os": [
     "darwin",
     "linux",

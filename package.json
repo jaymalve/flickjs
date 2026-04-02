@@ -22,6 +22,8 @@
     "build:deploy": "bun run build:landing && bun run docs:build && rm -rf dist && mkdir -p dist/docs && cp -r packages/landing/dist/* dist/ && cp -r packages/docs/.vitepress/dist/* dist/docs/",
     "publish:all": "bun run build && cd packages/runtime && npm publish --tag beta && cd ../compiler && npm publish --tag beta && cd ../router && npm publish --tag beta && cd ../vite-plugin && npm publish --tag beta && cd ../create-app && npm publish --tag beta && cd ../ai && npm publish --tag beta && cd ../react && npm publish --tag beta",
     "publish:dry": "bun run build && cd packages/runtime && npm publish --dry-run --tag beta && cd ../compiler && npm publish --dry-run --tag beta && cd ../router && npm publish --dry-run --tag beta && cd ../vite-plugin && npm publish --dry-run --tag beta && cd ../create-app && npm publish --dry-run --tag beta",
+    "publish:lint": "cd packages/linter/flint-npm && npm publish --access public",
+    "publish:lint:dry": "cd packages/linter/flint-npm && npm pack --dry-run",
     "version:update": "node -e \"const fs = require('fs'); const version = process.argv[1]; ['runtime', 'compiler', 'router', 'vite-plugin', 'create-app'].forEach(pkg => { const path = './packages/' + pkg + '/package.json'; const json = JSON.parse(fs.readFileSync(path)); json.version = version; fs.writeFileSync(path, JSON.stringify(json, null, 2) + '\\\\n'); });\"",
     "format": "prettier --write ."
   },
@@ -34,5 +36,8 @@
     "url": "git+https://github.com/jaymalave/flick.git"
   },
   "author": "Jay Malave",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@flickjs/lint": "/Users/jaymalave/Desktop/FlickJS/flickjs/packages/linter/flint-npm/flickjs-lint-0.1.0.tgz"
+  }
 }
