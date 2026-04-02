@@ -55,16 +55,30 @@ fn is_supported_unused_var_declaration(
     while let Some(node_id) = current {
         match nodes.kind(node_id) {
             AstKind::VariableDeclarator(_)
-            | AstKind::FormalParameter(_)
-            | AstKind::FormalParameterRest(_)
             | AstKind::CatchParameter(_)
             | AstKind::ImportSpecifier(_)
             | AstKind::ImportDefaultSpecifier(_)
             | AstKind::ImportNamespaceSpecifier(_) => return true,
+            AstKind::FormalParameter(_) | AstKind::FormalParameterRest(_) => {
+                return !is_type_level_parameter(ctx, node_id);
+            }
             _ => current = Some(nodes.parent_id(node_id)),
         }
     }
     false
+}
+
+fn is_type_level_parameter(ctx: &LintContext, node_id: oxc_syntax::node::NodeId) -> bool {
+    ctx.semantic.nodes().ancestor_kinds(node_id).any(|kind| {
+        matches!(
+            kind,
+            AstKind::TSMethodSignature(_)
+                | AstKind::TSCallSignatureDeclaration(_)
+                | AstKind::TSFunctionType(_)
+                | AstKind::TSInterfaceDeclaration(_)
+                | AstKind::TSTypeAliasDeclaration(_)
+        )
+    })
 }
 
 fn is_exported_declaration(ctx: &LintContext, declaration_id: oxc_syntax::node::NodeId) -> bool {
@@ -182,6 +196,24 @@ mod tests {
     #[test]
     fn keeps_aliased_exported_local_bindings_used_via_specifiers() {
         let messages = unused_var_messages("test.ts", "const foo = 1;\nexport { foo as bar };\n");
+        assert!(messages.is_empty());
+    }
+
+    #[test]
+    fn ignores_interface_method_signature_parameters() {
+        let messages = unused_var_messages(
+            "test.ts",
+            "interface Response {\n  status(code: number): Response;\n  json(body: unknown): void;\n  setHeader(name: string, value: string): void;\n}\n",
+        );
+        assert!(messages.is_empty());
+    }
+
+    #[test]
+    fn ignores_function_type_alias_parameters() {
+        let messages = unused_var_messages(
+            "test.ts",
+            "type NextFunction = (err?: unknown) => void;\n",
+        );
         assert!(messages.is_empty());
     }
 }
