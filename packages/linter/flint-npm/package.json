@@ -13,18 +13,24 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/aspect-build/flickjs"
+    "url": "git+https://github.com/jaymalave/flick.git",
+    "directory": "packages/linter"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=16"
   },
   "bin": {
     "flint": "./bin.js"
   },
   "files": [
     "bin.js",
-    "binaries/"
+    "binaries/",
+    "README.md"
   ],
-  "scripts": {
-    "postinstall": "node bin.js --install"
-  },
+  "scripts": {},
   "os": [
     "darwin",
     "linux",
