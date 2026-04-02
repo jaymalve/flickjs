@@ -36,5 +36,8 @@
     "url": "git+https://github.com/jaymalave/flick.git"
   },
   "author": "Jay Malave",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@flickjs/lint": "/Users/jaymalave/Desktop/FlickJS/flickjs/packages/linter/flint-npm/flickjs-lint-0.1.0.tgz"
+  }
 }
