@@ -20,7 +20,7 @@ impl LintRule for NoUnusedVars {
                 if !should_check_symbol(flags) {
                     return None;
                 }
-                if has_meaningful_usage(ctx, symbol_id, flags) {
+                if has_meaningful_usage(ctx, symbol_id) {
                     return None;
                 }
                 let name = scoping.symbol_name(symbol_id);
@@ -97,15 +97,11 @@ fn should_check_symbol(flags: SymbolFlags) -> bool {
     flags.is_variable() || flags.is_catch_variable() || flags.is_import()
 }
 
-fn has_meaningful_usage(
-    ctx: &LintContext,
-    symbol_id: oxc_syntax::symbol::SymbolId,
-    flags: SymbolFlags,
-) -> bool {
+fn has_meaningful_usage(ctx: &LintContext, symbol_id: oxc_syntax::symbol::SymbolId) -> bool {
     ctx.semantic
         .scoping()
         .get_resolved_references(symbol_id)
-        .any(|reference| reference.is_read() || (flags.is_import() && reference.is_type()))
+        .any(|reference| reference.is_read() || reference.is_type())
 }
 
 #[cfg(test)]
@@ -196,6 +192,15 @@ mod tests {
     #[test]
     fn keeps_aliased_exported_local_bindings_used_via_specifiers() {
         let messages = unused_var_messages("test.ts", "const foo = 1;\nexport { foo as bar };\n");
+        assert!(messages.is_empty());
+    }
+
+    #[test]
+    fn keeps_variable_used_only_in_typeof() {
+        let messages = unused_var_messages(
+            "test.ts",
+            "const actionTypes = { ADD: 'ADD' } as const;\ntype ActionType = typeof actionTypes;\n",
+        );
         assert!(messages.is_empty());
     }
 

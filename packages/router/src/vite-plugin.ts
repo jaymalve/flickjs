@@ -56,7 +56,7 @@ async function scanPagesDirectory(
 function generateRouteManifest(routes: RouteFile[]): string {
   const routeImports = routes
     .map(
-      (r, i) =>
+      (r, _) =>
         `  { path: ${JSON.stringify(
           r.route
         )}, component: () => import(${JSON.stringify(r.importPath)}) }`

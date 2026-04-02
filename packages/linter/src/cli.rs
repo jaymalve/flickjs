@@ -76,6 +76,16 @@ pub struct FilesConfig {
     pub exclude: Vec<String>,
 }
 
+/// Separate deserialization type for flint.json — rules default to empty
+/// so only explicitly listed rules are active when a config file exists.
+#[derive(Debug, Clone, Deserialize)]
+struct FileConfig {
+    #[serde(default)]
+    pub rules: HashMap<String, serde_json::Value>,
+    #[serde(default)]
+    pub files: FilesConfig,
+}
+
 pub struct LoadedConfig {
     pub config: Config,
     pub fingerprint: String,
@@ -131,8 +141,12 @@ pub fn load_config_with_fingerprint() -> Result<LoadedConfig> {
     }
 
     let raw = std::fs::read_to_string(path).into_diagnostic()?;
-    let config: Config = serde_json::from_str(&raw)
+    let file_config: FileConfig = serde_json::from_str(&raw)
         .map_err(|e| miette::miette!("Failed to parse flint.json: {}", e))?;
+    let config = Config {
+        rules: file_config.rules,
+        files: file_config.files,
+    };
 
     Ok(LoadedConfig {
         config,

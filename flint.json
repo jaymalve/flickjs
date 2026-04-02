@@ -1,0 +1,7 @@
+{
+  "$schema": "https://zarc.dev/schema.json",
+  "rules": {},
+  "files": {
+    "exclude": ["node_modules", "dist", "build", ".git"]
+  }
+}
