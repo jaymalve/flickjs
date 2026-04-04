@@ -15,12 +15,21 @@ export function HookLintPlayground({
   open,
   label,
 }: HookLintPlaygroundProps) {
+  function InlineCard() {
+    return <aside>Nested component for {label}</aside>;
+  }
+
+  function renderBadge() {
+    return <strong>{status}</strong>;
+  }
+
   const [copiedValue, setCopiedValue] = useState(value);
   const [count, setCount] = useState(expensiveComputation());
   const [step, setStep] = useState(0);
   const [status, setStatus] = useState("idle");
   const [message, setMessage] = useState(label);
   const [enabled, setEnabled] = useState(false);
+  const items = [label, message, status];
 
   useEffect(() => {
     fetch("/api/demo");
@@ -53,8 +62,25 @@ export function HookLintPlayground({
       <p>Count: {count}</p>
       <p>Step: {step}</p>
       <p>Status: {status}</p>
+      <p>Rendered Badge: {renderBadge()}</p>
       <p>Message: {message}</p>
       <p>Enabled: {String(enabled)}</p>
+      <InlineCard />
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          setStatus("submitted");
+        }}
+      >
+        <button type="submit">Submit</button>
+      </form>
+      {items.length && (
+        <ul>
+          {items.map((item, index) => (
+            <li key={index}>{item}</li>
+          ))}
+        </ul>
+      )}
       <button type="button" onClick={() => setCount(count + 1)}>
         Increment
       </button>
