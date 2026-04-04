@@ -17,6 +17,9 @@ npm install -D @flickjs/lint
 ## Usage
 
 ```bash
+# Generate a starter config for the current project
+flint init
+
 # Lint current directory
 flint check .
 
@@ -43,6 +46,10 @@ Create a `flint.json` in your project root:
   }
 }
 ```
+
+With `"detect": true`, Flint auto-enables matching built-in categories for React, Next.js, React
+Native, and server-side projects when their frameworks are detected from `package.json`. Explicit
+rule settings still win, including `"off"`.
 
 ## Supported Platforms
 

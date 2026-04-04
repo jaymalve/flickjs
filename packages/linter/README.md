@@ -35,6 +35,10 @@ flint check . --no-cache --timing
 
 By default, `flint check` uses an adaptive cache. It reuses cached results when that is predicted to beat a cold run and bypasses the cache when the cache overhead would likely lose.
 
+`flint init` detects the current project's framework hints from `package.json`, writes a starter
+`flint.json`, and leaves `"detect": true` enabled so matching built-in rule categories activate
+automatically unless you override them explicitly.
+
 ## Configuration
 
 Flint uses `flint.json`:
@@ -75,36 +79,32 @@ Severity values:
 
 ## Built-in Rules
 
-- `no-explicit-any`
-- `no-console`
-- `no-empty-catch`
-- `prefer-const`
-- `no-unused-vars`
-- `no-eval`
-- `no-hardcoded-secrets`
-- `no-chained-array-iterations`
-- `prefer-tosorted`
-- `no-regexp-in-loop`
-- `prefer-math-min-max`
-- `no-array-includes-in-loop`
-- `no-sequential-style-assignment`
-- `no-array-find-in-loop`
-- `no-duplicate-storage-reads`
-- `no-deep-nesting`
-- `prefer-promise-all`
-- `react/no-derived-state-effect`
-- `react/no-fetch-in-effect`
-- `react/no-cascading-set-state`
-- `react/no-effect-event-handler`
-- `react/no-derived-use-state`
-- `react/prefer-use-reducer`
-- `react/lazy-state-init`
-- `react/functional-set-state`
-- `react/unstable-deps`
+Flint now ships built-in rules across these categories:
 
-Built-in rules now include universal JS checks plus React rules that self-gate on detected project
-type. `prefer-const` and `no-unused-vars` still use lightweight MVP heuristics and should later be
-replaced with fuller semantic implementations.
+- core JS/TS rules
+- universal security and performance rules
+- React hooks, correctness, architecture, and performance rules
+- Next.js rules
+- React Native rules
+- server-side security, reliability, performance, and architecture rules
+- React Server Components rules
+
+Examples:
+
+- `no-explicit-any`
+- `no-eval`
+- `react/no-fetch-in-effect`
+- `react/no-array-index-key`
+- `react/no-usememo-simple-expr`
+- `nextjs/no-img-element`
+- `react-native/no-inline-styles`
+- `server/no-sql-injection`
+- `server/no-unhandled-async-route`
+- `server/require-input-validation`
+
+Framework-specific rules self-gate on detected project type. `prefer-const` and `no-unused-vars`
+still use lightweight MVP heuristics and should later be replaced with fuller semantic
+implementations.
 
 ## Plain-English Rules
 

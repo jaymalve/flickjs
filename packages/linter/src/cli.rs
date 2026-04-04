@@ -235,57 +235,7 @@ pub fn init_config() -> Result<()> {
     use colored::*;
 
     let project = ProjectInfo::detect(Path::new("."));
-    let mut rules = serde_json::Map::new();
-    rules.insert("no-explicit-any".into(), serde_json::json!("warn"));
-    rules.insert("no-unused-vars".into(), serde_json::json!("error"));
-    rules.insert("no-console".into(), serde_json::json!("warn"));
-    rules.insert("prefer-const".into(), serde_json::json!("warn"));
-    rules.insert("no-empty-catch".into(), serde_json::json!("error"));
-    rules.insert("no-debugger".into(), serde_json::json!(true));
-    rules.insert("no-var".into(), serde_json::json!(true));
-    rules.insert("no-nested-ternaries".into(), serde_json::json!(true));
-    rules.insert("no-default-export".into(), serde_json::json!(true));
-    rules.insert("no-switch".into(), serde_json::json!(false));
-    rules.insert("no-type-assertion".into(), serde_json::json!(false));
-    rules.insert("no-await-in-loops".into(), serde_json::json!(true));
-    rules.insert("max-function-params".into(), serde_json::json!(4));
-    rules.insert("max-file-lines".into(), serde_json::json!(500));
-    rules.insert("naming-functions".into(), serde_json::json!("camelCase"));
-    rules.insert("naming-classes".into(), serde_json::json!("PascalCase"));
-    rules.insert("banned-imports".into(), serde_json::json!([]));
-    rules.insert("banned-calls".into(), serde_json::json!([]));
-    rules.insert("unreachable-code".into(), serde_json::json!("error"));
-    rules.insert("unused-exports".into(), serde_json::json!("warn"));
-    rules.insert("unused-files".into(), serde_json::json!("warn"));
-    rules.insert("unused-dependencies".into(), serde_json::json!("warn"));
-    rules.insert("no-missing-return".into(), serde_json::json!("error"));
-    rules.insert("no-wrong-arg-count".into(), serde_json::json!("error"));
-    rules.insert(
-        "no-unsafe-optional-access".into(),
-        serde_json::json!("error"),
-    );
-
-    if project.has_react {
-        rules.insert("react/no-fetch-in-effect".into(), serde_json::json!("warn"));
-        rules.insert(
-            "react/no-derived-use-state".into(),
-            serde_json::json!("warn"),
-        );
-        rules.insert(
-            "react/functional-set-state".into(),
-            serde_json::json!("warn"),
-        );
-        rules.insert("react/unstable-deps".into(), serde_json::json!("warn"));
-    }
-
-    let config = serde_json::json!({
-        "$schema": "https://flickjs.dev/lint/schema.json",
-        "detect": true,
-        "rules": rules,
-        "files": {
-            "exclude": default_excludes(),
-        }
-    });
+    let config = build_init_config(&project);
 
     let path = Path::new("flint.json");
     if path.exists() {
@@ -296,12 +246,122 @@ pub fn init_config() -> Result<()> {
     let raw = serde_json::to_string_pretty(&config).into_diagnostic()? + "\n";
     std::fs::write(path, raw).into_diagnostic()?;
     println!("{} Created flint.json", "✓".green().bold());
+    let detected = detected_frameworks(&project);
+    if detected.is_empty() {
+        println!("  Detected frameworks: none");
+    } else {
+        println!("  Detected frameworks: {}", detected.join(", ").cyan());
+    }
+    println!(
+        "  {}",
+        "`detect: true` will auto-enable matching built-in rule categories.".dimmed()
+    );
     println!(
         "  Edit the config and run {} to start linting",
         "flint check".cyan()
     );
 
     Ok(())
+}
+
+fn build_init_config(project: &ProjectInfo) -> serde_json::Value {
+    serde_json::json!({
+        "$schema": "https://flickjs.dev/lint/schema.json",
+        "detect": true,
+        "rules": starter_rules_for_project(project),
+        "files": {
+            "exclude": default_excludes(),
+        }
+    })
+}
+
+fn starter_rules_for_project(project: &ProjectInfo) -> serde_json::Map<String, serde_json::Value> {
+    let mut rules = serde_json::Map::new();
+
+    for (rule, severity) in [
+        ("no-explicit-any", "warn"),
+        ("no-unused-vars", "error"),
+        ("no-console", "warn"),
+        ("prefer-const", "warn"),
+        ("no-empty-catch", "error"),
+        ("unreachable-code", "error"),
+        ("no-missing-return", "error"),
+        ("no-wrong-arg-count", "error"),
+        ("no-unsafe-optional-access", "error"),
+        ("no-eval", "error"),
+        ("no-hardcoded-secrets", "warn"),
+    ] {
+        rules.insert(rule.into(), serde_json::json!(severity));
+    }
+
+    if project.has_react {
+        for (rule, severity) in [
+            ("react/no-fetch-in-effect", "warn"),
+            ("react/functional-set-state", "warn"),
+            ("react/no-array-index-key", "warn"),
+            ("react/no-usememo-simple-expr", "warn"),
+            ("react/no-hydration-flicker", "warn"),
+        ] {
+            rules.insert(rule.into(), serde_json::json!(severity));
+        }
+    }
+
+    if project.has_next {
+        for (rule, severity) in [
+            ("nextjs/no-img-element", "warn"),
+            ("nextjs/prefer-next-link", "warn"),
+            ("nextjs/missing-metadata", "warn"),
+            ("nextjs/no-async-client-component", "warn"),
+            ("react/server-auth-actions", "warn"),
+        ] {
+            rules.insert(rule.into(), serde_json::json!(severity));
+        }
+    }
+
+    if project.has_server_framework() {
+        for (rule, severity) in [
+            ("server/no-sql-injection", "error"),
+            ("server/no-shell-injection", "error"),
+            ("server/require-input-validation", "warn"),
+            ("server/no-unhandled-async-route", "warn"),
+            ("server/no-n-plus-one", "warn"),
+        ] {
+            rules.insert(rule.into(), serde_json::json!(severity));
+        }
+    }
+
+    if project.has_react_native || project.has_expo {
+        for (rule, severity) in [
+            ("react-native/no-inline-styles", "warn"),
+            ("react-native/no-anonymous-list-render", "warn"),
+            ("react-native/require-key-extractor", "warn"),
+        ] {
+            rules.insert(rule.into(), serde_json::json!(severity));
+        }
+    }
+
+    rules
+}
+
+fn detected_frameworks(project: &ProjectInfo) -> Vec<&'static str> {
+    let mut frameworks = Vec::new();
+
+    if project.has_next {
+        frameworks.push("nextjs");
+    } else if project.has_react {
+        frameworks.push("react");
+    }
+    if project.has_server_framework() {
+        frameworks.push("server");
+    }
+    if project.has_react_native {
+        frameworks.push("react-native");
+    }
+    if project.has_expo {
+        frameworks.push("expo");
+    }
+
+    frameworks
 }
 
 /// Parse a rule config value into an optional severity.
@@ -359,5 +419,46 @@ mod tests {
     #[test]
     fn parse_severity_from_number() {
         assert!(parse_rule_severity(&serde_json::json!(3)).is_some());
+    }
+
+    #[test]
+    fn init_template_includes_nextjs_rules() {
+        let project = ProjectInfo {
+            has_react: true,
+            has_next: true,
+            ..ProjectInfo::default()
+        };
+        let rules = starter_rules_for_project(&project);
+        assert!(rules.contains_key("nextjs/no-img-element"));
+        assert!(rules.contains_key("nextjs/missing-metadata"));
+        assert!(rules.contains_key("react/server-auth-actions"));
+    }
+
+    #[test]
+    fn init_template_includes_server_rules() {
+        let project = ProjectInfo {
+            has_express: true,
+            ..ProjectInfo::default()
+        };
+        let rules = starter_rules_for_project(&project);
+        assert!(rules.contains_key("server/no-sql-injection"));
+        assert!(rules.contains_key("server/require-input-validation"));
+    }
+
+    #[test]
+    fn detected_frameworks_prefers_nextjs_label_for_next_projects() {
+        let project = ProjectInfo {
+            has_react: true,
+            has_next: true,
+            has_express: true,
+            ..ProjectInfo::default()
+        };
+        assert_eq!(detected_frameworks(&project), vec!["nextjs", "server"]);
+    }
+
+    #[test]
+    fn init_template_sets_detect_true() {
+        let config = build_init_config(&ProjectInfo::test_all());
+        assert_eq!(config.get("detect"), Some(&serde_json::json!(true)));
     }
 }

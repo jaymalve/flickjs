@@ -819,6 +819,11 @@ struct Summary {
     errors: usize,
 }
 
+struct PrettyEntry<'a> {
+    file: &'a Path,
+    diagnostic: &'a rules::LintDiagnostic,
+}
+
 fn print_results(
     results: &[rules::LintResult],
     format: &cli::OutputFormat,
@@ -835,32 +840,72 @@ fn print_results(
 fn print_pretty(results: &[rules::LintResult], elapsed: std::time::Duration) -> Summary {
     let mut total_errors = 0;
     let mut total_warnings = 0;
+    let mut grouped: HashMap<String, Vec<PrettyEntry<'_>>> = HashMap::new();
 
     for result in results {
         for diagnostic in &result.diagnostics {
             match diagnostic.severity {
-                rules::Severity::Error => {
-                    total_errors += 1;
-                    println!(
-                        "  {} {}:{} {}",
-                        "error".red().bold(),
-                        result.file.display(),
-                        diagnostic.span,
-                        diagnostic.message
-                    );
-                }
-                rules::Severity::Warning => {
-                    total_warnings += 1;
-                    println!(
-                        "  {} {}:{} {}",
-                        "warn".yellow().bold(),
-                        result.file.display(),
-                        diagnostic.span,
-                        diagnostic.message
-                    );
-                }
+                rules::Severity::Error => total_errors += 1,
+                rules::Severity::Warning => total_warnings += 1,
             }
-            println!("    {} {}", "rule".dimmed(), diagnostic.rule_name);
+            grouped
+                .entry(diagnostic_category_key(diagnostic))
+                .or_default()
+                .push(PrettyEntry {
+                    file: &result.file,
+                    diagnostic,
+                });
+        }
+    }
+
+    let mut categories: Vec<(String, Vec<PrettyEntry<'_>>)> = grouped.into_iter().collect();
+    categories.sort_by(|(left, _), (right, _)| {
+        category_order(left)
+            .cmp(&category_order(right))
+            .then_with(|| left.cmp(right))
+    });
+
+    for (index, (category, mut entries)) in categories.into_iter().enumerate() {
+        if index > 0 {
+            println!();
+        }
+
+        entries.sort_by(|left, right| {
+            severity_rank(&left.diagnostic.severity)
+                .cmp(&severity_rank(&right.diagnostic.severity))
+                .then_with(|| left.file.cmp(right.file))
+                .then_with(|| left.diagnostic.byte_start.cmp(&right.diagnostic.byte_start))
+                .then_with(|| left.diagnostic.rule_name.cmp(&right.diagnostic.rule_name))
+        });
+
+        println!(
+            "  {} {}",
+            category_display_name(&category).bold(),
+            format!("({})", entries.len()).dimmed()
+        );
+
+        for entry in entries {
+            let diagnostic = entry.diagnostic;
+            match diagnostic.severity {
+                rules::Severity::Error => println!(
+                    "    {} {}:{} {}",
+                    "error".red().bold(),
+                    entry.file.display(),
+                    diagnostic.span,
+                    diagnostic.message
+                ),
+                rules::Severity::Warning => println!(
+                    "    {} {}:{} {}",
+                    "warn".yellow().bold(),
+                    entry.file.display(),
+                    diagnostic.span,
+                    diagnostic.message
+                ),
+            }
+            println!("      {} {}", "rule".dimmed(), diagnostic.rule_name);
+            if let Some(help) = diagnostic_help_text(diagnostic) {
+                println!("      {} {}", "help".dimmed(), help);
+            }
         }
     }
 
@@ -883,6 +928,78 @@ fn print_pretty(results: &[rules::LintResult], elapsed: std::time::Duration) -> 
 
     Summary {
         errors: total_errors,
+    }
+}
+
+fn severity_rank(severity: &rules::Severity) -> usize {
+    match severity {
+        rules::Severity::Error => 0,
+        rules::Severity::Warning => 1,
+    }
+}
+
+fn diagnostic_category_key(diagnostic: &rules::LintDiagnostic) -> String {
+    match diagnostic.rule_name.as_str() {
+        "parse-error" => "parse".to_string(),
+        "semantic-error" => "semantic".to_string(),
+        _ if diagnostic.origin == rules::RuleOrigin::Config
+            && !diagnostic.rule_name.contains('/') =>
+        {
+            "policy".to_string()
+        }
+        _ => diagnostic
+            .rule_name
+            .split_once('/')
+            .map(|(prefix, _)| prefix.to_string())
+            .unwrap_or_else(|| "core".to_string()),
+    }
+}
+
+fn category_order(category: &str) -> usize {
+    match category {
+        "parse" => 0,
+        "semantic" => 1,
+        "core" => 2,
+        "react" => 3,
+        "nextjs" => 4,
+        "react-native" => 5,
+        "server" => 6,
+        "policy" => 7,
+        _ => 8,
+    }
+}
+
+fn category_display_name(category: &str) -> &'static str {
+    match category {
+        "parse" => "Parse",
+        "semantic" => "Semantic",
+        "core" => "Core",
+        "react" => "React",
+        "nextjs" => "Next.js",
+        "react-native" => "React Native",
+        "server" => "Server",
+        "policy" => "Policy",
+        _ => "Other",
+    }
+}
+
+fn diagnostic_help_text(diagnostic: &rules::LintDiagnostic) -> Option<String> {
+    match diagnostic.rule_name.as_str() {
+        "parse-error" => Some("Fix syntax issues before Flint can run rule checks.".to_string()),
+        "semantic-error" => {
+            Some("Fix semantic issues before Flint can analyze this file fully.".to_string())
+        }
+        _ if matches!(
+            diagnostic.origin,
+            rules::RuleOrigin::BuiltIn | rules::RuleOrigin::Config
+        ) =>
+        {
+            Some(format!(
+                "configure in flint.json -> rules.\"{}\": \"off\"",
+                diagnostic.rule_name
+            ))
+        }
+        _ => None,
     }
 }
 
@@ -1121,6 +1238,67 @@ mod tests {
     struct FixtureSpec {
         files: usize,
         repeats: usize,
+    }
+
+    #[test]
+    fn builtin_rules_default_to_core_category() {
+        let diagnostic = rules::LintDiagnostic {
+            rule_name: "no-console".to_string(),
+            message: "Unexpected console statement".to_string(),
+            span: "1:1".to_string(),
+            severity: rules::Severity::Warning,
+            origin: rules::RuleOrigin::BuiltIn,
+            fix: None,
+            byte_start: 0,
+            byte_end: 0,
+            node_kind: None,
+            symbol: None,
+        };
+
+        assert_eq!(diagnostic_category_key(&diagnostic), "core");
+        assert_eq!(category_display_name("core"), "Core");
+    }
+
+    #[test]
+    fn config_rules_without_namespace_group_as_policy() {
+        let diagnostic = rules::LintDiagnostic {
+            rule_name: "custom-policy".to_string(),
+            message: "Nope".to_string(),
+            span: "1:1".to_string(),
+            severity: rules::Severity::Warning,
+            origin: rules::RuleOrigin::Config,
+            fix: None,
+            byte_start: 0,
+            byte_end: 0,
+            node_kind: None,
+            symbol: None,
+        };
+
+        assert_eq!(diagnostic_category_key(&diagnostic), "policy");
+    }
+
+    #[test]
+    fn builtin_diagnostics_include_disable_hint() {
+        let diagnostic = rules::LintDiagnostic {
+            rule_name: "react/no-fetch-in-effect".to_string(),
+            message: "Move data fetching out of `useEffect` when possible".to_string(),
+            span: "1:1".to_string(),
+            severity: rules::Severity::Warning,
+            origin: rules::RuleOrigin::BuiltIn,
+            fix: None,
+            byte_start: 0,
+            byte_end: 0,
+            node_kind: None,
+            symbol: None,
+        };
+
+        assert_eq!(
+            diagnostic_help_text(&diagnostic),
+            Some(
+                "configure in flint.json -> rules.\"react/no-fetch-in-effect\": \"off\""
+                    .to_string()
+            )
+        );
     }
 
     #[test]
