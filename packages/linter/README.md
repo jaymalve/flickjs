@@ -37,19 +37,28 @@ By default, `flint check` uses an adaptive cache. It reuses cached results when 
 
 ## Configuration
 
-Flint uses `flint.toml`:
+Flint uses `flint.json`:
 
-```toml
-[lint]
-rules = { no-explicit-any = "warn", no-unused-vars = "error", no-console = "warn", prefer-const = "warn", no-empty-catch = "error" }
-
-[[lint.english_rules]]
-text = "no function should have more than 3 params"
-severity = "warn"
-
-[files]
-exclude = ["node_modules", "dist", "build", ".git"]
+```json
+{
+  "detect": true,
+  "rules": {
+    "no-explicit-any": "warn",
+    "no-unused-vars": "error",
+    "no-console": "warn",
+    "prefer-const": "warn",
+    "no-empty-catch": "error",
+    "react/no-fetch-in-effect": "warn"
+  },
+  "files": {
+    "exclude": ["node_modules", "dist", "build", ".git"]
+  }
+}
 ```
+
+When `detect` is `true`, framework-specific built-in rules are enabled at their default severities
+when Flint detects a matching project. Explicit `rules` entries still take precedence, including
+`"off"`.
 
 If you want broader natural-language compilation for English rules, add a Flint API key in
 `.flintrc`:
@@ -71,8 +80,31 @@ Severity values:
 - `no-empty-catch`
 - `prefer-const`
 - `no-unused-vars`
+- `no-eval`
+- `no-hardcoded-secrets`
+- `no-chained-array-iterations`
+- `prefer-tosorted`
+- `no-regexp-in-loop`
+- `prefer-math-min-max`
+- `no-array-includes-in-loop`
+- `no-sequential-style-assignment`
+- `no-array-find-in-loop`
+- `no-duplicate-storage-reads`
+- `no-deep-nesting`
+- `prefer-promise-all`
+- `react/no-derived-state-effect`
+- `react/no-fetch-in-effect`
+- `react/no-cascading-set-state`
+- `react/no-effect-event-handler`
+- `react/no-derived-use-state`
+- `react/prefer-use-reducer`
+- `react/lazy-state-init`
+- `react/functional-set-state`
+- `react/unstable-deps`
 
-All built-in rules are active. `prefer-const` and `no-unused-vars` currently use lightweight MVP heuristics and should later be replaced with full semantic implementations.
+Built-in rules now include universal JS checks plus React rules that self-gate on detected project
+type. `prefer-const` and `no-unused-vars` still use lightweight MVP heuristics and should later be
+replaced with fuller semantic implementations.
 
 ## Plain-English Rules
 
@@ -152,7 +184,7 @@ flint/
 - [x] Rename public product surface to `flint`
 - [x] Remove code health scoring from the MVP
 - [x] Support JS and TS file discovery
-- [x] Add a minimal `flint.toml`
+- [x] Add a minimal `flint.json`
 - [x] Add cached plain-English rule compilation for supported native checks
 - [ ] Replace the current heuristic rule implementations with proper AST/semantic analysis
 - [ ] Reduce the shipped rule set to the few rules we want to support extremely well

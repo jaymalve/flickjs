@@ -1,6 +1,4 @@
-use crate::rules::policy_ir::{
-    CompiledPolicyRule, FileRule, PathPatternExpectation, RuleScope,
-};
+use crate::rules::policy_ir::{CompiledPolicyRule, FileRule, PathPatternExpectation, RuleScope};
 use crate::rules::{LintContext, LintDiagnostic, RuleOrigin};
 use oxc_span::Span;
 

@@ -18,13 +18,13 @@ npm install -D @flickjs/lint
 
 ```bash
 # Lint current directory
-flint .
+flint check .
 
-# Lint specific files
-flint src/index.ts src/utils.ts
+# Lint a specific directory
+flint check src
 
 # JSON output
-flint . --format json
+flint check . --format json
 ```
 
 ## Configuration
@@ -33,11 +33,13 @@ Create a `flint.json` in your project root:
 
 ```json
 {
+  "detect": true,
   "rules": {
     "no-explicit-any": "error",
     "no-unused-vars": "warn",
     "no-console": "off",
-    "prefer-const": "error"
+    "prefer-const": "error",
+    "react/no-fetch-in-effect": "warn"
   }
 }
 ```

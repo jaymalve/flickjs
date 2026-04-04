@@ -25,7 +25,12 @@ pub fn evaluate(
             let normalized_pattern = pattern.to_ascii_lowercase();
             comments
                 .into_iter()
-                .filter(|comment| comment.text.to_ascii_lowercase().contains(&normalized_pattern))
+                .filter(|comment| {
+                    comment
+                        .text
+                        .to_ascii_lowercase()
+                        .contains(&normalized_pattern)
+                })
                 .map(|comment| {
                     ctx.diagnostic_with_origin(
                         compiled_rule.id.clone(),
@@ -68,7 +73,8 @@ fn extract_comments(source: &str) -> Vec<SourceComment> {
                 let start = index;
                 index += 2;
                 let content_start = index;
-                while index + 1 < bytes.len() && !(bytes[index] == b'*' && bytes[index + 1] == b'/') {
+                while index + 1 < bytes.len() && !(bytes[index] == b'*' && bytes[index + 1] == b'/')
+                {
                     index += 1;
                 }
                 let content_end = index.min(bytes.len());

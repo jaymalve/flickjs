@@ -1,6 +1,7 @@
+use crate::project::ProjectInfo;
 use clap::{Parser, Subcommand};
 use miette::{IntoDiagnostic, Result};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -62,24 +63,28 @@ pub enum OutputFormat {
 
 // ── Config types ───────────────────────────────────────────
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
+    #[serde(default = "default_detect")]
+    pub detect: bool,
     #[serde(default)]
     pub rules: HashMap<String, serde_json::Value>,
     #[serde(default)]
     pub files: FilesConfig,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FilesConfig {
     #[serde(default = "default_excludes")]
     pub exclude: Vec<String>,
 }
 
 /// Separate deserialization type for flint.json — rules default to empty
-/// so only explicitly listed rules are active when a config file exists.
-#[derive(Debug, Clone, Deserialize)]
+/// but detection may still enable built-ins when `detect` is true.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct FileConfig {
+    #[serde(default = "default_detect")]
+    pub detect: bool,
     #[serde(default)]
     pub rules: HashMap<String, serde_json::Value>,
     #[serde(default)]
@@ -94,6 +99,7 @@ pub struct LoadedConfig {
 impl Default for Config {
     fn default() -> Self {
         Self {
+            detect: default_detect(),
             rules: default_rules(),
             files: FilesConfig::default(),
         }
@@ -117,13 +123,32 @@ fn default_excludes() -> Vec<String> {
     ]
 }
 
+fn default_detect() -> bool {
+    true
+}
+
 fn default_rules() -> HashMap<String, serde_json::Value> {
     let mut rules = HashMap::new();
-    rules.insert("no-explicit-any".into(), serde_json::Value::String("warn".into()));
-    rules.insert("no-unused-vars".into(), serde_json::Value::String("error".into()));
-    rules.insert("no-console".into(), serde_json::Value::String("warn".into()));
-    rules.insert("prefer-const".into(), serde_json::Value::String("warn".into()));
-    rules.insert("no-empty-catch".into(), serde_json::Value::String("error".into()));
+    rules.insert(
+        "no-explicit-any".into(),
+        serde_json::Value::String("warn".into()),
+    );
+    rules.insert(
+        "no-unused-vars".into(),
+        serde_json::Value::String("error".into()),
+    );
+    rules.insert(
+        "no-console".into(),
+        serde_json::Value::String("warn".into()),
+    );
+    rules.insert(
+        "prefer-const".into(),
+        serde_json::Value::String("warn".into()),
+    );
+    rules.insert(
+        "no-empty-catch".into(),
+        serde_json::Value::String("error".into()),
+    );
     rules
 }
 
@@ -134,9 +159,10 @@ pub fn load_config() -> Result<Config> {
 pub fn load_config_with_fingerprint() -> Result<LoadedConfig> {
     let path = Path::new("flint.json");
     if !path.exists() {
+        let config = Config::default();
         return Ok(LoadedConfig {
-            config: Config::default(),
-            fingerprint: hash_string("__default__"),
+            fingerprint: hash_string("__default_detect_v1__"),
+            config,
         });
     }
 
@@ -144,6 +170,7 @@ pub fn load_config_with_fingerprint() -> Result<LoadedConfig> {
     let file_config: FileConfig = serde_json::from_str(&raw)
         .map_err(|e| miette::miette!("Failed to parse flint.json: {}", e))?;
     let config = Config {
+        detect: file_config.detect,
         rules: file_config.rules,
         files: file_config.files,
     };
@@ -207,40 +234,58 @@ fn is_ignored_path(path: &Path, patterns: &[&str]) -> bool {
 pub fn init_config() -> Result<()> {
     use colored::*;
 
-    let config = r#"{
-  "$schema": "https://flickjs.dev/lint/schema.json",
-  "rules": {
-    "no-explicit-any": "warn",
-    "no-unused-vars": "error",
-    "no-console": "warn",
-    "prefer-const": "warn",
-    "no-empty-catch": "error",
-    "no-debugger": true,
-    "no-var": true,
-    "no-nested-ternaries": true,
-    "no-default-export": true,
-    "no-switch": false,
-    "no-type-assertion": false,
-    "no-await-in-loops": true,
-    "max-function-params": 4,
-    "max-file-lines": 500,
-    "naming-functions": "camelCase",
-    "naming-classes": "PascalCase",
-    "banned-imports": [],
-    "banned-calls": [],
-    "unreachable-code": "error",
-    "unused-exports": "warn",
-    "unused-files": "warn",
-    "unused-dependencies": "warn",
-    "no-missing-return": "error",
-    "no-wrong-arg-count": "error",
-    "no-unsafe-optional-access": "error"
-  },
-  "files": {
-    "exclude": ["node_modules", "dist", "build", ".git"]
-  }
-}
-"#;
+    let project = ProjectInfo::detect(Path::new("."));
+    let mut rules = serde_json::Map::new();
+    rules.insert("no-explicit-any".into(), serde_json::json!("warn"));
+    rules.insert("no-unused-vars".into(), serde_json::json!("error"));
+    rules.insert("no-console".into(), serde_json::json!("warn"));
+    rules.insert("prefer-const".into(), serde_json::json!("warn"));
+    rules.insert("no-empty-catch".into(), serde_json::json!("error"));
+    rules.insert("no-debugger".into(), serde_json::json!(true));
+    rules.insert("no-var".into(), serde_json::json!(true));
+    rules.insert("no-nested-ternaries".into(), serde_json::json!(true));
+    rules.insert("no-default-export".into(), serde_json::json!(true));
+    rules.insert("no-switch".into(), serde_json::json!(false));
+    rules.insert("no-type-assertion".into(), serde_json::json!(false));
+    rules.insert("no-await-in-loops".into(), serde_json::json!(true));
+    rules.insert("max-function-params".into(), serde_json::json!(4));
+    rules.insert("max-file-lines".into(), serde_json::json!(500));
+    rules.insert("naming-functions".into(), serde_json::json!("camelCase"));
+    rules.insert("naming-classes".into(), serde_json::json!("PascalCase"));
+    rules.insert("banned-imports".into(), serde_json::json!([]));
+    rules.insert("banned-calls".into(), serde_json::json!([]));
+    rules.insert("unreachable-code".into(), serde_json::json!("error"));
+    rules.insert("unused-exports".into(), serde_json::json!("warn"));
+    rules.insert("unused-files".into(), serde_json::json!("warn"));
+    rules.insert("unused-dependencies".into(), serde_json::json!("warn"));
+    rules.insert("no-missing-return".into(), serde_json::json!("error"));
+    rules.insert("no-wrong-arg-count".into(), serde_json::json!("error"));
+    rules.insert(
+        "no-unsafe-optional-access".into(),
+        serde_json::json!("error"),
+    );
+
+    if project.has_react {
+        rules.insert("react/no-fetch-in-effect".into(), serde_json::json!("warn"));
+        rules.insert(
+            "react/no-derived-use-state".into(),
+            serde_json::json!("warn"),
+        );
+        rules.insert(
+            "react/functional-set-state".into(),
+            serde_json::json!("warn"),
+        );
+        rules.insert("react/unstable-deps".into(), serde_json::json!("warn"));
+    }
+
+    let config = serde_json::json!({
+        "$schema": "https://flickjs.dev/lint/schema.json",
+        "detect": true,
+        "rules": rules,
+        "files": {
+            "exclude": default_excludes(),
+        }
+    });
 
     let path = Path::new("flint.json");
     if path.exists() {
@@ -248,7 +293,8 @@ pub fn init_config() -> Result<()> {
         return Ok(());
     }
 
-    std::fs::write(path, config).into_diagnostic()?;
+    let raw = serde_json::to_string_pretty(&config).into_diagnostic()? + "\n";
+    std::fs::write(path, raw).into_diagnostic()?;
     println!("{} Created flint.json", "✓".green().bold());
     println!(
         "  Edit the config and run {} to start linting",
@@ -286,6 +332,7 @@ mod tests {
     #[test]
     fn default_config_has_five_rules() {
         let config = Config::default();
+        assert!(config.detect);
         assert_eq!(config.rules.len(), 5);
         assert!(config.rules.contains_key("no-console"));
     }

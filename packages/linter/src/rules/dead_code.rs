@@ -1,7 +1,6 @@
 use oxc_allocator::Allocator;
 use oxc_ast::ast::{
-    ExportDefaultDeclaration, ExportNamedDeclaration, ImportDeclaration,
-    ImportDeclarationSpecifier,
+    ExportDefaultDeclaration, ExportNamedDeclaration, ImportDeclaration, ImportDeclarationSpecifier,
 };
 use oxc_ast::AstKind;
 use oxc_parser::Parser;
@@ -278,7 +277,9 @@ pub fn resolve_import(
     let from_dir = from_file.parent()?;
     let base = from_dir.join(import_source);
 
-    let extensions = ["", ".ts", ".tsx", ".js", ".jsx", ".mts", ".cts", ".mjs", ".cjs"];
+    let extensions = [
+        "", ".ts", ".tsx", ".js", ".jsx", ".mts", ".cts", ".mjs", ".cjs",
+    ];
     let index_names = ["index.ts", "index.tsx", "index.js", "index.jsx"];
 
     // Try direct match with extensions
@@ -406,9 +407,7 @@ pub fn find_unused_exports(graph: &ImportGraph) -> Vec<(PathBuf, LintDiagnostic)
         let used_names = canonical
             .and_then(|c| imported_names.get(c))
             .or_else(|| imported_names.get(path));
-        let has_namespace_import = used_names
-            .map(|names| names.contains("*"))
-            .unwrap_or(false);
+        let has_namespace_import = used_names.map(|names| names.contains("*")).unwrap_or(false);
 
         if has_namespace_import {
             continue; // Everything is used via namespace import
@@ -564,14 +563,8 @@ fn extract_package_name(source: &str) -> String {
 }
 
 fn is_likely_entry_point(path: &Path) -> bool {
-    let file_name = path
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("");
-    let file_stem = path
-        .file_stem()
-        .and_then(|n| n.to_str())
-        .unwrap_or("");
+    let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+    let file_stem = path.file_stem().and_then(|n| n.to_str()).unwrap_or("");
 
     // Common entry point patterns
     matches!(

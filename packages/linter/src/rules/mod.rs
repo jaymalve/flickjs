@@ -1,16 +1,21 @@
 pub mod dead_code;
+pub mod js_performance;
 pub mod no_console;
 pub mod no_empty_catch;
 pub mod no_explicit_any;
 pub mod no_missing_return;
-pub mod no_unused_vars;
 pub mod no_unsafe_optional_access;
+pub mod no_unused_vars;
 pub mod no_wrong_arg_count;
 pub mod policy;
 pub mod policy_ir;
 pub mod prefer_const;
+pub mod react;
+pub mod server;
+pub mod universal_security;
 pub mod unreachable_code;
 
+use crate::project::ProjectInfo;
 use miette::Result;
 use oxc_allocator::Allocator;
 use oxc_diagnostics::OxcDiagnostic;
@@ -90,6 +95,10 @@ pub enum RuleOrigin {
 /// Every lint rule implements this trait.
 pub trait LintRule: Send + Sync {
     fn name(&self) -> &'static str;
+    fn default_severity(&self) -> Severity;
+    fn applies_to_project(&self, _project: &ProjectInfo) -> bool {
+        true
+    }
     fn run(&self, ctx: &LintContext) -> Vec<LintDiagnostic>;
 }
 
@@ -99,15 +108,22 @@ pub struct LintContext<'a> {
     pub file_path: &'a Path,
     pub source_type: SourceType,
     pub semantic: &'a Semantic<'a>,
+    pub project: &'a ProjectInfo,
 }
 
 impl<'a> LintContext<'a> {
-    pub fn new(source: &'a str, file_path: &'a Path, semantic: &'a Semantic<'a>) -> Self {
+    pub fn new(
+        source: &'a str,
+        file_path: &'a Path,
+        semantic: &'a Semantic<'a>,
+        project: &'a ProjectInfo,
+    ) -> Self {
         Self {
             source,
             file_path,
             source_type: *semantic.source_type(),
             semantic,
+            project,
         }
     }
 
@@ -192,7 +208,7 @@ impl<'a> LintContext<'a> {
 
 /// Returns all built-in rules (used when no config is present)
 fn all_builtin_rules() -> Vec<Box<dyn LintRule>> {
-    vec![
+    let mut rules: Vec<Box<dyn LintRule>> = vec![
         Box::new(no_explicit_any::NoExplicitAny),
         Box::new(no_console::NoConsole),
         Box::new(no_empty_catch::NoEmptyCatch),
@@ -202,23 +218,25 @@ fn all_builtin_rules() -> Vec<Box<dyn LintRule>> {
         Box::new(no_missing_return::NoMissingReturn),
         Box::new(no_wrong_arg_count::NoWrongArgCount),
         Box::new(no_unsafe_optional_access::NoUnsafeOptionalAccess),
-    ]
+        Box::new(universal_security::NoEval),
+        Box::new(universal_security::NoHardcodedSecrets),
+    ];
+    rules.extend(js_performance::all_rules());
+    rules.extend(react::all_react_rules());
+    rules.extend(server::all_server_rules());
+    rules
 }
 
 /// Returns only the built-in rules that are enabled in config
-pub fn enabled_builtin_rules(config: &HashMap<String, serde_json::Value>) -> Vec<Box<dyn LintRule>> {
+pub fn enabled_builtin_rules(
+    config: &HashMap<String, serde_json::Value>,
+    detect: bool,
+    project: &ProjectInfo,
+) -> Vec<Box<dyn LintRule>> {
     let all = all_builtin_rules();
-    if config.is_empty() {
-        return all;
-    }
 
     all.into_iter()
-        .filter(|rule| {
-            config
-                .get(rule.name())
-                .map(|v| crate::cli::parse_rule_severity(v).is_some())
-                .unwrap_or(false)
-        })
+        .filter(|rule| builtin_rule_severity(rule.as_ref(), config, detect, project).is_some())
         .collect()
 }
 
@@ -232,20 +250,43 @@ pub fn get_severity_override(
         .and_then(|v| crate::cli::parse_rule_severity(v))
 }
 
+pub fn builtin_rule_severity(
+    rule: &dyn LintRule,
+    config: &HashMap<String, serde_json::Value>,
+    detect: bool,
+    project: &ProjectInfo,
+) -> Option<Severity> {
+    if let Some(value) = config.get(rule.name()) {
+        return crate::cli::parse_rule_severity(value);
+    }
+
+    if detect && rule.applies_to_project(project) {
+        return Some(rule.default_severity());
+    }
+
+    None
+}
+
 /// Lint a single file with config-driven rules
 pub fn lint_file_with_config(
     path: &Path,
     config: &HashMap<String, serde_json::Value>,
+    detect: bool,
+    project: &ProjectInfo,
 ) -> Result<LintResult> {
     let source = fs::read_to_string(path)
         .map_err(|e| miette::miette!("Failed to read {}: {}", path.display(), e))?;
-    Ok(lint_source_with_config(path, &source, config))
+    Ok(lint_source_with_config(
+        path, &source, config, detect, project,
+    ))
 }
 
 pub fn lint_source_with_config(
     path: &Path,
     source: &str,
     config: &HashMap<String, serde_json::Value>,
+    detect: bool,
+    project: &ProjectInfo,
 ) -> LintResult {
     let source_type = SourceType::from_path(path).unwrap_or_default();
 
@@ -255,9 +296,9 @@ pub fn lint_source_with_config(
         .with_check_syntax_error(true)
         .build(&parsed.program);
 
-    let ctx = LintContext::new(source, path, &semantic.semantic);
+    let ctx = LintContext::new(source, path, &semantic.semantic, project);
 
-    let builtin_rules = enabled_builtin_rules(config);
+    let builtin_rules = enabled_builtin_rules(config, detect, project);
     let policy_rules = policy::build_all_policy_rules(config);
 
     let mut diagnostics = parser_diagnostics_to_lints(source, &parsed.errors);
@@ -270,7 +311,7 @@ pub fn lint_source_with_config(
     // Run built-in rules with severity overrides
     for rule in &builtin_rules {
         let mut rule_diagnostics = rule.run(&ctx);
-        if let Some(severity) = get_severity_override(rule.name(), config) {
+        if let Some(severity) = builtin_rule_severity(rule.as_ref(), config, detect, project) {
             for d in &mut rule_diagnostics {
                 d.severity = severity.clone();
             }
@@ -289,7 +330,7 @@ pub fn lint_source_with_config(
 
 // Keep backward-compatible function for existing callers
 pub fn lint_file(path: &Path) -> Result<LintResult> {
-    lint_file_with_config(path, &HashMap::new())
+    lint_file_with_config(path, &HashMap::new(), true, &ProjectInfo::default())
 }
 
 pub struct HashedSource {
@@ -311,7 +352,7 @@ pub fn load_source_with_hash(path: &Path) -> Result<HashedSource> {
 
 #[allow(dead_code)]
 pub(crate) fn lint_source_at_path(path: &Path, source: &str) -> LintResult {
-    lint_source_with_config(path, source, &HashMap::new())
+    lint_source_with_config(path, source, &HashMap::new(), true, &ProjectInfo::default())
 }
 
 fn parser_diagnostics_to_lints(source: &str, errors: &[OxcDiagnostic]) -> Vec<LintDiagnostic> {
@@ -379,13 +420,22 @@ fn offset_to_line_col(source: &str, offset: usize) -> (usize, usize) {
 
 #[cfg(test)]
 pub(crate) fn lint_source_for_test(path: &str, source: &str) -> LintResult {
-    lint_source_at_path(Path::new(path), source)
+    lint_source_for_test_with_project(path, source, &ProjectInfo::test_all())
+}
+
+#[cfg(test)]
+pub(crate) fn lint_source_for_test_with_project(
+    path: &str,
+    source: &str,
+    project: &ProjectInfo,
+) -> LintResult {
+    lint_source_with_config(Path::new(path), source, &HashMap::new(), true, project)
 }
 
 // ── File hashing for cache ──────────────────────────────────
 
 pub const CACHE_SCHEMA_VERSION: u32 = 4; // Bumped for new diagnostic fields
-pub const CACHE_LOGIC_VERSION: u32 = 1;
+pub const CACHE_LOGIC_VERSION: u32 = 2;
 const MAX_TIMING_SAMPLES: usize = 8;
 
 pub fn hash_bytes(bytes: &[u8]) -> String {
@@ -706,6 +756,8 @@ impl Cache {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::project::ProjectInfo;
+    use serde_json::json;
     use tempfile::tempdir;
 
     #[test]
@@ -793,5 +845,56 @@ mod tests {
         assert!(changed);
         assert!(cache.entries.contains_key(&file_a));
         assert!(!cache.entries.contains_key(&file_b));
+    }
+
+    #[test]
+    fn detect_true_enables_react_rules_by_project() {
+        let result = lint_source_with_config(
+            Path::new("demo.tsx"),
+            "import { useEffect } from 'react';\nfunction Demo() {\n  useEffect(() => { fetch('/api'); }, []);\n  return null;\n}\n",
+            &HashMap::new(),
+            true,
+            &ProjectInfo::test_react(),
+        );
+
+        assert!(result
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.rule_name == "react/no-fetch-in-effect"));
+    }
+
+    #[test]
+    fn detect_false_keeps_unconfigured_react_rules_off() {
+        let result = lint_source_with_config(
+            Path::new("demo.tsx"),
+            "import { useEffect } from 'react';\nfunction Demo() {\n  useEffect(() => { fetch('/api'); }, []);\n  return null;\n}\n",
+            &HashMap::new(),
+            false,
+            &ProjectInfo::test_react(),
+        );
+
+        assert!(!result
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.rule_name == "react/no-fetch-in-effect"));
+    }
+
+    #[test]
+    fn explicit_off_overrides_detect_enabled_builtin() {
+        let mut config = HashMap::new();
+        config.insert("react/no-fetch-in-effect".to_string(), json!("off"));
+
+        let result = lint_source_with_config(
+            Path::new("demo.tsx"),
+            "import { useEffect } from 'react';\nfunction Demo() {\n  useEffect(() => { fetch('/api'); }, []);\n  return null;\n}\n",
+            &config,
+            true,
+            &ProjectInfo::test_react(),
+        );
+
+        assert!(!result
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.rule_name == "react/no-fetch-in-effect"));
     }
 }

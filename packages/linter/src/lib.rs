@@ -1,4 +1,5 @@
 pub mod cli;
+pub mod project;
 pub mod rules;
 
 use clap::Parser;
@@ -199,6 +200,10 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
     let total_start = Instant::now();
     let loaded_config = cli::load_config_with_fingerprint()?;
     let rule_config = &loaded_config.config.rules;
+    let project = project::ProjectInfo::detect(&args.path);
+    let config_fingerprint = rules::hash_bytes(
+        format!("{}:{}", loaded_config.fingerprint, project.fingerprint()).as_bytes(),
+    );
     let files = cli::discover_files(
         &args.path,
         &loaded_config.config.files.exclude,
@@ -230,6 +235,8 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
         let (mut results, _) = execute_without_cache(
             &snapshots,
             rule_config,
+            loaded_config.config.detect,
+            &project,
             false,
             &mut metrics,
         );
@@ -239,8 +246,7 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
     }
 
     let load_start = Instant::now();
-    let (mut cache, load_status) =
-        rules::Cache::load(&args.cache_path, &loaded_config.fingerprint)?;
+    let (mut cache, load_status) = rules::Cache::load(&args.cache_path, &config_fingerprint)?;
     metrics.load_time = load_start.elapsed();
 
     let snapshots = collect_file_snapshots(&files, &mut metrics);
@@ -258,6 +264,8 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
             let (results, updates) = execute_without_cache(
                 &snapshots,
                 rule_config,
+                loaded_config.config.detect,
+                &project,
                 prime_cache,
                 &mut metrics,
             );
@@ -270,6 +278,8 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
                 &snapshots,
                 &cache,
                 rule_config,
+                loaded_config.config.detect,
+                &project,
                 &mut metrics,
             )
         }
@@ -282,7 +292,7 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
     let has_deleted_entries = cache.entries.keys().any(|path| !live_paths.contains(path));
 
     if dirty_entries || has_deleted_entries {
-        cache.update_fingerprint(&loaded_config.fingerprint);
+        cache.update_fingerprint(&config_fingerprint);
         let mut should_persist = cache.prune_to(&live_paths);
 
         for update in updates {
@@ -390,8 +400,7 @@ fn run_cross_file_analysis(
     if wants_unused_deps {
         let package_json = project_root.join("package.json");
         if package_json.exists() {
-            let mut diagnostics =
-                rules::dead_code::find_unused_dependencies(&graph, &package_json);
+            let mut diagnostics = rules::dead_code::find_unused_dependencies(&graph, &package_json);
             if let Some(ref severity) = dep_severity {
                 for d in &mut diagnostics {
                     d.severity = severity.clone();
@@ -550,6 +559,8 @@ fn should_use_cache(cache: &rules::Cache, snapshots: &[FileSnapshot], total_byte
 fn execute_without_cache(
     snapshots: &[FileSnapshot],
     rule_config: &HashMap<String, serde_json::Value>,
+    detect: bool,
+    project: &project::ProjectInfo,
     prepare_cache_entries: bool,
     metrics: &mut RunMetrics,
 ) -> (Vec<rules::LintResult>, Vec<CacheUpdate>) {
@@ -564,6 +575,8 @@ fn execute_without_cache(
                             &snapshot.path,
                             &loaded.source,
                             rule_config,
+                            detect,
+                            project,
                         );
                         let lint_time = lint_start.elapsed();
                         Some(FileExecution {
@@ -588,7 +601,7 @@ fn execute_without_cache(
                 }
             } else {
                 let lint_start = Instant::now();
-                match rules::lint_file_with_config(&snapshot.path, rule_config) {
+                match rules::lint_file_with_config(&snapshot.path, rule_config, detect, project) {
                     Ok(result) => Some(FileExecution {
                         result,
                         update: None,
@@ -630,6 +643,8 @@ fn execute_with_cache(
     snapshots: &[FileSnapshot],
     cache: &rules::Cache,
     rule_config: &HashMap<String, serde_json::Value>,
+    detect: bool,
+    project: &project::ProjectInfo,
     metrics: &mut RunMetrics,
 ) -> (Vec<rules::LintResult>, Vec<CacheUpdate>, bool) {
     let executions: Vec<FileExecution> = snapshots
@@ -680,6 +695,8 @@ fn execute_with_cache(
                     &snapshot.path,
                     &loaded.source,
                     rule_config,
+                    detect,
+                    project,
                 );
                 let lint_time = lint_start.elapsed();
 
@@ -714,6 +731,8 @@ fn execute_with_cache(
                 &snapshot.path,
                 &loaded.source,
                 rule_config,
+                detect,
+                project,
             );
             let lint_time = lint_start.elapsed();
 
@@ -1004,7 +1023,10 @@ fn print_agent_json(results: &[rules::LintResult]) -> Summary {
                 .collect();
 
             let agent_fix = diagnostic.fix.as_ref().map(|fix| AgentFix {
-                description: fix.description.clone().unwrap_or_else(|| "Apply fix".to_string()),
+                description: fix
+                    .description
+                    .clone()
+                    .unwrap_or_else(|| "Apply fix".to_string()),
                 edits: vec![AgentEdit {
                     start_byte: fix.range.0,
                     end_byte: fix.range.1,
@@ -1355,6 +1377,14 @@ mod tests {
     }
 
     fn default_fingerprint() -> String {
-        cli::load_config_with_fingerprint().unwrap().fingerprint
+        let config_fingerprint = cli::load_config_with_fingerprint().unwrap().fingerprint;
+        rules::hash_bytes(
+            format!(
+                "{}:{}",
+                config_fingerprint,
+                crate::project::ProjectInfo::default().fingerprint()
+            )
+            .as_bytes(),
+        )
     }
 }

@@ -9,6 +9,10 @@ impl LintRule for NoConsole {
         "no-console"
     }
 
+    fn default_severity(&self) -> Severity {
+        Severity::Warning
+    }
+
     fn run(&self, ctx: &LintContext) -> Vec<LintDiagnostic> {
         ctx.semantic
             .nodes()
