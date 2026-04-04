@@ -207,7 +207,7 @@ impl<'a> LintContext<'a> {
 // ── Lint engine ─────────────────────────────────────────────
 
 /// Returns all built-in rules (used when no config is present)
-fn all_builtin_rules() -> Vec<Box<dyn LintRule>> {
+pub(crate) fn all_builtin_rules() -> Vec<Box<dyn LintRule>> {
     let mut rules: Vec<Box<dyn LintRule>> = vec![
         Box::new(no_explicit_any::NoExplicitAny),
         Box::new(no_console::NoConsole),

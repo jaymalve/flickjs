@@ -1,6 +1,8 @@
 pub mod cli;
 pub mod project;
+pub mod rule_catalog;
 pub mod rules;
+pub mod rules_tui;
 
 use clap::Parser;
 use colored::*;
@@ -34,6 +36,10 @@ pub fn run() -> Result<i32> {
         }
         cli::Command::Init => {
             cli::init_config()?;
+            (0, None)
+        }
+        cli::Command::Rules(args) => {
+            rules_tui::run(args)?;
             (0, None)
         }
     };

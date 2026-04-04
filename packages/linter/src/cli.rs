@@ -28,6 +28,8 @@ pub enum Command {
     Check(CheckArgs),
     /// Initialize flint config in current directory
     Init,
+    /// Browse Flint's built-in rules in a terminal UI
+    Rules(RulesArgs),
 }
 
 #[derive(clap::Args, Clone)]
@@ -59,6 +61,17 @@ pub enum OutputFormat {
     Json,
     Compact,
     AgentJson,
+}
+
+#[derive(clap::Args, Clone, Debug, Default)]
+pub struct RulesArgs {
+    /// Open the rule browser focused on a specific group
+    #[arg(long)]
+    pub group: Option<String>,
+
+    /// Start the rule browser with a search query applied
+    #[arg(long)]
+    pub search: Option<String>,
 }
 
 // ── Config types ───────────────────────────────────────────
@@ -388,6 +401,7 @@ pub fn parse_rule_severity(value: &serde_json::Value) -> Option<super::rules::Se
 #[cfg(test)]
 mod tests {
     use super::*;
+    use clap::CommandFactory;
 
     #[test]
     fn default_config_has_five_rules() {
@@ -460,5 +474,32 @@ mod tests {
     fn init_template_sets_detect_true() {
         let config = build_init_config(&ProjectInfo::test_all());
         assert_eq!(config.get("detect"), Some(&serde_json::json!(true)));
+    }
+
+    #[test]
+    fn parses_rules_command_flags() {
+        let cli = Cli::parse_from([
+            "flint",
+            "rules",
+            "--group",
+            "react-hooks",
+            "--search",
+            "fetch",
+        ]);
+
+        match cli.command {
+            Command::Rules(args) => {
+                assert_eq!(args.group.as_deref(), Some("react-hooks"));
+                assert_eq!(args.search.as_deref(), Some("fetch"));
+            }
+            _ => panic!("expected rules command"),
+        }
+    }
+
+    #[test]
+    fn help_mentions_rules_command() {
+        let help = Cli::command().render_long_help().to_string();
+        assert!(help.contains("rules"));
+        assert!(help.contains("Browse Flint's built-in rules"));
     }
 }
