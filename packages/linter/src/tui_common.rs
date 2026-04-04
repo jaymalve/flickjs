@@ -15,17 +15,17 @@ use ratatui::{
 };
 use std::io::{self, Stdout};
 
-pub const BORDER_ACTIVE: Color = Color::Rgb(82, 164, 255);
-pub const BORDER_IDLE: Color = Color::Rgb(55, 65, 81);
-pub const PANEL_BG: Color = Color::Rgb(14, 18, 24);
-pub const PANEL_BG_SUBTLE: Color = Color::Rgb(18, 24, 32);
-pub const TEXT_PRIMARY: Color = Color::Rgb(236, 240, 244);
-pub const TEXT_MUTED: Color = Color::Rgb(145, 154, 168);
-pub const TEXT_FAINT: Color = Color::Rgb(99, 109, 124);
-pub const SELECT_BG: Color = Color::Rgb(25, 35, 48);
-pub const WARN_COLOR: Color = Color::Rgb(240, 187, 78);
-pub const ERROR_COLOR: Color = Color::Rgb(241, 98, 96);
-pub const OK_COLOR: Color = Color::Rgb(100, 204, 144);
+pub const BORDER_ACTIVE: Color = Color::Rgb(245, 245, 245);
+pub const BORDER_IDLE: Color = Color::Rgb(72, 72, 72);
+pub const PANEL_BG: Color = Color::Rgb(10, 10, 10);
+pub const PANEL_BG_SUBTLE: Color = Color::Rgb(18, 18, 18);
+pub const TEXT_PRIMARY: Color = Color::Rgb(244, 244, 244);
+pub const TEXT_MUTED: Color = Color::Rgb(160, 160, 160);
+pub const TEXT_FAINT: Color = Color::Rgb(104, 104, 104);
+pub const SELECT_BG: Color = Color::Rgb(42, 42, 42);
+pub const WARN_COLOR: Color = Color::Rgb(184, 184, 184);
+pub const ERROR_COLOR: Color = Color::Rgb(255, 255, 255);
+pub const OK_COLOR: Color = Color::Rgb(222, 222, 222);
 
 pub struct TerminalSession {
     pub terminal: Terminal<CrosstermBackend<Stdout>>,

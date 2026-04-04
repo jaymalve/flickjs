@@ -452,7 +452,12 @@ fn render_categories(frame: &mut Frame, area: ratatui::layout::Rect, app: &Resul
 
     let list = List::new(items)
         .block(tui_common::block("Categories", app.focus == FocusPane::Categories))
-        .highlight_style(Style::default().bg(SELECT_BG).add_modifier(Modifier::BOLD));
+        .highlight_style(
+            Style::default()
+                .bg(SELECT_BG)
+                .fg(TEXT_PRIMARY)
+                .add_modifier(Modifier::BOLD),
+        );
     let mut state = ListState::default();
     state.select(Some(app.selected_category));
     frame.render_stateful_widget(list, area, &mut state);
@@ -523,7 +528,12 @@ fn render_issues(frame: &mut Frame, area: ratatui::layout::Rect, app: &ResultsAp
 
     let list = List::new(items)
         .block(tui_common::block("Issues", app.focus == FocusPane::Issues))
-        .highlight_style(Style::default().bg(SELECT_BG).add_modifier(Modifier::BOLD));
+        .highlight_style(
+            Style::default()
+                .bg(SELECT_BG)
+                .fg(TEXT_PRIMARY)
+                .add_modifier(Modifier::BOLD),
+        );
     let mut state = ListState::default();
     state.select(Some(app.selected_issue));
     frame.render_stateful_widget(list, area, &mut state);

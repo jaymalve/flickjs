@@ -1,9 +1,7 @@
 use crate::cli::RulesArgs;
 use crate::project::ProjectInfo;
 use crate::rule_catalog::{build_rule_catalog, RuleCatalog, RuleCatalogEntry};
-use crate::tui_common::{
-    self, OK_COLOR, PANEL_BG, PANEL_BG_SUBTLE, SELECT_BG, TEXT_FAINT, TEXT_MUTED, TEXT_PRIMARY,
-};
+use crate::tui_common::{self, PANEL_BG, PANEL_BG_SUBTLE, SELECT_BG, TEXT_FAINT, TEXT_MUTED, TEXT_PRIMARY};
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
 use miette::{IntoDiagnostic, Result};
 use ratatui::{
@@ -394,7 +392,12 @@ fn render_groups(frame: &mut Frame, area: ratatui::layout::Rect, app: &RulesApp)
 
     let list = List::new(items)
         .block(tui_common::block("Groups", app.focus == FocusPane::Groups))
-        .highlight_style(Style::default().bg(SELECT_BG).add_modifier(Modifier::BOLD));
+        .highlight_style(
+            Style::default()
+                .bg(SELECT_BG)
+                .fg(TEXT_PRIMARY)
+                .add_modifier(Modifier::BOLD),
+        );
     let mut state = ListState::default();
     state.select(Some(app.selected_group));
     frame.render_stateful_widget(list, area, &mut state);
@@ -444,7 +447,12 @@ fn render_rules(frame: &mut Frame, area: ratatui::layout::Rect, app: &RulesApp) 
 
     let list = List::new(items)
         .block(tui_common::block("Rules", app.focus == FocusPane::Rules))
-        .highlight_style(Style::default().bg(SELECT_BG).add_modifier(Modifier::BOLD));
+        .highlight_style(
+            Style::default()
+                .bg(SELECT_BG)
+                .fg(TEXT_PRIMARY)
+                .add_modifier(Modifier::BOLD),
+        );
     let mut state = ListState::default();
     state.select(Some(app.selected_rule));
     frame.render_stateful_widget(list, area, &mut state);
@@ -479,9 +487,14 @@ fn render_details(frame: &mut Frame, area: ratatui::layout::Rect, app: &RulesApp
         .map(|group| group.title)
         .unwrap_or(entry.group_key);
     let applicability = if applies {
-        ("Active in current project", OK_COLOR)
+        (
+            "Active in current project",
+            Style::default()
+                .fg(TEXT_PRIMARY)
+                .add_modifier(Modifier::BOLD),
+        )
     } else {
-        ("Inactive for current project", TEXT_MUTED)
+        ("Inactive for current project", Style::default().fg(TEXT_MUTED))
     };
 
     let details = Text::from(vec![
@@ -510,7 +523,7 @@ fn render_details(frame: &mut Frame, area: ratatui::layout::Rect, app: &RulesApp
         detail_line("Applies To", entry.scope.label()),
         Line::from(vec![
             Span::styled("Current Project: ", Style::default().fg(TEXT_MUTED)),
-            Span::styled(applicability.0, Style::default().fg(applicability.1)),
+            Span::styled(applicability.0, applicability.1),
         ]),
         Line::from(""),
         Line::from(Span::styled(
