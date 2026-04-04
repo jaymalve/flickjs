@@ -1,5 +1,8 @@
 use crate::rules::LintContext;
-use oxc_ast::ast::{CallExpression, Expression, FormalParameters, Program};
+use oxc_ast::ast::{
+    CallExpression, ExportDefaultDeclarationKind, Expression, FormalParameters,
+    ImportDeclarationSpecifier, Program,
+};
 use oxc_ast::AstKind;
 use oxc_span::{GetSpan, Span};
 use oxc_syntax::node::NodeId;
@@ -43,6 +46,107 @@ pub fn has_directive(program: &Program<'_>, directive: &str) -> bool {
         .directives
         .iter()
         .any(|entry| entry.directive.as_str() == directive)
+}
+
+pub fn program<'a>(ctx: &'a LintContext<'a>) -> Option<&'a Program<'a>> {
+    ctx.semantic
+        .nodes()
+        .iter()
+        .find_map(|node| match node.kind() {
+            AstKind::Program(program) => Some(program),
+            _ => None,
+        })
+}
+
+pub fn file_has_directive(ctx: &LintContext, directive: &str) -> bool {
+    program(ctx).is_some_and(|program| has_directive(program, directive))
+}
+
+pub fn has_import_source(ctx: &LintContext, source: &str) -> bool {
+    ctx.semantic.nodes().iter().any(|node| {
+        matches!(
+            node.kind(),
+            AstKind::ImportDeclaration(import_decl) if import_decl.source.value.as_str() == source
+        )
+    })
+}
+
+pub fn imports_name_from(ctx: &LintContext, source: &str, name: &str) -> bool {
+    ctx.semantic.nodes().iter().any(|node| {
+        let AstKind::ImportDeclaration(import_decl) = node.kind() else {
+            return false;
+        };
+        if import_decl.source.value.as_str() != source {
+            return false;
+        }
+        let Some(specifiers) = &import_decl.specifiers else {
+            return false;
+        };
+        specifiers.iter().any(|specifier| match specifier {
+            ImportDeclarationSpecifier::ImportSpecifier(specifier) => {
+                specifier.imported.name() == name
+            }
+            ImportDeclarationSpecifier::ImportDefaultSpecifier(specifier) => {
+                name == "default" || specifier.local.name == name
+            }
+            ImportDeclarationSpecifier::ImportNamespaceSpecifier(specifier) => {
+                name == "*" || specifier.local.name == name
+            }
+        })
+    })
+}
+
+pub fn has_jsx_element(ctx: &LintContext, name: &str) -> bool {
+    ctx.semantic.nodes().iter().any(|node| {
+        matches!(
+            node.kind(),
+            AstKind::JSXOpeningElement(opening) if opening.name.to_string() == name
+        )
+    })
+}
+
+pub fn exports_name(ctx: &LintContext, export_name: &str) -> bool {
+    ctx.semantic.nodes().iter().any(|node| match node.kind() {
+        AstKind::ExportNamedDeclaration(decl) => {
+            decl.specifiers
+                .iter()
+                .any(|specifier| specifier.exported.name() == export_name)
+                || decl
+                    .declaration
+                    .as_ref()
+                    .is_some_and(|declaration| match declaration {
+                        oxc_ast::ast::Declaration::VariableDeclaration(decl) => {
+                            decl.declarations.iter().any(|declarator| {
+                                declarator
+                                    .id
+                                    .get_identifier_name()
+                                    .is_some_and(|name| name == export_name)
+                            })
+                        }
+                        oxc_ast::ast::Declaration::FunctionDeclaration(function) => function
+                            .id
+                            .as_ref()
+                            .is_some_and(|identifier| identifier.name == export_name),
+                        oxc_ast::ast::Declaration::ClassDeclaration(class) => class
+                            .id
+                            .as_ref()
+                            .is_some_and(|identifier| identifier.name == export_name),
+                        _ => false,
+                    })
+        }
+        AstKind::ExportDefaultDeclaration(decl) => match &decl.declaration {
+            ExportDefaultDeclarationKind::FunctionDeclaration(function) => function
+                .id
+                .as_ref()
+                .is_some_and(|identifier| identifier.name == export_name),
+            ExportDefaultDeclarationKind::ClassDeclaration(class) => class
+                .id
+                .as_ref()
+                .is_some_and(|identifier| identifier.name == export_name),
+            _ => export_name == "default",
+        },
+        _ => false,
+    })
 }
 
 pub fn file_uses_react(ctx: &LintContext) -> bool {
