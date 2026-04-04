@@ -1,7 +1,7 @@
 use crate::rules::LintContext;
 use oxc_ast::ast::{Argument, CallExpression, Expression, MemberExpression};
 use oxc_ast::AstKind;
-use oxc_span::GetSpan;
+use oxc_span::{GetSpan, Span};
 use oxc_syntax::node::NodeId;
 
 const ROUTE_METHODS: &[&str] = &["get", "post", "put", "patch", "delete", "all", "use"];
@@ -57,6 +57,10 @@ pub fn is_inside_route_handler(ctx: &LintContext, node_id: NodeId) -> bool {
     enclosing_route_handler(ctx, node_id).is_some()
 }
 
+pub fn enclosing_route_handler_span(ctx: &LintContext, node_id: NodeId) -> Option<Span> {
+    enclosing_route_handler(ctx, node_id).map(|handler| handler.1)
+}
+
 pub fn is_orm_query_call(call: &CallExpression<'_>) -> bool {
     call.callee
         .get_member_expr()
@@ -71,7 +75,46 @@ pub fn is_orm_mutate_call(call: &CallExpression<'_>) -> bool {
         .is_some_and(|name| ORM_MUTATE_METHODS.contains(&name))
 }
 
-fn enclosing_route_handler(ctx: &LintContext, node_id: NodeId) -> Option<NodeId> {
+pub fn is_inside_loop(ctx: &LintContext, node_id: NodeId) -> bool {
+    ctx.semantic.nodes().ancestor_kinds(node_id).any(|kind| {
+        matches!(
+            kind,
+            AstKind::ForStatement(_)
+                | AstKind::ForInStatement(_)
+                | AstKind::ForOfStatement(_)
+                | AstKind::WhileStatement(_)
+                | AstKind::DoWhileStatement(_)
+        )
+    })
+}
+
+pub fn enclosing_function_span(ctx: &LintContext, node_id: NodeId) -> Option<Span> {
+    ctx.semantic
+        .nodes()
+        .ancestor_kinds(node_id)
+        .find_map(|kind| match kind {
+            AstKind::Function(function) if function.body.is_some() => Some(function.span),
+            AstKind::ArrowFunctionExpression(function) => Some(function.span),
+            _ => None,
+        })
+}
+
+pub fn is_async_context(ctx: &LintContext, node_id: NodeId) -> bool {
+    ctx.semantic
+        .nodes()
+        .ancestor_kinds(node_id)
+        .any(|kind| match kind {
+            AstKind::Function(function) => function.r#async,
+            AstKind::ArrowFunctionExpression(function) => function.r#async,
+            _ => false,
+        })
+}
+
+pub fn span_contains(outer: Span, inner: Span) -> bool {
+    inner.start >= outer.start && inner.end <= outer.end
+}
+
+fn enclosing_route_handler(ctx: &LintContext, node_id: NodeId) -> Option<(NodeId, Span)> {
     for ancestor_id in ctx.semantic.nodes().ancestor_ids(node_id) {
         let span = match ctx.semantic.nodes().kind(ancestor_id) {
             AstKind::Function(function) if function.body.is_some() => function.span,
@@ -88,7 +131,7 @@ fn enclosing_route_handler(ctx: &LintContext, node_id: NodeId) -> Option<NodeId>
                 .iter()
                 .any(|argument| argument.span() == span)
         {
-            return Some(parent_id);
+            return Some((parent_id, span));
         }
     }
     None
