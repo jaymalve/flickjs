@@ -2,7 +2,9 @@ pub mod cli;
 pub mod project;
 pub mod rule_catalog;
 pub mod rules;
+pub mod results_tui;
 pub mod rules_tui;
+pub mod tui_common;
 
 use clap::Parser;
 use colored::*;
@@ -28,6 +30,7 @@ pub fn run() -> Result<i32> {
                 &execution.results,
                 &args.format,
                 execution.metrics.total_runtime,
+                &args.path,
             );
             (
                 if summary.errors > 0 { 1 } else { 0 },
@@ -821,39 +824,37 @@ fn print_timing(metrics: &RunMetrics) {
     );
 }
 
-struct Summary {
-    errors: usize,
+pub(crate) struct Summary {
+    pub(crate) errors: usize,
 }
 
-struct PrettyEntry<'a> {
-    file: &'a Path,
-    diagnostic: &'a rules::LintDiagnostic,
+pub(crate) struct PrettyEntry<'a> {
+    pub(crate) file: &'a Path,
+    pub(crate) diagnostic: &'a rules::LintDiagnostic,
 }
 
-fn print_results(
-    results: &[rules::LintResult],
-    format: &cli::OutputFormat,
-    elapsed: std::time::Duration,
-) -> Summary {
-    match format {
-        cli::OutputFormat::Json => print_json(results),
-        cli::OutputFormat::Compact => print_compact(results),
-        cli::OutputFormat::Pretty => print_pretty(results, elapsed),
-        cli::OutputFormat::AgentJson => print_agent_json(results),
-    }
-}
-
-fn print_pretty(results: &[rules::LintResult], elapsed: std::time::Duration) -> Summary {
-    let mut total_errors = 0;
-    let mut total_warnings = 0;
-    let mut grouped: HashMap<String, Vec<PrettyEntry<'_>>> = HashMap::new();
-
+pub(crate) fn diagnostic_counts(results: &[rules::LintResult]) -> (usize, usize) {
+    let mut errors = 0;
+    let mut warnings = 0;
     for result in results {
         for diagnostic in &result.diagnostics {
             match diagnostic.severity {
-                rules::Severity::Error => total_errors += 1,
-                rules::Severity::Warning => total_warnings += 1,
+                rules::Severity::Error => errors += 1,
+                rules::Severity::Warning => warnings += 1,
             }
+        }
+    }
+    (errors, warnings)
+}
+
+/// Categories sorted by `category_order`, entries sorted like pretty output.
+pub(crate) fn group_results_for_display<'a>(
+    results: &'a [rules::LintResult],
+) -> Vec<(String, Vec<PrettyEntry<'a>>)> {
+    let mut grouped: HashMap<String, Vec<PrettyEntry<'a>>> = HashMap::new();
+
+    for result in results {
+        for diagnostic in &result.diagnostics {
             grouped
                 .entry(diagnostic_category_key(diagnostic))
                 .or_default()
@@ -864,25 +865,49 @@ fn print_pretty(results: &[rules::LintResult], elapsed: std::time::Duration) -> 
         }
     }
 
-    let mut categories: Vec<(String, Vec<PrettyEntry<'_>>)> = grouped.into_iter().collect();
+    let mut categories: Vec<(String, Vec<PrettyEntry<'a>>)> = grouped.into_iter().collect();
     categories.sort_by(|(left, _), (right, _)| {
         category_order(left)
             .cmp(&category_order(right))
             .then_with(|| left.cmp(right))
     });
 
-    for (index, (category, mut entries)) in categories.into_iter().enumerate() {
-        if index > 0 {
-            println!();
-        }
-
+    for (_, entries) in &mut categories {
         entries.sort_by(|left, right| {
-            severity_rank(&left.diagnostic.severity)
-                .cmp(&severity_rank(&right.diagnostic.severity))
+            crate::tui_common::severity_rank(&left.diagnostic.severity)
+                .cmp(&crate::tui_common::severity_rank(&right.diagnostic.severity))
                 .then_with(|| left.file.cmp(right.file))
                 .then_with(|| left.diagnostic.byte_start.cmp(&right.diagnostic.byte_start))
                 .then_with(|| left.diagnostic.rule_name.cmp(&right.diagnostic.rule_name))
         });
+    }
+
+    categories
+}
+
+fn print_results(
+    results: &[rules::LintResult],
+    format: &cli::OutputFormat,
+    elapsed: std::time::Duration,
+    scan_root: &Path,
+) -> Summary {
+    match format {
+        cli::OutputFormat::Json => print_json(results),
+        cli::OutputFormat::Compact => print_compact(results),
+        cli::OutputFormat::Pretty => print_pretty(results, elapsed),
+        cli::OutputFormat::Tui => results_tui::print_or_fallback(results, elapsed, scan_root),
+        cli::OutputFormat::AgentJson => print_agent_json(results),
+    }
+}
+
+pub(crate) fn print_pretty(results: &[rules::LintResult], elapsed: std::time::Duration) -> Summary {
+    let (total_errors, total_warnings) = diagnostic_counts(results);
+    let categories = group_results_for_display(results);
+
+    for (index, (category, entries)) in categories.iter().enumerate() {
+        if index > 0 {
+            println!();
+        }
 
         println!(
             "  {} {}",
@@ -937,14 +962,7 @@ fn print_pretty(results: &[rules::LintResult], elapsed: std::time::Duration) -> 
     }
 }
 
-fn severity_rank(severity: &rules::Severity) -> usize {
-    match severity {
-        rules::Severity::Error => 0,
-        rules::Severity::Warning => 1,
-    }
-}
-
-fn diagnostic_category_key(diagnostic: &rules::LintDiagnostic) -> String {
+pub(crate) fn diagnostic_category_key(diagnostic: &rules::LintDiagnostic) -> String {
     match diagnostic.rule_name.as_str() {
         "parse-error" => "parse".to_string(),
         "semantic-error" => "semantic".to_string(),
@@ -961,7 +979,7 @@ fn diagnostic_category_key(diagnostic: &rules::LintDiagnostic) -> String {
     }
 }
 
-fn category_order(category: &str) -> usize {
+pub(crate) fn category_order(category: &str) -> usize {
     match category {
         "parse" => 0,
         "semantic" => 1,
@@ -975,7 +993,7 @@ fn category_order(category: &str) -> usize {
     }
 }
 
-fn category_display_name(category: &str) -> &'static str {
+pub(crate) fn category_display_name(category: &str) -> &'static str {
     match category {
         "parse" => "Parse",
         "semantic" => "Semantic",
@@ -989,7 +1007,7 @@ fn category_display_name(category: &str) -> &'static str {
     }
 }
 
-fn diagnostic_help_text(diagnostic: &rules::LintDiagnostic) -> Option<String> {
+pub(crate) fn diagnostic_help_text(diagnostic: &rules::LintDiagnostic) -> Option<String> {
     match diagnostic.rule_name.as_str() {
         "parse-error" => Some("Fix syntax issues before Flint can run rule checks.".to_string()),
         "semantic-error" => {

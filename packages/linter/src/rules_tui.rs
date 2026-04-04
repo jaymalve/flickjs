@@ -1,16 +1,14 @@
 use crate::cli::RulesArgs;
 use crate::project::ProjectInfo;
 use crate::rule_catalog::{build_rule_catalog, RuleCatalog, RuleCatalogEntry};
-use crate::rules::Severity;
 use crate::tui_common::{
-    self, ERROR_COLOR, OK_COLOR, PANEL_BG, PANEL_BG_SUBTLE, SELECT_BG, TEXT_FAINT, TEXT_MUTED,
-    TEXT_PRIMARY, WARN_COLOR,
+    self, OK_COLOR, PANEL_BG, PANEL_BG_SUBTLE, SELECT_BG, TEXT_FAINT, TEXT_MUTED, TEXT_PRIMARY,
 };
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
 use miette::{IntoDiagnostic, Result};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Line, Span, Text},
     widgets::{List, ListItem, ListState, Paragraph, Wrap},
     Frame,
@@ -296,8 +294,8 @@ impl RulesApp {
             })
             .collect::<Vec<_>>();
         entries.sort_by(|left, right| {
-            severity_rank(&left.default_severity)
-                .cmp(&severity_rank(&right.default_severity))
+            tui_common::severity_rank(&left.default_severity)
+                .cmp(&tui_common::severity_rank(&right.default_severity))
                 .then_with(|| left.id.cmp(&right.id))
         });
         entries
@@ -367,7 +365,7 @@ fn render_header(frame: &mut Frame, area: ratatui::layout::Rect, app: &RulesApp)
     ]);
 
     let header = Paragraph::new(text)
-        .block(block("Browser", false))
+        .block(tui_common::block("Browser", false))
         .style(Style::default().bg(PANEL_BG));
     frame.render_widget(header, area);
 }
@@ -395,7 +393,7 @@ fn render_groups(frame: &mut Frame, area: ratatui::layout::Rect, app: &RulesApp)
         .collect::<Vec<_>>();
 
     let list = List::new(items)
-        .block(block("Groups", app.focus == FocusPane::Groups))
+        .block(tui_common::block("Groups", app.focus == FocusPane::Groups))
         .highlight_style(Style::default().bg(SELECT_BG).add_modifier(Modifier::BOLD));
     let mut state = ListState::default();
     state.select(Some(app.selected_group));
@@ -415,7 +413,7 @@ fn render_rules(frame: &mut Frame, area: ratatui::layout::Rect, app: &RulesApp) 
                 Style::default().fg(TEXT_MUTED),
             )),
         ]))
-        .block(block("Rules", app.focus == FocusPane::Rules))
+        .block(tui_common::block("Rules", app.focus == FocusPane::Rules))
         .wrap(Wrap { trim: false })
         .style(Style::default().bg(PANEL_BG_SUBTLE));
         frame.render_widget(empty, area);
@@ -425,7 +423,7 @@ fn render_rules(frame: &mut Frame, area: ratatui::layout::Rect, app: &RulesApp) 
     let items = entries
         .iter()
         .map(|entry| {
-            let (label, color) = severity_badge(&entry.default_severity);
+            let (label, color) = tui_common::severity_badge(&entry.default_severity);
             ListItem::new(Line::from(vec![
                 Span::styled(
                     format!(" {label} "),
@@ -445,7 +443,7 @@ fn render_rules(frame: &mut Frame, area: ratatui::layout::Rect, app: &RulesApp) 
         .collect::<Vec<_>>();
 
     let list = List::new(items)
-        .block(block("Rules", app.focus == FocusPane::Rules))
+        .block(tui_common::block("Rules", app.focus == FocusPane::Rules))
         .highlight_style(Style::default().bg(SELECT_BG).add_modifier(Modifier::BOLD));
     let mut state = ListState::default();
     state.select(Some(app.selected_rule));
@@ -464,14 +462,14 @@ fn render_details(frame: &mut Frame, area: ratatui::layout::Rect, app: &RulesApp
                 Style::default().fg(TEXT_MUTED),
             )),
         ]))
-        .block(block("Details", false))
+        .block(tui_common::block("Details", false))
         .wrap(Wrap { trim: false })
         .style(Style::default().bg(PANEL_BG_SUBTLE));
         frame.render_widget(empty, area);
         return;
     };
 
-    let (severity_label, severity_color) = severity_badge(&entry.default_severity);
+    let (severity_label, severity_color) = tui_common::severity_badge(&entry.default_severity);
     let applies = entry.scope.applies_to_project(&app.project);
     let group_title = app
         .catalog
@@ -530,7 +528,7 @@ fn render_details(frame: &mut Frame, area: ratatui::layout::Rect, app: &RulesApp
     ]);
 
     let panel = Paragraph::new(details)
-        .block(block("Details", false))
+        .block(tui_common::block("Details", false))
         .wrap(Wrap { trim: false })
         .style(Style::default().bg(PANEL_BG_SUBTLE));
     frame.render_widget(panel, area);
@@ -554,23 +552,10 @@ fn render_footer(frame: &mut Frame, area: ratatui::layout::Rect, app: &RulesApp)
         Line::from(Span::styled(search_line, Style::default().fg(TEXT_PRIMARY))),
         Line::from(Span::styled(legend, Style::default().fg(TEXT_MUTED))),
     ]))
-    .block(block("Keys", false))
+    .block(tui_common::block("Keys", false))
     .wrap(Wrap { trim: false })
     .style(Style::default().bg(PANEL_BG));
     frame.render_widget(footer, area);
-}
-
-fn block(title: &'static str, active: bool) -> Block<'static> {
-    Block::default()
-        .borders(Borders::ALL)
-        .title(Span::styled(
-            format!(" {title} "),
-            Style::default()
-                .fg(if active { BORDER_ACTIVE } else { TEXT_MUTED })
-                .add_modifier(Modifier::BOLD),
-        ))
-        .border_style(Style::default().fg(if active { BORDER_ACTIVE } else { BORDER_IDLE }))
-        .style(Style::default().bg(PANEL_BG))
 }
 
 fn detail_line(label: &str, value: &str) -> Line<'static> {
@@ -578,20 +563,6 @@ fn detail_line(label: &str, value: &str) -> Line<'static> {
         Span::styled(format!("{label}: "), Style::default().fg(TEXT_MUTED)),
         Span::styled(value.to_string(), Style::default().fg(TEXT_PRIMARY)),
     ])
-}
-
-fn severity_badge(severity: &Severity) -> (&'static str, Color) {
-    match severity {
-        Severity::Error => ("error", ERROR_COLOR),
-        Severity::Warning => ("warn", WARN_COLOR),
-    }
-}
-
-fn severity_rank(severity: &Severity) -> usize {
-    match severity {
-        Severity::Error => 0,
-        Severity::Warning => 1,
-    }
 }
 
 fn shift_index(current: usize, len: usize, delta: isize) -> usize {

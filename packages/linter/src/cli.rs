@@ -58,6 +58,8 @@ pub struct CheckArgs {
 #[derive(Clone, clap::ValueEnum)]
 pub enum OutputFormat {
     Pretty,
+    /// Interactive terminal UI (falls back to pretty when stdout is not a TTY)
+    Tui,
     Json,
     Compact,
     AgentJson,
@@ -474,6 +476,17 @@ mod tests {
     fn init_template_sets_detect_true() {
         let config = build_init_config(&ProjectInfo::test_all());
         assert_eq!(config.get("detect"), Some(&serde_json::json!(true)));
+    }
+
+    #[test]
+    fn parses_format_tui() {
+        let cli = Cli::parse_from(["flint", "check", ".", "--format", "tui"]);
+        match cli.command {
+            Command::Check(args) => {
+                assert!(matches!(args.format, OutputFormat::Tui));
+            }
+            _ => panic!("expected check command"),
+        }
     }
 
     #[test]
