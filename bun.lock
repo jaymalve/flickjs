@@ -4,9 +4,6 @@
   "workspaces": {
     "": {
       "name": "seagull-monorepo",
-      "dependencies": {
-        "@flickjs/lint": "/Users/jaymalave/Desktop/FlickJS/flickjs/packages/linter/flint-npm/flickjs-lint-0.1.0.tgz",
-      },
       "devDependencies": {
         "@types/bun": "latest",
       },
@@ -151,8 +148,8 @@
       "name": "@flickjs/react",
       "version": "0.0.1-beta.1",
       "devDependencies": {
-        "@flickjs/ai": "workspace:*",
-        "@flickjs/runtime": "workspace:*",
+        "@flickjs/ai": "^0.0.1-beta.1",
+        "@flickjs/runtime": "^0.0.1-beta.3",
         "@types/react": "^19.0.0",
         "react": "^19.0.0",
         "typescript": "^5.0.0",
@@ -416,8 +413,6 @@
     "@flickjs/compiler": ["@flickjs/compiler@workspace:packages/compiler"],
 
     "@flickjs/docs": ["@flickjs/docs@workspace:packages/docs"],
-
-    "@flickjs/lint": ["@flickjs/lint@/Users/jaymalave/Desktop/FlickJS/flickjs/packages/linter/flint-npm/flickjs-lint-0.1.0.tgz", { "bin": { "flint": "./bin.js" } }, "sha512-sj3sYTKM/mJrg7w0I3gLHron/g7c8vCCifzGeQiL6+bk9M4Gr4eEHvJgSmLV5SJ8clK+CmPUe1ZMrYIXDuZKhQ=="],
 
     "@flickjs/lint-workspace": ["@flickjs/lint-workspace@workspace:packages/linter"],
 

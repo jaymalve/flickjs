@@ -53,8 +53,8 @@
   },
   "devDependencies": {
     "react": "^19.0.0",
-    "@flickjs/runtime": "workspace:*",
-    "@flickjs/ai": "workspace:*",
+    "@flickjs/runtime": "^0.0.1-beta.3",
+    "@flickjs/ai": "^0.0.1-beta.1",
     "@types/react": "^19.0.0",
     "typescript": "^5.0.0"
   }
