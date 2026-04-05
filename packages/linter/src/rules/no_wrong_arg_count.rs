@@ -13,6 +13,10 @@ impl LintRule for NoWrongArgCount {
         "no-wrong-arg-count"
     }
 
+    fn default_severity(&self) -> Severity {
+        Severity::Error
+    }
+
     fn run(&self, ctx: &LintContext) -> Vec<LintDiagnostic> {
         let mut diagnostics = Vec::new();
 
@@ -123,27 +127,21 @@ mod tests {
 
     #[test]
     fn flags_too_few_args() {
-        let msgs = wrong_arg_msgs(
-            "function add(a, b) { return a + b; }\nadd(1);\n",
-        );
+        let msgs = wrong_arg_msgs("function add(a, b) { return a + b; }\nadd(1);\n");
         assert_eq!(msgs.len(), 1);
         assert!(msgs[0].contains("at least 2"));
     }
 
     #[test]
     fn flags_too_many_args() {
-        let msgs = wrong_arg_msgs(
-            "function add(a, b) { return a + b; }\nadd(1, 2, 3);\n",
-        );
+        let msgs = wrong_arg_msgs("function add(a, b) { return a + b; }\nadd(1, 2, 3);\n");
         assert_eq!(msgs.len(), 1);
         assert!(msgs[0].contains("at most 2"));
     }
 
     #[test]
     fn ok_with_correct_args() {
-        let msgs = wrong_arg_msgs(
-            "function add(a, b) { return a + b; }\nadd(1, 2);\n",
-        );
+        let msgs = wrong_arg_msgs("function add(a, b) { return a + b; }\nadd(1, 2);\n");
         assert!(msgs.is_empty());
     }
 

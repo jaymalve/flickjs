@@ -85,7 +85,9 @@ impl RuleScope {
             .and_then(|extension| extension.to_str())
             .is_some_and(|extension| {
                 self.extensions.iter().any(|candidate| {
-                    candidate.trim_start_matches('.').eq_ignore_ascii_case(extension)
+                    candidate
+                        .trim_start_matches('.')
+                        .eq_ignore_ascii_case(extension)
                 })
             })
     }
@@ -342,7 +344,10 @@ fn normalize_path(file_path: &Path) -> String {
 fn path_pattern_matches(pattern: &str, normalized_path: &str) -> bool {
     let normalized_pattern = pattern.replace('\\', "/");
     glob_match(&normalized_pattern, normalized_path)
-        || glob_match(&format!("**/{}", normalized_pattern.trim_start_matches('/')), normalized_path)
+        || glob_match(
+            &format!("**/{}", normalized_pattern.trim_start_matches('/')),
+            normalized_path,
+        )
 }
 
 fn glob_match(pattern: &str, value: &str) -> bool {

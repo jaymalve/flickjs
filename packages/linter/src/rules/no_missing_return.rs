@@ -13,6 +13,10 @@ impl LintRule for NoMissingReturn {
         "no-missing-return"
     }
 
+    fn default_severity(&self) -> Severity {
+        Severity::Error
+    }
+
     fn run(&self, ctx: &LintContext) -> Vec<LintDiagnostic> {
         // Only relevant for TypeScript files
         if !ctx.source_type.is_typescript() {
@@ -149,9 +153,10 @@ fn stmt_always_returns(stmt: &Statement<'_>) -> bool {
             // Check each case, but allow fall-through: a case with no
             // statements falls through to the next case, so only the
             // case that actually has statements needs to return.
-            switch.cases.iter().all(|c| {
-                c.consequent.is_empty() || all_paths_return(&c.consequent)
-            })
+            switch
+                .cases
+                .iter()
+                .all(|c| c.consequent.is_empty() || all_paths_return(&c.consequent))
         }
 
         Statement::TryStatement(try_stmt) => {
@@ -161,7 +166,7 @@ fn stmt_always_returns(stmt: &Statement<'_>) -> bool {
                 .as_ref()
                 .map(|h| all_paths_return(&h.body.body))
                 .unwrap_or(true); // No catch = try must return
-            // If finally exists and returns, the whole thing returns
+                                  // If finally exists and returns, the whole thing returns
             let finally_returns = try_stmt
                 .finalizer
                 .as_ref()
@@ -189,9 +194,7 @@ mod tests {
 
     #[test]
     fn flags_missing_return_in_simple_function() {
-        let msgs = missing_return_spans(
-            "function foo(): number {\n  const x = 1;\n}\n",
-        );
+        let msgs = missing_return_spans("function foo(): number {\n  const x = 1;\n}\n");
         assert_eq!(msgs.len(), 1);
         assert!(msgs[0].contains("not all code paths return"));
     }
@@ -227,15 +230,14 @@ mod tests {
 
     #[test]
     fn ok_for_simple_return() {
-        let msgs = missing_return_spans(
-            "function foo(): number {\n  return 42;\n}\n",
-        );
+        let msgs = missing_return_spans("function foo(): number {\n  return 42;\n}\n");
         assert!(msgs.is_empty());
     }
 
     #[test]
     fn ignores_js_files() {
-        let result = crate::rules::lint_source_for_test("test.js", "function foo() { const x = 1; }\n");
+        let result =
+            crate::rules::lint_source_for_test("test.js", "function foo() { const x = 1; }\n");
         let msgs: Vec<_> = result
             .diagnostics
             .into_iter()
@@ -258,7 +260,11 @@ mod tests {
             }
             "#,
         );
-        assert!(msgs.is_empty(), "Expected no diagnostics but got: {:?}", msgs);
+        assert!(
+            msgs.is_empty(),
+            "Expected no diagnostics but got: {:?}",
+            msgs
+        );
     }
 
     #[test]
@@ -270,7 +276,11 @@ mod tests {
             }
             "#,
         );
-        assert!(msgs.is_empty(), "Expected no diagnostics but got: {:?}", msgs);
+        assert!(
+            msgs.is_empty(),
+            "Expected no diagnostics but got: {:?}",
+            msgs
+        );
     }
 
     #[test]
@@ -291,7 +301,11 @@ mod tests {
             }
             "#,
         );
-        assert!(msgs.is_empty(), "Expected no diagnostics but got: {:?}", msgs);
+        assert!(
+            msgs.is_empty(),
+            "Expected no diagnostics but got: {:?}",
+            msgs
+        );
     }
 
     #[test]
@@ -309,7 +323,11 @@ mod tests {
             }
             "#,
         );
-        assert!(msgs.is_empty(), "Expected no diagnostics but got: {:?}", msgs);
+        assert!(
+            msgs.is_empty(),
+            "Expected no diagnostics but got: {:?}",
+            msgs
+        );
     }
 
     #[test]

@@ -17,14 +17,17 @@ npm install -D @flickjs/lint
 ## Usage
 
 ```bash
-# Lint current directory
-flint .
+# Generate a starter config for the current project
+flint init
 
-# Lint specific files
-flint src/index.ts src/utils.ts
+# Lint current directory
+flint check .
+
+# Lint a specific directory
+flint check src
 
 # JSON output
-flint . --format json
+flint check . --format json
 ```
 
 ## Configuration
@@ -33,14 +36,20 @@ Create a `flint.json` in your project root:
 
 ```json
 {
+  "detect": true,
   "rules": {
     "no-explicit-any": "error",
     "no-unused-vars": "warn",
     "no-console": "off",
-    "prefer-const": "error"
+    "prefer-const": "error",
+    "react/no-fetch-in-effect": "warn"
   }
 }
 ```
+
+With `"detect": true`, Flint auto-enables matching built-in categories for React, Next.js, React
+Native, and server-side projects when their frameworks are detected from `package.json`. Explicit
+rule settings still win, including `"off"`.
 
 ## Supported Platforms
 

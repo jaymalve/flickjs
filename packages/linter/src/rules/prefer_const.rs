@@ -11,6 +11,10 @@ impl LintRule for PreferConst {
         "prefer-const"
     }
 
+    fn default_severity(&self) -> Severity {
+        Severity::Warning
+    }
+
     fn run(&self, ctx: &LintContext) -> Vec<LintDiagnostic> {
         ctx.semantic
             .nodes()

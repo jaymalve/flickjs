@@ -10,6 +10,10 @@ impl LintRule for NoUnusedVars {
         "no-unused-vars"
     }
 
+    fn default_severity(&self) -> Severity {
+        Severity::Error
+    }
+
     fn run(&self, ctx: &LintContext) -> Vec<LintDiagnostic> {
         ctx.semantic
             .scoping()
@@ -215,10 +219,8 @@ mod tests {
 
     #[test]
     fn ignores_function_type_alias_parameters() {
-        let messages = unused_var_messages(
-            "test.ts",
-            "type NextFunction = (err?: unknown) => void;\n",
-        );
+        let messages =
+            unused_var_messages("test.ts", "type NextFunction = (err?: unknown) => void;\n");
         assert!(messages.is_empty());
     }
 }

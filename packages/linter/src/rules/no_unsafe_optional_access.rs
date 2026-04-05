@@ -17,6 +17,10 @@ impl LintRule for NoUnsafeOptionalAccess {
         "no-unsafe-optional-access"
     }
 
+    fn default_severity(&self) -> Severity {
+        Severity::Error
+    }
+
     fn run(&self, ctx: &LintContext) -> Vec<LintDiagnostic> {
         if !ctx.source_type.is_typescript() {
             return Vec::new();
@@ -49,8 +53,7 @@ impl LintRule for NoUnsafeOptionalAccess {
                         }
                     }
                     if param.optional {
-                        if let oxc_ast::ast::BindingPattern::BindingIdentifier(id) =
-                            &param.pattern
+                        if let oxc_ast::ast::BindingPattern::BindingIdentifier(id) = &param.pattern
                         {
                             nullable_symbols.insert(id.symbol_id());
                         }
@@ -88,25 +91,16 @@ impl LintRule for NoUnsafeOptionalAccess {
 
             if let oxc_ast::ast::Expression::Identifier(id) = object_expr {
                 if let Some(reference_id) = id.reference_id.get() {
-                    if let Some(symbol_id) =
-                        ctx.semantic.scoping().get_reference(reference_id).symbol_id()
+                    if let Some(symbol_id) = ctx
+                        .semantic
+                        .scoping()
+                        .get_reference(reference_id)
+                        .symbol_id()
                     {
                         if nullable_symbols.contains(&symbol_id)
-                            && !is_narrowed_by_if_guard(
-                                node.id(),
-                                symbol_id,
-                                ctx,
-                            )
-                            && !is_narrowed_by_early_return(
-                                node.id(),
-                                symbol_id,
-                                ctx,
-                            )
-                            && !is_narrowed_by_logical_and(
-                                node.id(),
-                                symbol_id,
-                                ctx,
-                            )
+                            && !is_narrowed_by_if_guard(node.id(), symbol_id, ctx)
+                            && !is_narrowed_by_early_return(node.id(), symbol_id, ctx)
+                            && !is_narrowed_by_logical_and(node.id(), symbol_id, ctx)
                         {
                             diagnostics.push(ctx.diagnostic_with_context(
                                 self.name(),
@@ -220,10 +214,12 @@ fn is_nullish_guard_with_return(stmt: &Statement, symbol_id: SymbolId, ctx: &Lin
 fn consequent_is_early_exit(stmt: &Statement) -> bool {
     match stmt {
         Statement::ReturnStatement(_) | Statement::ThrowStatement(_) => true,
-        Statement::BlockStatement(block) => block
-            .body
-            .iter()
-            .any(|s| matches!(s, Statement::ReturnStatement(_) | Statement::ThrowStatement(_))),
+        Statement::BlockStatement(block) => block.body.iter().any(|s| {
+            matches!(
+                s,
+                Statement::ReturnStatement(_) | Statement::ThrowStatement(_)
+            )
+        }),
         _ => false,
     }
 }
@@ -244,8 +240,7 @@ fn is_nullish_check(expr: &Expression, symbol_id: SymbolId, ctx: &LintContext) -
             use oxc_ast::ast::BinaryOperator;
             matches!(
                 binary.operator,
-                BinaryOperator::Equality
-                    | BinaryOperator::StrictEquality
+                BinaryOperator::Equality | BinaryOperator::StrictEquality
             ) && ((expr_references_symbol(&binary.left, symbol_id, ctx)
                 && is_null_or_undefined(&binary.right))
                 || (is_null_or_undefined(&binary.left)
@@ -257,10 +252,8 @@ fn is_nullish_check(expr: &Expression, symbol_id: SymbolId, ctx: &LintContext) -
 
 /// Check if an expression is a `null` or `undefined` literal.
 fn is_null_or_undefined(expr: &Expression) -> bool {
-    matches!(
-        expr,
-        Expression::NullLiteral(_)
-    ) || matches!(expr, Expression::Identifier(id) if id.name == "undefined")
+    matches!(expr, Expression::NullLiteral(_))
+        || matches!(expr, Expression::Identifier(id) if id.name == "undefined")
 }
 
 /// Check if an expression references a given symbol (directly or through
@@ -342,9 +335,7 @@ fn expr_references_symbol(expr: &Expression, symbol_id: SymbolId, ctx: &LintCont
                 || expr_references_symbol(&logical.right, symbol_id, ctx)
         }
         // Handle call: if (x?.method())
-        Expression::CallExpression(call) => {
-            expr_references_symbol(&call.callee, symbol_id, ctx)
-        }
+        Expression::CallExpression(call) => expr_references_symbol(&call.callee, symbol_id, ctx),
         _ => false,
     }
 }
@@ -374,9 +365,7 @@ mod tests {
 
     #[test]
     fn flags_access_on_nullable_variable() {
-        let msgs = unsafe_access_msgs(
-            "const x: string | null = null;\nconst y = x.length;\n",
-        );
+        let msgs = unsafe_access_msgs("const x: string | null = null;\nconst y = x.length;\n");
         assert_eq!(msgs.len(), 1);
         assert!(msgs[0].contains("x"));
         assert!(msgs[0].contains("null or undefined"));
@@ -384,33 +373,26 @@ mod tests {
 
     #[test]
     fn flags_access_on_union_with_undefined() {
-        let msgs = unsafe_access_msgs(
-            "const x: string | undefined = undefined;\nconst y = x.trim();\n",
-        );
+        let msgs =
+            unsafe_access_msgs("const x: string | undefined = undefined;\nconst y = x.trim();\n");
         assert_eq!(msgs.len(), 1);
     }
 
     #[test]
     fn ok_with_optional_chaining() {
-        let msgs = unsafe_access_msgs(
-            "const x: string | null = null;\nconst y = x?.length;\n",
-        );
+        let msgs = unsafe_access_msgs("const x: string | null = null;\nconst y = x?.length;\n");
         assert!(msgs.is_empty());
     }
 
     #[test]
     fn ok_with_non_nullable_type() {
-        let msgs = unsafe_access_msgs(
-            "const x: string = 'hello';\nconst y = x.length;\n",
-        );
+        let msgs = unsafe_access_msgs("const x: string = 'hello';\nconst y = x.length;\n");
         assert!(msgs.is_empty());
     }
 
     #[test]
     fn flags_optional_param_access() {
-        let msgs = unsafe_access_msgs(
-            "function foo(x?: string) {\n  const y = x.length;\n}\n",
-        );
+        let msgs = unsafe_access_msgs("function foo(x?: string) {\n  const y = x.length;\n}\n");
         assert_eq!(msgs.len(), 1);
     }
 
@@ -426,7 +408,11 @@ mod tests {
             }
             "#,
         );
-        assert!(msgs.is_empty(), "Expected no diagnostics but got: {:?}", msgs);
+        assert!(
+            msgs.is_empty(),
+            "Expected no diagnostics but got: {:?}",
+            msgs
+        );
     }
 
     #[test]
@@ -440,7 +426,11 @@ mod tests {
             }
             "#,
         );
-        assert!(msgs.is_empty(), "Expected no diagnostics but got: {:?}", msgs);
+        assert!(
+            msgs.is_empty(),
+            "Expected no diagnostics but got: {:?}",
+            msgs
+        );
     }
 
     #[test]
@@ -454,7 +444,11 @@ mod tests {
             }
             "#,
         );
-        assert!(msgs.is_empty(), "Expected no diagnostics but got: {:?}", msgs);
+        assert!(
+            msgs.is_empty(),
+            "Expected no diagnostics but got: {:?}",
+            msgs
+        );
     }
 
     #[test]
@@ -486,7 +480,11 @@ mod tests {
             }
             "#,
         );
-        assert!(msgs.is_empty(), "Expected no diagnostics but got: {:?}", msgs);
+        assert!(
+            msgs.is_empty(),
+            "Expected no diagnostics but got: {:?}",
+            msgs
+        );
     }
 
     #[test]
@@ -509,7 +507,11 @@ mod tests {
             }
             "#,
         );
-        assert!(msgs.is_empty(), "Expected no diagnostics but got: {:?}", msgs);
+        assert!(
+            msgs.is_empty(),
+            "Expected no diagnostics but got: {:?}",
+            msgs
+        );
     }
 
     #[test]
@@ -523,7 +525,11 @@ mod tests {
             }
             "#,
         );
-        assert!(msgs.is_empty(), "Expected no diagnostics but got: {:?}", msgs);
+        assert!(
+            msgs.is_empty(),
+            "Expected no diagnostics but got: {:?}",
+            msgs
+        );
     }
 
     #[test]
@@ -550,7 +556,11 @@ mod tests {
             }
             "#,
         );
-        assert!(msgs.is_empty(), "Expected no diagnostics but got: {:?}", msgs);
+        assert!(
+            msgs.is_empty(),
+            "Expected no diagnostics but got: {:?}",
+            msgs
+        );
     }
 
     #[test]
@@ -563,15 +573,17 @@ mod tests {
             }
             "#,
         );
-        assert!(msgs.is_empty(), "Expected no diagnostics but got: {:?}", msgs);
+        assert!(
+            msgs.is_empty(),
+            "Expected no diagnostics but got: {:?}",
+            msgs
+        );
     }
 
     #[test]
     fn ignores_js_files() {
-        let result = crate::rules::lint_source_for_test(
-            "test.js",
-            "const x = null;\nconst y = x.length;\n",
-        );
+        let result =
+            crate::rules::lint_source_for_test("test.js", "const x = null;\nconst y = x.length;\n");
         let msgs: Vec<_> = result
             .diagnostics
             .into_iter()

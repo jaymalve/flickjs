@@ -15,7 +15,8 @@ pub fn evaluate(
             .iter()
             .filter_map(|node| match node.kind() {
                 AstKind::Function(function) if function.body.is_some() => {
-                    let count = function.params.items.len() + usize::from(function.params.rest.is_some());
+                    let count =
+                        function.params.items.len() + usize::from(function.params.rest.is_some());
                     (count > *max).then(|| {
                         let span = function
                             .id
@@ -32,7 +33,8 @@ pub fn evaluate(
                     })
                 }
                 AstKind::ArrowFunctionExpression(function) => {
-                    let count = function.params.items.len() + usize::from(function.params.rest.is_some());
+                    let count =
+                        function.params.items.len() + usize::from(function.params.rest.is_some());
                     (count > *max).then(|| {
                         ctx.diagnostic_with_origin(
                             compiled_rule.id.clone(),
@@ -50,7 +52,9 @@ pub fn evaluate(
             .semantic
             .nodes()
             .iter()
-            .filter_map(|node| syntax_match(ctx, node.id(), node.kind(), syntax).then(|| node.kind().span()))
+            .filter_map(|node| {
+                syntax_match(ctx, node.id(), node.kind(), syntax).then(|| node.kind().span())
+            })
             .map(|span| {
                 ctx.diagnostic_with_origin(
                     compiled_rule.id.clone(),

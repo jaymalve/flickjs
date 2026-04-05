@@ -35,21 +35,34 @@ flint check . --no-cache --timing
 
 By default, `flint check` uses an adaptive cache. It reuses cached results when that is predicted to beat a cold run and bypasses the cache when the cache overhead would likely lose.
 
+`flint init` detects the current project's framework hints from `package.json`, writes a starter
+`flint.json`, and leaves `"detect": true` enabled so matching built-in rule categories activate
+automatically unless you override them explicitly.
+
 ## Configuration
 
-Flint uses `flint.toml`:
+Flint uses `flint.json`:
 
-```toml
-[lint]
-rules = { no-explicit-any = "warn", no-unused-vars = "error", no-console = "warn", prefer-const = "warn", no-empty-catch = "error" }
-
-[[lint.english_rules]]
-text = "no function should have more than 3 params"
-severity = "warn"
-
-[files]
-exclude = ["node_modules", "dist", "build", ".git"]
+```json
+{
+  "detect": true,
+  "rules": {
+    "no-explicit-any": "warn",
+    "no-unused-vars": "error",
+    "no-console": "warn",
+    "prefer-const": "warn",
+    "no-empty-catch": "error",
+    "react/no-fetch-in-effect": "warn"
+  },
+  "files": {
+    "exclude": ["node_modules", "dist", "build", ".git"]
+  }
+}
 ```
+
+When `detect` is `true`, framework-specific built-in rules are enabled at their default severities
+when Flint detects a matching project. Explicit `rules` entries still take precedence, including
+`"off"`.
 
 If you want broader natural-language compilation for English rules, add a Flint API key in
 `.flintrc`:
@@ -66,13 +79,32 @@ Severity values:
 
 ## Built-in Rules
 
-- `no-explicit-any`
-- `no-console`
-- `no-empty-catch`
-- `prefer-const`
-- `no-unused-vars`
+Flint now ships built-in rules across these categories:
 
-All built-in rules are active. `prefer-const` and `no-unused-vars` currently use lightweight MVP heuristics and should later be replaced with full semantic implementations.
+- core JS/TS rules
+- universal security and performance rules
+- React hooks, correctness, architecture, and performance rules
+- Next.js rules
+- React Native rules
+- server-side security, reliability, performance, and architecture rules
+- React Server Components rules
+
+Examples:
+
+- `no-explicit-any`
+- `no-eval`
+- `react/no-fetch-in-effect`
+- `react/no-array-index-key`
+- `react/no-usememo-simple-expr`
+- `nextjs/no-img-element`
+- `react-native/no-inline-styles`
+- `server/no-sql-injection`
+- `server/no-unhandled-async-route`
+- `server/require-input-validation`
+
+Framework-specific rules self-gate on detected project type. `prefer-const` and `no-unused-vars`
+still use lightweight MVP heuristics and should later be replaced with fuller semantic
+implementations.
 
 ## Plain-English Rules
 
@@ -152,7 +184,7 @@ flint/
 - [x] Rename public product surface to `flint`
 - [x] Remove code health scoring from the MVP
 - [x] Support JS and TS file discovery
-- [x] Add a minimal `flint.toml`
+- [x] Add a minimal `flint.json`
 - [x] Add cached plain-English rule compilation for supported native checks
 - [ ] Replace the current heuristic rule implementations with proper AST/semantic analysis
 - [ ] Reduce the shipped rule set to the few rules we want to support extremely well

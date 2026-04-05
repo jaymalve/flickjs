@@ -11,6 +11,10 @@ impl LintRule for UnreachableCode {
         "unreachable-code"
     }
 
+    fn default_severity(&self) -> Severity {
+        Severity::Error
+    }
+
     fn run(&self, ctx: &LintContext) -> Vec<LintDiagnostic> {
         let mut diagnostics = Vec::new();
 
@@ -104,9 +108,7 @@ mod tests {
 
     #[test]
     fn flags_code_after_return() {
-        let spans = unreachable_spans(
-            "function foo() {\n  return 1;\n  const x = 2;\n}\n",
-        );
+        let spans = unreachable_spans("function foo() {\n  return 1;\n  const x = 2;\n}\n");
         assert_eq!(spans.len(), 1);
         assert_eq!(spans[0], "3:3");
     }
@@ -122,25 +124,21 @@ mod tests {
 
     #[test]
     fn ignores_code_with_no_terminator() {
-        let spans = unreachable_spans(
-            "function foo() {\n  const x = 1;\n  return x;\n}\n",
-        );
+        let spans = unreachable_spans("function foo() {\n  const x = 1;\n  return x;\n}\n");
         assert!(spans.is_empty());
     }
 
     #[test]
     fn flags_code_after_break_in_loop() {
-        let spans = unreachable_spans(
-            "for (let i = 0; i < 10; i++) {\n  break;\n  console.log(i);\n}\n",
-        );
+        let spans =
+            unreachable_spans("for (let i = 0; i < 10; i++) {\n  break;\n  console.log(i);\n}\n");
         assert_eq!(spans.len(), 1);
     }
 
     #[test]
     fn only_reports_first_unreachable_per_block() {
-        let spans = unreachable_spans(
-            "function foo() {\n  return 1;\n  const a = 1;\n  const b = 2;\n}\n",
-        );
+        let spans =
+            unreachable_spans("function foo() {\n  return 1;\n  const a = 1;\n  const b = 2;\n}\n");
         assert_eq!(spans.len(), 1);
     }
 

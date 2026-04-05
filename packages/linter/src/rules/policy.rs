@@ -147,9 +147,15 @@ fn config_key_to_rule_ir(key: &str, value: &serde_json::Value) -> Option<RuleIR>
         }
 
         // Built-in rules (handled by the builtin rule engine, not policy)
-        "no-explicit-any" | "no-console" | "no-empty-catch" | "prefer-const"
-        | "no-unused-vars" | "unreachable-code" | "no-missing-return"
-        | "no-wrong-arg-count" | "no-unsafe-optional-access" => None,
+        "no-explicit-any"
+        | "no-console"
+        | "no-empty-catch"
+        | "prefer-const"
+        | "no-unused-vars"
+        | "unreachable-code"
+        | "no-missing-return"
+        | "no-wrong-arg-count"
+        | "no-unsafe-optional-access" => None,
 
         // Cross-file dead code rules (handled by the dead_code engine, not policy)
         "unused-exports" | "unused-files" | "unused-dependencies" => None,
@@ -276,10 +282,9 @@ fn default_message(rule: &RuleIR) -> String {
                 "{} names must start with `{affix}`",
                 selector_name(selector)
             ),
-            super::policy_ir::AffixMatchKind::Suffix => format!(
-                "{} names must end with `{affix}`",
-                selector_name(selector)
-            ),
+            super::policy_ir::AffixMatchKind::Suffix => {
+                format!("{} names must end with `{affix}`", selector_name(selector))
+            }
         },
         RuleIR::Naming(NamingRule::Case {
             selector, style, ..
@@ -303,9 +308,7 @@ fn default_message(rule: &RuleIR) -> String {
                 format!("File paths must not match `{pattern}`")
             }
         },
-        RuleIR::Comment(CommentRule::NoComments { .. }) => {
-            "Comments are not allowed".to_string()
-        }
+        RuleIR::Comment(CommentRule::NoComments { .. }) => "Comments are not allowed".to_string(),
         RuleIR::Comment(CommentRule::ForbidPattern { pattern, .. }) => {
             format!("Comments must not contain `{pattern}`")
         }
@@ -379,7 +382,10 @@ mod tests {
         );
         let rules = build_policy_rules_from_config(&config);
         assert_eq!(rules.len(), 1);
-        assert!(matches!(rules[0].rule, RuleIR::Naming(NamingRule::Case { .. })));
+        assert!(matches!(
+            rules[0].rule,
+            RuleIR::Naming(NamingRule::Case { .. })
+        ));
     }
 
     #[test]

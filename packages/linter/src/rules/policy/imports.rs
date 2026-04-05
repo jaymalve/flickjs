@@ -19,11 +19,7 @@ pub fn evaluate(
             .iter()
             .filter_map(|node| match node.kind() {
                 AstKind::ImportDeclaration(declaration)
-                    if matches_string(
-                        declaration.source.value.as_str(),
-                        pattern,
-                        match_kind,
-                    ) =>
+                    if matches_string(declaration.source.value.as_str(), pattern, match_kind) =>
                 {
                     Some(ctx.diagnostic_with_origin(
                         compiled_rule.id.clone(),

@@ -9,6 +9,10 @@ impl LintRule for NoEmptyCatch {
         "no-empty-catch"
     }
 
+    fn default_severity(&self) -> Severity {
+        Severity::Error
+    }
+
     fn run(&self, ctx: &LintContext) -> Vec<LintDiagnostic> {
         ctx.semantic
             .nodes()

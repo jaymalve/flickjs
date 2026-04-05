@@ -1,5 +1,10 @@
 pub mod cli;
+pub mod project;
+pub mod rule_catalog;
 pub mod rules;
+pub mod results_tui;
+pub mod rules_tui;
+pub mod tui_common;
 
 use clap::Parser;
 use colored::*;
@@ -25,6 +30,7 @@ pub fn run() -> Result<i32> {
                 &execution.results,
                 &args.format,
                 execution.metrics.total_runtime,
+                &args.path,
             );
             (
                 if summary.errors > 0 { 1 } else { 0 },
@@ -33,6 +39,10 @@ pub fn run() -> Result<i32> {
         }
         cli::Command::Init => {
             cli::init_config()?;
+            (0, None)
+        }
+        cli::Command::Rules(args) => {
+            rules_tui::run(args)?;
             (0, None)
         }
     };
@@ -199,6 +209,10 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
     let total_start = Instant::now();
     let loaded_config = cli::load_config_with_fingerprint()?;
     let rule_config = &loaded_config.config.rules;
+    let project = project::ProjectInfo::detect(&args.path);
+    let config_fingerprint = rules::hash_bytes(
+        format!("{}:{}", loaded_config.fingerprint, project.fingerprint()).as_bytes(),
+    );
     let files = cli::discover_files(
         &args.path,
         &loaded_config.config.files.exclude,
@@ -230,6 +244,8 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
         let (mut results, _) = execute_without_cache(
             &snapshots,
             rule_config,
+            loaded_config.config.detect,
+            &project,
             false,
             &mut metrics,
         );
@@ -239,8 +255,7 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
     }
 
     let load_start = Instant::now();
-    let (mut cache, load_status) =
-        rules::Cache::load(&args.cache_path, &loaded_config.fingerprint)?;
+    let (mut cache, load_status) = rules::Cache::load(&args.cache_path, &config_fingerprint)?;
     metrics.load_time = load_start.elapsed();
 
     let snapshots = collect_file_snapshots(&files, &mut metrics);
@@ -258,6 +273,8 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
             let (results, updates) = execute_without_cache(
                 &snapshots,
                 rule_config,
+                loaded_config.config.detect,
+                &project,
                 prime_cache,
                 &mut metrics,
             );
@@ -270,6 +287,8 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
                 &snapshots,
                 &cache,
                 rule_config,
+                loaded_config.config.detect,
+                &project,
                 &mut metrics,
             )
         }
@@ -282,7 +301,7 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
     let has_deleted_entries = cache.entries.keys().any(|path| !live_paths.contains(path));
 
     if dirty_entries || has_deleted_entries {
-        cache.update_fingerprint(&loaded_config.fingerprint);
+        cache.update_fingerprint(&config_fingerprint);
         let mut should_persist = cache.prune_to(&live_paths);
 
         for update in updates {
@@ -390,8 +409,7 @@ fn run_cross_file_analysis(
     if wants_unused_deps {
         let package_json = project_root.join("package.json");
         if package_json.exists() {
-            let mut diagnostics =
-                rules::dead_code::find_unused_dependencies(&graph, &package_json);
+            let mut diagnostics = rules::dead_code::find_unused_dependencies(&graph, &package_json);
             if let Some(ref severity) = dep_severity {
                 for d in &mut diagnostics {
                     d.severity = severity.clone();
@@ -550,6 +568,8 @@ fn should_use_cache(cache: &rules::Cache, snapshots: &[FileSnapshot], total_byte
 fn execute_without_cache(
     snapshots: &[FileSnapshot],
     rule_config: &HashMap<String, serde_json::Value>,
+    detect: bool,
+    project: &project::ProjectInfo,
     prepare_cache_entries: bool,
     metrics: &mut RunMetrics,
 ) -> (Vec<rules::LintResult>, Vec<CacheUpdate>) {
@@ -564,6 +584,8 @@ fn execute_without_cache(
                             &snapshot.path,
                             &loaded.source,
                             rule_config,
+                            detect,
+                            project,
                         );
                         let lint_time = lint_start.elapsed();
                         Some(FileExecution {
@@ -588,7 +610,7 @@ fn execute_without_cache(
                 }
             } else {
                 let lint_start = Instant::now();
-                match rules::lint_file_with_config(&snapshot.path, rule_config) {
+                match rules::lint_file_with_config(&snapshot.path, rule_config, detect, project) {
                     Ok(result) => Some(FileExecution {
                         result,
                         update: None,
@@ -630,6 +652,8 @@ fn execute_with_cache(
     snapshots: &[FileSnapshot],
     cache: &rules::Cache,
     rule_config: &HashMap<String, serde_json::Value>,
+    detect: bool,
+    project: &project::ProjectInfo,
     metrics: &mut RunMetrics,
 ) -> (Vec<rules::LintResult>, Vec<CacheUpdate>, bool) {
     let executions: Vec<FileExecution> = snapshots
@@ -680,6 +704,8 @@ fn execute_with_cache(
                     &snapshot.path,
                     &loaded.source,
                     rule_config,
+                    detect,
+                    project,
                 );
                 let lint_time = lint_start.elapsed();
 
@@ -714,6 +740,8 @@ fn execute_with_cache(
                 &snapshot.path,
                 &loaded.source,
                 rule_config,
+                detect,
+                project,
             );
             let lint_time = lint_start.elapsed();
 
@@ -796,52 +824,119 @@ fn print_timing(metrics: &RunMetrics) {
     );
 }
 
-struct Summary {
-    errors: usize,
+pub(crate) struct Summary {
+    pub(crate) errors: usize,
+}
+
+pub(crate) struct PrettyEntry<'a> {
+    pub(crate) file: &'a Path,
+    pub(crate) diagnostic: &'a rules::LintDiagnostic,
+}
+
+pub(crate) fn diagnostic_counts(results: &[rules::LintResult]) -> (usize, usize) {
+    let mut errors = 0;
+    let mut warnings = 0;
+    for result in results {
+        for diagnostic in &result.diagnostics {
+            match diagnostic.severity {
+                rules::Severity::Error => errors += 1,
+                rules::Severity::Warning => warnings += 1,
+            }
+        }
+    }
+    (errors, warnings)
+}
+
+/// Categories sorted by `category_order`, entries sorted like pretty output.
+pub(crate) fn group_results_for_display<'a>(
+    results: &'a [rules::LintResult],
+) -> Vec<(String, Vec<PrettyEntry<'a>>)> {
+    let mut grouped: HashMap<String, Vec<PrettyEntry<'a>>> = HashMap::new();
+
+    for result in results {
+        for diagnostic in &result.diagnostics {
+            grouped
+                .entry(diagnostic_category_key(diagnostic))
+                .or_default()
+                .push(PrettyEntry {
+                    file: &result.file,
+                    diagnostic,
+                });
+        }
+    }
+
+    let mut categories: Vec<(String, Vec<PrettyEntry<'a>>)> = grouped.into_iter().collect();
+    categories.sort_by(|(left, _), (right, _)| {
+        category_order(left)
+            .cmp(&category_order(right))
+            .then_with(|| left.cmp(right))
+    });
+
+    for (_, entries) in &mut categories {
+        entries.sort_by(|left, right| {
+            crate::tui_common::severity_rank(&left.diagnostic.severity)
+                .cmp(&crate::tui_common::severity_rank(&right.diagnostic.severity))
+                .then_with(|| left.file.cmp(right.file))
+                .then_with(|| left.diagnostic.byte_start.cmp(&right.diagnostic.byte_start))
+                .then_with(|| left.diagnostic.rule_name.cmp(&right.diagnostic.rule_name))
+        });
+    }
+
+    categories
 }
 
 fn print_results(
     results: &[rules::LintResult],
     format: &cli::OutputFormat,
     elapsed: std::time::Duration,
+    scan_root: &Path,
 ) -> Summary {
     match format {
         cli::OutputFormat::Json => print_json(results),
         cli::OutputFormat::Compact => print_compact(results),
         cli::OutputFormat::Pretty => print_pretty(results, elapsed),
+        cli::OutputFormat::Tui => results_tui::print_or_fallback(results, elapsed, scan_root),
         cli::OutputFormat::AgentJson => print_agent_json(results),
     }
 }
 
-fn print_pretty(results: &[rules::LintResult], elapsed: std::time::Duration) -> Summary {
-    let mut total_errors = 0;
-    let mut total_warnings = 0;
+pub(crate) fn print_pretty(results: &[rules::LintResult], elapsed: std::time::Duration) -> Summary {
+    let (total_errors, total_warnings) = diagnostic_counts(results);
+    let categories = group_results_for_display(results);
 
-    for result in results {
-        for diagnostic in &result.diagnostics {
+    for (index, (category, entries)) in categories.iter().enumerate() {
+        if index > 0 {
+            println!();
+        }
+
+        println!(
+            "  {} {}",
+            category_display_name(&category).bold(),
+            format!("({})", entries.len()).dimmed()
+        );
+
+        for entry in entries {
+            let diagnostic = entry.diagnostic;
             match diagnostic.severity {
-                rules::Severity::Error => {
-                    total_errors += 1;
-                    println!(
-                        "  {} {}:{} {}",
-                        "error".red().bold(),
-                        result.file.display(),
-                        diagnostic.span,
-                        diagnostic.message
-                    );
-                }
-                rules::Severity::Warning => {
-                    total_warnings += 1;
-                    println!(
-                        "  {} {}:{} {}",
-                        "warn".yellow().bold(),
-                        result.file.display(),
-                        diagnostic.span,
-                        diagnostic.message
-                    );
-                }
+                rules::Severity::Error => println!(
+                    "    {} {}:{} {}",
+                    "error".red().bold(),
+                    entry.file.display(),
+                    diagnostic.span,
+                    diagnostic.message
+                ),
+                rules::Severity::Warning => println!(
+                    "    {} {}:{} {}",
+                    "warn".yellow().bold(),
+                    entry.file.display(),
+                    diagnostic.span,
+                    diagnostic.message
+                ),
             }
-            println!("    {} {}", "rule".dimmed(), diagnostic.rule_name);
+            println!("      {} {}", "rule".dimmed(), diagnostic.rule_name);
+            if let Some(help) = diagnostic_help_text(diagnostic) {
+                println!("      {} {}", "help".dimmed(), help);
+            }
         }
     }
 
@@ -864,6 +959,71 @@ fn print_pretty(results: &[rules::LintResult], elapsed: std::time::Duration) -> 
 
     Summary {
         errors: total_errors,
+    }
+}
+
+pub(crate) fn diagnostic_category_key(diagnostic: &rules::LintDiagnostic) -> String {
+    match diagnostic.rule_name.as_str() {
+        "parse-error" => "parse".to_string(),
+        "semantic-error" => "semantic".to_string(),
+        _ if diagnostic.origin == rules::RuleOrigin::Config
+            && !diagnostic.rule_name.contains('/') =>
+        {
+            "policy".to_string()
+        }
+        _ => diagnostic
+            .rule_name
+            .split_once('/')
+            .map(|(prefix, _)| prefix.to_string())
+            .unwrap_or_else(|| "core".to_string()),
+    }
+}
+
+pub(crate) fn category_order(category: &str) -> usize {
+    match category {
+        "parse" => 0,
+        "semantic" => 1,
+        "core" => 2,
+        "react" => 3,
+        "nextjs" => 4,
+        "react-native" => 5,
+        "server" => 6,
+        "policy" => 7,
+        _ => 8,
+    }
+}
+
+pub(crate) fn category_display_name(category: &str) -> &'static str {
+    match category {
+        "parse" => "Parse",
+        "semantic" => "Semantic",
+        "core" => "Core",
+        "react" => "React",
+        "nextjs" => "Next.js",
+        "react-native" => "React Native",
+        "server" => "Server",
+        "policy" => "Policy",
+        _ => "Other",
+    }
+}
+
+pub(crate) fn diagnostic_help_text(diagnostic: &rules::LintDiagnostic) -> Option<String> {
+    match diagnostic.rule_name.as_str() {
+        "parse-error" => Some("Fix syntax issues before Flint can run rule checks.".to_string()),
+        "semantic-error" => {
+            Some("Fix semantic issues before Flint can analyze this file fully.".to_string())
+        }
+        _ if matches!(
+            diagnostic.origin,
+            rules::RuleOrigin::BuiltIn | rules::RuleOrigin::Config
+        ) =>
+        {
+            Some(format!(
+                "configure in flint.json -> rules.\"{}\": \"off\"",
+                diagnostic.rule_name
+            ))
+        }
+        _ => None,
     }
 }
 
@@ -1004,7 +1164,10 @@ fn print_agent_json(results: &[rules::LintResult]) -> Summary {
                 .collect();
 
             let agent_fix = diagnostic.fix.as_ref().map(|fix| AgentFix {
-                description: fix.description.clone().unwrap_or_else(|| "Apply fix".to_string()),
+                description: fix
+                    .description
+                    .clone()
+                    .unwrap_or_else(|| "Apply fix".to_string()),
                 edits: vec![AgentEdit {
                     start_byte: fix.range.0,
                     end_byte: fix.range.1,
@@ -1099,6 +1262,67 @@ mod tests {
     struct FixtureSpec {
         files: usize,
         repeats: usize,
+    }
+
+    #[test]
+    fn builtin_rules_default_to_core_category() {
+        let diagnostic = rules::LintDiagnostic {
+            rule_name: "no-console".to_string(),
+            message: "Unexpected console statement".to_string(),
+            span: "1:1".to_string(),
+            severity: rules::Severity::Warning,
+            origin: rules::RuleOrigin::BuiltIn,
+            fix: None,
+            byte_start: 0,
+            byte_end: 0,
+            node_kind: None,
+            symbol: None,
+        };
+
+        assert_eq!(diagnostic_category_key(&diagnostic), "core");
+        assert_eq!(category_display_name("core"), "Core");
+    }
+
+    #[test]
+    fn config_rules_without_namespace_group_as_policy() {
+        let diagnostic = rules::LintDiagnostic {
+            rule_name: "custom-policy".to_string(),
+            message: "Nope".to_string(),
+            span: "1:1".to_string(),
+            severity: rules::Severity::Warning,
+            origin: rules::RuleOrigin::Config,
+            fix: None,
+            byte_start: 0,
+            byte_end: 0,
+            node_kind: None,
+            symbol: None,
+        };
+
+        assert_eq!(diagnostic_category_key(&diagnostic), "policy");
+    }
+
+    #[test]
+    fn builtin_diagnostics_include_disable_hint() {
+        let diagnostic = rules::LintDiagnostic {
+            rule_name: "react/no-fetch-in-effect".to_string(),
+            message: "Move data fetching out of `useEffect` when possible".to_string(),
+            span: "1:1".to_string(),
+            severity: rules::Severity::Warning,
+            origin: rules::RuleOrigin::BuiltIn,
+            fix: None,
+            byte_start: 0,
+            byte_end: 0,
+            node_kind: None,
+            symbol: None,
+        };
+
+        assert_eq!(
+            diagnostic_help_text(&diagnostic),
+            Some(
+                "configure in flint.json -> rules.\"react/no-fetch-in-effect\": \"off\""
+                    .to_string()
+            )
+        );
     }
 
     #[test]
@@ -1355,6 +1579,14 @@ mod tests {
     }
 
     fn default_fingerprint() -> String {
-        cli::load_config_with_fingerprint().unwrap().fingerprint
+        let config_fingerprint = cli::load_config_with_fingerprint().unwrap().fingerprint;
+        rules::hash_bytes(
+            format!(
+                "{}:{}",
+                config_fingerprint,
+                crate::project::ProjectInfo::default().fingerprint()
+            )
+            .as_bytes(),
+        )
     }
 }

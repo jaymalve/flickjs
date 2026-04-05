@@ -1,6 +1,7 @@
+use crate::project::ProjectInfo;
 use clap::{Parser, Subcommand};
 use miette::{IntoDiagnostic, Result};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -27,6 +28,8 @@ pub enum Command {
     Check(CheckArgs),
     /// Initialize flint config in current directory
     Init,
+    /// Browse Flint's built-in rules in a terminal UI
+    Rules(RulesArgs),
 }
 
 #[derive(clap::Args, Clone)]
@@ -55,31 +58,48 @@ pub struct CheckArgs {
 #[derive(Clone, clap::ValueEnum)]
 pub enum OutputFormat {
     Pretty,
+    /// Interactive terminal UI (falls back to pretty when stdout is not a TTY)
+    Tui,
     Json,
     Compact,
     AgentJson,
 }
 
+#[derive(clap::Args, Clone, Debug, Default)]
+pub struct RulesArgs {
+    /// Open the rule browser focused on a specific group
+    #[arg(long)]
+    pub group: Option<String>,
+
+    /// Start the rule browser with a search query applied
+    #[arg(long)]
+    pub search: Option<String>,
+}
+
 // ── Config types ───────────────────────────────────────────
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
+    #[serde(default = "default_detect")]
+    pub detect: bool,
     #[serde(default)]
     pub rules: HashMap<String, serde_json::Value>,
     #[serde(default)]
     pub files: FilesConfig,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FilesConfig {
     #[serde(default = "default_excludes")]
     pub exclude: Vec<String>,
 }
 
 /// Separate deserialization type for flint.json — rules default to empty
-/// so only explicitly listed rules are active when a config file exists.
-#[derive(Debug, Clone, Deserialize)]
+/// but detection may still enable built-ins when `detect` is true.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct FileConfig {
+    #[serde(default = "default_detect")]
+    pub detect: bool,
     #[serde(default)]
     pub rules: HashMap<String, serde_json::Value>,
     #[serde(default)]
@@ -94,6 +114,7 @@ pub struct LoadedConfig {
 impl Default for Config {
     fn default() -> Self {
         Self {
+            detect: default_detect(),
             rules: default_rules(),
             files: FilesConfig::default(),
         }
@@ -117,13 +138,32 @@ fn default_excludes() -> Vec<String> {
     ]
 }
 
+fn default_detect() -> bool {
+    true
+}
+
 fn default_rules() -> HashMap<String, serde_json::Value> {
     let mut rules = HashMap::new();
-    rules.insert("no-explicit-any".into(), serde_json::Value::String("warn".into()));
-    rules.insert("no-unused-vars".into(), serde_json::Value::String("error".into()));
-    rules.insert("no-console".into(), serde_json::Value::String("warn".into()));
-    rules.insert("prefer-const".into(), serde_json::Value::String("warn".into()));
-    rules.insert("no-empty-catch".into(), serde_json::Value::String("error".into()));
+    rules.insert(
+        "no-explicit-any".into(),
+        serde_json::Value::String("warn".into()),
+    );
+    rules.insert(
+        "no-unused-vars".into(),
+        serde_json::Value::String("error".into()),
+    );
+    rules.insert(
+        "no-console".into(),
+        serde_json::Value::String("warn".into()),
+    );
+    rules.insert(
+        "prefer-const".into(),
+        serde_json::Value::String("warn".into()),
+    );
+    rules.insert(
+        "no-empty-catch".into(),
+        serde_json::Value::String("error".into()),
+    );
     rules
 }
 
@@ -134,9 +174,10 @@ pub fn load_config() -> Result<Config> {
 pub fn load_config_with_fingerprint() -> Result<LoadedConfig> {
     let path = Path::new("flint.json");
     if !path.exists() {
+        let config = Config::default();
         return Ok(LoadedConfig {
-            config: Config::default(),
-            fingerprint: hash_string("__default__"),
+            fingerprint: hash_string("__default_detect_v1__"),
+            config,
         });
     }
 
@@ -144,6 +185,7 @@ pub fn load_config_with_fingerprint() -> Result<LoadedConfig> {
     let file_config: FileConfig = serde_json::from_str(&raw)
         .map_err(|e| miette::miette!("Failed to parse flint.json: {}", e))?;
     let config = Config {
+        detect: file_config.detect,
         rules: file_config.rules,
         files: file_config.files,
     };
@@ -207,40 +249,8 @@ fn is_ignored_path(path: &Path, patterns: &[&str]) -> bool {
 pub fn init_config() -> Result<()> {
     use colored::*;
 
-    let config = r#"{
-  "$schema": "https://flickjs.dev/lint/schema.json",
-  "rules": {
-    "no-explicit-any": "warn",
-    "no-unused-vars": "error",
-    "no-console": "warn",
-    "prefer-const": "warn",
-    "no-empty-catch": "error",
-    "no-debugger": true,
-    "no-var": true,
-    "no-nested-ternaries": true,
-    "no-default-export": true,
-    "no-switch": false,
-    "no-type-assertion": false,
-    "no-await-in-loops": true,
-    "max-function-params": 4,
-    "max-file-lines": 500,
-    "naming-functions": "camelCase",
-    "naming-classes": "PascalCase",
-    "banned-imports": [],
-    "banned-calls": [],
-    "unreachable-code": "error",
-    "unused-exports": "warn",
-    "unused-files": "warn",
-    "unused-dependencies": "warn",
-    "no-missing-return": "error",
-    "no-wrong-arg-count": "error",
-    "no-unsafe-optional-access": "error"
-  },
-  "files": {
-    "exclude": ["node_modules", "dist", "build", ".git"]
-  }
-}
-"#;
+    let project = ProjectInfo::detect(Path::new("."));
+    let config = build_init_config(&project);
 
     let path = Path::new("flint.json");
     if path.exists() {
@@ -248,14 +258,125 @@ pub fn init_config() -> Result<()> {
         return Ok(());
     }
 
-    std::fs::write(path, config).into_diagnostic()?;
+    let raw = serde_json::to_string_pretty(&config).into_diagnostic()? + "\n";
+    std::fs::write(path, raw).into_diagnostic()?;
     println!("{} Created flint.json", "✓".green().bold());
+    let detected = detected_frameworks(&project);
+    if detected.is_empty() {
+        println!("  Detected frameworks: none");
+    } else {
+        println!("  Detected frameworks: {}", detected.join(", ").cyan());
+    }
+    println!(
+        "  {}",
+        "`detect: true` will auto-enable matching built-in rule categories.".dimmed()
+    );
     println!(
         "  Edit the config and run {} to start linting",
         "flint check".cyan()
     );
 
     Ok(())
+}
+
+fn build_init_config(project: &ProjectInfo) -> serde_json::Value {
+    serde_json::json!({
+        "$schema": "https://flickjs.dev/lint/schema.json",
+        "detect": true,
+        "rules": starter_rules_for_project(project),
+        "files": {
+            "exclude": default_excludes(),
+        }
+    })
+}
+
+fn starter_rules_for_project(project: &ProjectInfo) -> serde_json::Map<String, serde_json::Value> {
+    let mut rules = serde_json::Map::new();
+
+    for (rule, severity) in [
+        ("no-explicit-any", "warn"),
+        ("no-unused-vars", "error"),
+        ("no-console", "warn"),
+        ("prefer-const", "warn"),
+        ("no-empty-catch", "error"),
+        ("unreachable-code", "error"),
+        ("no-missing-return", "error"),
+        ("no-wrong-arg-count", "error"),
+        ("no-unsafe-optional-access", "error"),
+        ("no-eval", "error"),
+        ("no-hardcoded-secrets", "warn"),
+    ] {
+        rules.insert(rule.into(), serde_json::json!(severity));
+    }
+
+    if project.has_react {
+        for (rule, severity) in [
+            ("react/no-fetch-in-effect", "warn"),
+            ("react/functional-set-state", "warn"),
+            ("react/no-array-index-key", "warn"),
+            ("react/no-usememo-simple-expr", "warn"),
+            ("react/no-hydration-flicker", "warn"),
+        ] {
+            rules.insert(rule.into(), serde_json::json!(severity));
+        }
+    }
+
+    if project.has_next {
+        for (rule, severity) in [
+            ("nextjs/no-img-element", "warn"),
+            ("nextjs/prefer-next-link", "warn"),
+            ("nextjs/missing-metadata", "warn"),
+            ("nextjs/no-async-client-component", "warn"),
+            ("react/server-auth-actions", "warn"),
+        ] {
+            rules.insert(rule.into(), serde_json::json!(severity));
+        }
+    }
+
+    if project.has_server_framework() {
+        for (rule, severity) in [
+            ("server/no-sql-injection", "error"),
+            ("server/no-shell-injection", "error"),
+            ("server/require-input-validation", "warn"),
+            ("server/no-unhandled-async-route", "warn"),
+            ("server/no-n-plus-one", "warn"),
+        ] {
+            rules.insert(rule.into(), serde_json::json!(severity));
+        }
+    }
+
+    if project.has_react_native || project.has_expo {
+        for (rule, severity) in [
+            ("react-native/no-inline-styles", "warn"),
+            ("react-native/no-anonymous-list-render", "warn"),
+            ("react-native/require-key-extractor", "warn"),
+        ] {
+            rules.insert(rule.into(), serde_json::json!(severity));
+        }
+    }
+
+    rules
+}
+
+fn detected_frameworks(project: &ProjectInfo) -> Vec<&'static str> {
+    let mut frameworks = Vec::new();
+
+    if project.has_next {
+        frameworks.push("nextjs");
+    } else if project.has_react {
+        frameworks.push("react");
+    }
+    if project.has_server_framework() {
+        frameworks.push("server");
+    }
+    if project.has_react_native {
+        frameworks.push("react-native");
+    }
+    if project.has_expo {
+        frameworks.push("expo");
+    }
+
+    frameworks
 }
 
 /// Parse a rule config value into an optional severity.
@@ -282,10 +403,12 @@ pub fn parse_rule_severity(value: &serde_json::Value) -> Option<super::rules::Se
 #[cfg(test)]
 mod tests {
     use super::*;
+    use clap::CommandFactory;
 
     #[test]
     fn default_config_has_five_rules() {
         let config = Config::default();
+        assert!(config.detect);
         assert_eq!(config.rules.len(), 5);
         assert!(config.rules.contains_key("no-console"));
     }
@@ -312,5 +435,84 @@ mod tests {
     #[test]
     fn parse_severity_from_number() {
         assert!(parse_rule_severity(&serde_json::json!(3)).is_some());
+    }
+
+    #[test]
+    fn init_template_includes_nextjs_rules() {
+        let project = ProjectInfo {
+            has_react: true,
+            has_next: true,
+            ..ProjectInfo::default()
+        };
+        let rules = starter_rules_for_project(&project);
+        assert!(rules.contains_key("nextjs/no-img-element"));
+        assert!(rules.contains_key("nextjs/missing-metadata"));
+        assert!(rules.contains_key("react/server-auth-actions"));
+    }
+
+    #[test]
+    fn init_template_includes_server_rules() {
+        let project = ProjectInfo {
+            has_express: true,
+            ..ProjectInfo::default()
+        };
+        let rules = starter_rules_for_project(&project);
+        assert!(rules.contains_key("server/no-sql-injection"));
+        assert!(rules.contains_key("server/require-input-validation"));
+    }
+
+    #[test]
+    fn detected_frameworks_prefers_nextjs_label_for_next_projects() {
+        let project = ProjectInfo {
+            has_react: true,
+            has_next: true,
+            has_express: true,
+            ..ProjectInfo::default()
+        };
+        assert_eq!(detected_frameworks(&project), vec!["nextjs", "server"]);
+    }
+
+    #[test]
+    fn init_template_sets_detect_true() {
+        let config = build_init_config(&ProjectInfo::test_all());
+        assert_eq!(config.get("detect"), Some(&serde_json::json!(true)));
+    }
+
+    #[test]
+    fn parses_format_tui() {
+        let cli = Cli::parse_from(["flint", "check", ".", "--format", "tui"]);
+        match cli.command {
+            Command::Check(args) => {
+                assert!(matches!(args.format, OutputFormat::Tui));
+            }
+            _ => panic!("expected check command"),
+        }
+    }
+
+    #[test]
+    fn parses_rules_command_flags() {
+        let cli = Cli::parse_from([
+            "flint",
+            "rules",
+            "--group",
+            "react-hooks",
+            "--search",
+            "fetch",
+        ]);
+
+        match cli.command {
+            Command::Rules(args) => {
+                assert_eq!(args.group.as_deref(), Some("react-hooks"));
+                assert_eq!(args.search.as_deref(), Some("fetch"));
+            }
+            _ => panic!("expected rules command"),
+        }
+    }
+
+    #[test]
+    fn help_mentions_rules_command() {
+        let help = Cli::command().render_long_help().to_string();
+        assert!(help.contains("rules"));
+        assert!(help.contains("Browse Flint's built-in rules"));
     }
 }
