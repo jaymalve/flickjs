@@ -10,7 +10,7 @@ use ratatui::{
     backend::CrosstermBackend,
     style::{Color, Modifier, Style},
     text::Span,
-    widgets::{Block, Borders},
+    widgets::{Block, BorderType, Borders},
     Terminal,
 };
 use std::io::{self, Stdout};
@@ -23,9 +23,15 @@ pub const TEXT_PRIMARY: Color = Color::Rgb(244, 244, 244);
 pub const TEXT_MUTED: Color = Color::Rgb(160, 160, 160);
 pub const TEXT_FAINT: Color = Color::Rgb(104, 104, 104);
 pub const SELECT_BG: Color = Color::Rgb(42, 42, 42);
-pub const WARN_COLOR: Color = Color::Rgb(184, 184, 184);
-pub const ERROR_COLOR: Color = Color::Rgb(255, 255, 255);
-pub const OK_COLOR: Color = Color::Rgb(222, 222, 222);
+
+pub const WARN_COLOR: Color = Color::Rgb(230, 175, 46);
+pub const ERROR_COLOR: Color = Color::Rgb(220, 80, 80);
+pub const OK_COLOR: Color = Color::Rgb(120, 190, 120);
+pub const WARN_BG: Color = Color::Rgb(50, 40, 15);
+pub const ERROR_BG: Color = Color::Rgb(50, 20, 20);
+
+pub const SCROLLBAR_TRACK: Color = Color::Rgb(30, 30, 30);
+pub const SCROLLBAR_THUMB: Color = Color::Rgb(80, 80, 80);
 
 pub struct TerminalSession {
     pub terminal: Terminal<CrosstermBackend<Stdout>>,
@@ -54,6 +60,7 @@ impl Drop for TerminalSession {
 pub fn block(title: &'static str, active: bool) -> Block<'static> {
     Block::default()
         .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
         .title(Span::styled(
             format!(" {title} "),
             Style::default()
@@ -64,10 +71,10 @@ pub fn block(title: &'static str, active: bool) -> Block<'static> {
         .style(Style::default().bg(PANEL_BG))
 }
 
-pub fn severity_badge(severity: &Severity) -> (&'static str, Color) {
+pub fn severity_badge(severity: &Severity) -> (&'static str, Color, Color) {
     match severity {
-        Severity::Error => ("error", ERROR_COLOR),
-        Severity::Warning => ("warn", WARN_COLOR),
+        Severity::Error => ("error", ERROR_COLOR, ERROR_BG),
+        Severity::Warning => ("warn", WARN_COLOR, WARN_BG),
     }
 }
 

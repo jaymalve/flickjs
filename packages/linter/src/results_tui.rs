@@ -5,7 +5,10 @@ use crate::{
     print_pretty, PrettyEntry, Summary,
 };
 use crate::rules::{FixSafety, LintResult, Severity};
-use crate::tui_common::{self, PANEL_BG, PANEL_BG_SUBTLE, SELECT_BG, TEXT_FAINT, TEXT_MUTED, TEXT_PRIMARY};
+use crate::tui_common::{
+    self, ERROR_COLOR, PANEL_BG, PANEL_BG_SUBTLE, SCROLLBAR_THUMB, SCROLLBAR_TRACK, SELECT_BG,
+    TEXT_FAINT, TEXT_MUTED, TEXT_PRIMARY, WARN_COLOR,
+};
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::tty::IsTty;
 use miette::{IntoDiagnostic, Result};
@@ -13,7 +16,10 @@ use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Modifier, Style},
     text::{Line, Span, Text},
-    widgets::{List, ListItem, ListState, Paragraph, Wrap},
+    widgets::{
+        List, ListItem, ListState, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState,
+        Wrap,
+    },
     Frame,
 };
 use std::io;
@@ -51,7 +57,7 @@ fn run(results: &[LintResult], elapsed: std::time::Duration, scan_root: &Path) -
     loop {
         terminal
             .terminal
-            .draw(|frame| render(frame, &app))
+            .draw(|frame| render(frame, &mut app))
             .into_diagnostic()?;
 
         if !event::poll(Duration::from_millis(200)).into_diagnostic()? {
@@ -74,8 +80,8 @@ fn run(results: &[LintResult], elapsed: std::time::Duration, scan_root: &Path) -
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum FocusPane {
-    Categories,
     Issues,
+    Detail,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -88,12 +94,14 @@ struct ResultsApp<'a> {
     categories: Vec<(String, Vec<PrettyEntry<'a>>)>,
     elapsed: std::time::Duration,
     scan_root: PathBuf,
-    selected_category: usize,
     selected_issue: usize,
     focus: FocusPane,
     search: String,
     search_mode: bool,
     errors_only: bool,
+    detail_scroll: u16,
+    issues_scrollbar: ScrollbarState,
+    detail_scrollbar: ScrollbarState,
 }
 
 impl<'a> ResultsApp<'a> {
@@ -106,12 +114,14 @@ impl<'a> ResultsApp<'a> {
             categories,
             elapsed,
             scan_root,
-            selected_category: 0,
             selected_issue: 0,
-            focus: FocusPane::Categories,
+            focus: FocusPane::Issues,
             search: String::new(),
             search_mode: false,
             errors_only: false,
+            detail_scroll: 0,
+            issues_scrollbar: ScrollbarState::default(),
+            detail_scrollbar: ScrollbarState::default(),
         };
         app.normalize_selection();
         app
@@ -129,32 +139,32 @@ impl<'a> ResultsApp<'a> {
 
         match key.code {
             KeyCode::Char('q') => AppAction::Quit,
-            KeyCode::Tab => {
+            KeyCode::Tab | KeyCode::BackTab => {
                 self.focus = match self.focus {
-                    FocusPane::Categories => FocusPane::Issues,
-                    FocusPane::Issues => FocusPane::Categories,
+                    FocusPane::Issues => FocusPane::Detail,
+                    FocusPane::Detail => FocusPane::Issues,
                 };
                 AppAction::Continue
             }
             KeyCode::Left | KeyCode::Char('h') => {
-                self.focus = FocusPane::Categories;
+                self.focus = FocusPane::Issues;
                 AppAction::Continue
             }
             KeyCode::Right | KeyCode::Char('l') => {
-                self.focus = FocusPane::Issues;
+                self.focus = FocusPane::Detail;
                 AppAction::Continue
             }
             KeyCode::Up | KeyCode::Char('k') => {
                 match self.focus {
-                    FocusPane::Categories => self.move_category(-1),
                     FocusPane::Issues => self.move_issue(-1),
+                    FocusPane::Detail => self.scroll_detail(-1),
                 }
                 AppAction::Continue
             }
             KeyCode::Down | KeyCode::Char('j') => {
                 match self.focus {
-                    FocusPane::Categories => self.move_category(1),
                     FocusPane::Issues => self.move_issue(1),
+                    FocusPane::Detail => self.scroll_detail(1),
                 }
                 AppAction::Continue
             }
@@ -177,6 +187,7 @@ impl<'a> ResultsApp<'a> {
             KeyCode::Char('e') => {
                 self.errors_only = !self.errors_only;
                 self.selected_issue = 0;
+                self.detail_scroll = 0;
                 self.normalize_selection();
                 AppAction::Continue
             }
@@ -190,6 +201,7 @@ impl<'a> ResultsApp<'a> {
             KeyCode::Backspace => {
                 self.search.pop();
                 self.selected_issue = 0;
+                self.detail_scroll = 0;
                 self.normalize_selection();
             }
             KeyCode::Char(ch)
@@ -198,22 +210,10 @@ impl<'a> ResultsApp<'a> {
             {
                 self.search.push(ch);
                 self.selected_issue = 0;
+                self.detail_scroll = 0;
                 self.normalize_selection();
             }
             _ => {}
-        }
-    }
-
-    fn move_category(&mut self, delta: isize) {
-        let len = self.categories.len();
-        if len == 0 {
-            return;
-        }
-        let next = shift_index(self.selected_category, len, delta);
-        if next != self.selected_category {
-            self.selected_category = next;
-            self.selected_issue = 0;
-            self.normalize_selection();
         }
     }
 
@@ -225,56 +225,51 @@ impl<'a> ResultsApp<'a> {
             return;
         }
         self.selected_issue = shift_index(self.selected_issue, len, delta);
+        self.detail_scroll = 0;
+    }
+
+    fn scroll_detail(&mut self, delta: isize) {
+        let new = self.detail_scroll as isize + delta;
+        self.detail_scroll = new.max(0) as u16;
     }
 
     fn jump_to_start(&mut self) {
         match self.focus {
-            FocusPane::Categories => {
-                self.selected_category = 0;
-                self.selected_issue = 0;
-            }
             FocusPane::Issues => self.selected_issue = 0,
+            FocusPane::Detail => self.detail_scroll = 0,
         }
         self.normalize_selection();
     }
 
     fn jump_to_end(&mut self) {
         match self.focus {
-            FocusPane::Categories => {
-                if !self.categories.is_empty() {
-                    self.selected_category = self.categories.len() - 1;
-                    self.selected_issue = 0;
-                }
-            }
             FocusPane::Issues => {
                 let len = self.visible_issues().len();
                 if len > 0 {
                     self.selected_issue = len - 1;
                 }
             }
+            FocusPane::Detail => {
+                self.detail_scroll = self.detail_scroll.saturating_add(100);
+            }
         }
         self.normalize_selection();
     }
 
     fn reset_filters(&mut self) {
-        self.selected_category = 0;
         self.selected_issue = 0;
-        self.focus = FocusPane::Categories;
+        self.focus = FocusPane::Issues;
         self.search.clear();
         self.search_mode = false;
         self.errors_only = false;
+        self.detail_scroll = 0;
         self.normalize_selection();
     }
 
     fn normalize_selection(&mut self) {
         if self.categories.is_empty() {
-            self.selected_category = 0;
             self.selected_issue = 0;
             return;
-        }
-
-        if self.selected_category >= self.categories.len() {
-            self.selected_category = self.categories.len() - 1;
         }
 
         let visible_len = self.visible_issues().len();
@@ -285,20 +280,11 @@ impl<'a> ResultsApp<'a> {
         }
     }
 
-    fn selected_category_key(&self) -> Option<&str> {
-        self.categories
-            .get(self.selected_category)
-            .map(|(key, _)| key.as_str())
-    }
-
     fn visible_issues(&self) -> Vec<&PrettyEntry<'a>> {
-        let Some((_, entries)) = self.categories.get(self.selected_category) else {
-            return Vec::new();
-        };
-
         let query = self.search.trim().to_ascii_lowercase();
-        entries
+        self.categories
             .iter()
+            .flat_map(|(_, entries)| entries.iter())
             .filter(|entry| {
                 if self.errors_only && entry.diagnostic.severity != Severity::Error {
                     return false;
@@ -319,11 +305,8 @@ impl<'a> ResultsApp<'a> {
         visible.get(self.selected_issue).copied()
     }
 
-    fn total_issues_in_category(&self) -> usize {
-        self.categories
-            .get(self.selected_category)
-            .map(|(_, e)| e.len())
-            .unwrap_or(0)
+    fn total_issues(&self) -> usize {
+        self.categories.iter().map(|(_, entries)| entries.len()).sum()
     }
 
     fn error_stats(&self) -> (usize, usize) {
@@ -338,6 +321,15 @@ impl<'a> ResultsApp<'a> {
             }
         }
         (errors, warnings)
+    }
+
+    fn category_key_for_entry(&self, entry: &PrettyEntry<'a>) -> Option<&str> {
+        self.categories.iter().find_map(|(key, entries)| {
+            entries
+                .iter()
+                .find(|candidate| std::ptr::eq(*candidate, entry))
+                .map(|_| key.as_str())
+        })
     }
 
     fn display_path(&self, path: &Path) -> String {
@@ -356,13 +348,13 @@ fn shift_index(current: usize, len: usize, delta: isize) -> usize {
     next.clamp(0, len as isize - 1) as usize
 }
 
-fn render(frame: &mut Frame, app: &ResultsApp<'_>) {
+fn render(frame: &mut Frame, app: &mut ResultsApp<'_>) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),
+            Constraint::Length(2),
             Constraint::Min(0),
-            Constraint::Length(3),
+            Constraint::Length(2),
         ])
         .split(frame.area());
 
@@ -370,114 +362,101 @@ fn render(frame: &mut Frame, app: &ResultsApp<'_>) {
 
     let body = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(28), Constraint::Percentage(72)])
+        .constraints([Constraint::Percentage(35), Constraint::Percentage(65)])
         .split(chunks[1]);
-    let right = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Percentage(55), Constraint::Percentage(45)])
-        .split(body[1]);
 
-    render_categories(frame, body[0], app);
-    render_issues(frame, right[0], app);
-    render_detail(frame, right[1], app);
+    render_issues(frame, body[0], app);
+    render_detail(frame, body[1], app);
     render_footer(frame, chunks[2], app);
 }
 
 fn render_header(frame: &mut Frame, area: ratatui::layout::Rect, app: &ResultsApp<'_>) {
     let (errors, warnings) = app.error_stats();
-    let scan = app.scan_root.display();
-    let stats_line = if errors == 0 && warnings == 0 {
-        format!("{} errors, {} warnings — clean", errors, warnings)
-    } else {
-        format!("{errors} errors, {warnings} warnings")
-    };
+    let scan = app.display_path(&app.scan_root.clone());
 
-    let text = Text::from(vec![
-        Line::from(vec![
-            Span::styled(
-                "Flint Check",
-                Style::default()
-                    .fg(TEXT_PRIMARY)
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::styled(
-                format!("  finished in {:.2?}", app.elapsed),
-                Style::default().fg(TEXT_MUTED),
-            ),
-        ]),
-        Line::from(vec![
-            Span::styled(format!("Path: {scan}"), Style::default().fg(TEXT_MUTED)),
-            Span::styled("  •  ", Style::default().fg(TEXT_FAINT)),
-            Span::styled(stats_line, Style::default().fg(TEXT_MUTED)),
-        ]),
+    let line = Line::from(vec![
+        Span::styled(
+            " Flint Check",
+            Style::default()
+                .fg(TEXT_PRIMARY)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            format!("  {:.2?}", app.elapsed),
+            Style::default().fg(TEXT_MUTED),
+        ),
+        Span::styled("  •  ", Style::default().fg(TEXT_FAINT)),
+        Span::styled(
+            format!("{errors} errors"),
+            Style::default()
+                .fg(if errors > 0 { ERROR_COLOR } else { TEXT_MUTED })
+                .add_modifier(if errors > 0 {
+                    Modifier::BOLD
+                } else {
+                    Modifier::empty()
+                }),
+        ),
+        Span::styled("  ", Style::default()),
+        Span::styled(
+            format!("{warnings} warnings"),
+            Style::default()
+                .fg(if warnings > 0 { WARN_COLOR } else { TEXT_MUTED })
+                .add_modifier(if warnings > 0 {
+                    Modifier::BOLD
+                } else {
+                    Modifier::empty()
+                }),
+        ),
+        Span::styled("  •  ", Style::default().fg(TEXT_FAINT)),
+        Span::styled(scan, Style::default().fg(TEXT_MUTED)),
     ]);
 
-    let header = Paragraph::new(text)
-        .block(tui_common::block("Results", false))
+    let header = Paragraph::new(Text::from(vec![line, Line::from("")]))
         .style(Style::default().bg(PANEL_BG));
     frame.render_widget(header, area);
 }
 
-fn render_categories(frame: &mut Frame, area: ratatui::layout::Rect, app: &ResultsApp<'_>) {
-    if app.categories.is_empty() {
-        let empty = Paragraph::new(Text::from(vec![Line::from(Span::styled(
-            "No issues — nothing to browse.",
-            Style::default().fg(TEXT_PRIMARY),
-        ))]))
-        .block(tui_common::block("Categories", app.focus == FocusPane::Categories))
-        .wrap(Wrap { trim: false })
-        .style(Style::default().bg(PANEL_BG_SUBTLE));
-        frame.render_widget(empty, area);
-        return;
+fn highlight_spans(text: &str, query: &str, base_style: Style) -> Vec<Span<'static>> {
+    if query.is_empty() {
+        return vec![Span::styled(text.to_string(), base_style)];
     }
 
-    let items: Vec<ListItem> = app
-        .categories
-        .iter()
-        .map(|(key, entries)| {
-            let title = category_display_name(key);
-            let count = entries.len();
-            ListItem::new(Line::from(vec![
-                Span::styled(
-                    title,
-                    Style::default()
-                        .fg(TEXT_PRIMARY)
-                        .add_modifier(Modifier::BOLD),
-                ),
-                Span::raw(" "),
-                Span::styled(format!("{count}"), Style::default().fg(TEXT_MUTED)),
-            ]))
-        })
-        .collect();
+    let lower = text.to_ascii_lowercase();
+    let query_lower = query.to_ascii_lowercase();
+    let mut spans = Vec::new();
+    let mut last = 0;
 
-    let list = List::new(items)
-        .block(tui_common::block("Categories", app.focus == FocusPane::Categories))
-        .highlight_style(
-            Style::default()
-                .bg(SELECT_BG)
-                .fg(TEXT_PRIMARY)
-                .add_modifier(Modifier::BOLD),
-        );
-    let mut state = ListState::default();
-    state.select(Some(app.selected_category));
-    frame.render_stateful_widget(list, area, &mut state);
+    for (start, _) in lower.match_indices(&query_lower) {
+        if start > last {
+            spans.push(Span::styled(text[last..start].to_string(), base_style));
+        }
+        spans.push(Span::styled(
+            text[start..start + query.len()].to_string(),
+            base_style.add_modifier(Modifier::UNDERLINED),
+        ));
+        last = start + query.len();
+    }
+    if last < text.len() {
+        spans.push(Span::styled(text[last..].to_string(), base_style));
+    }
+    if spans.is_empty() {
+        spans.push(Span::styled(text.to_string(), base_style));
+    }
+    spans
 }
 
-fn render_issues(frame: &mut Frame, area: ratatui::layout::Rect, app: &ResultsApp<'_>) {
+fn render_issues(frame: &mut Frame, area: ratatui::layout::Rect, app: &mut ResultsApp<'_>) {
     let visible = app.visible_issues();
     if visible.is_empty() {
-        let msg = if app.total_issues_in_category() == 0 {
-            "No issues in this category."
+        let msg = if app.total_issues() == 0 {
+            "No issues to display."
         } else {
-            "No issues match filters — change search or press e to show warnings."
+            "No issues match filters."
         };
         let empty = Paragraph::new(Text::from(vec![
+            Line::from(Span::styled(msg, Style::default().fg(TEXT_PRIMARY))),
             Line::from(Span::styled(
-                msg,
-                Style::default().fg(TEXT_PRIMARY),
-            )),
-            Line::from(Span::styled(
-                "Use / to filter, e for errors-only, g to reset.",
+                "/ filter · e errors-only · g reset",
                 Style::default().fg(TEXT_MUTED),
             )),
         ]))
@@ -488,44 +467,43 @@ fn render_issues(frame: &mut Frame, area: ratatui::layout::Rect, app: &ResultsAp
         return;
     }
 
+    let query = app.search.trim().to_string();
     let items: Vec<ListItem> = visible
         .iter()
         .map(|entry| {
-            let (label, color) = tui_common::severity_badge(&entry.diagnostic.severity);
+            let (label, fg, bg) = tui_common::severity_badge(&entry.diagnostic.severity);
             let path = app.display_path(entry.file);
-            let msg: String = entry
-                .diagnostic
-                .message
-                .chars()
-                .take(64)
-                .collect();
-            let ellipsis = if entry.diagnostic.message.chars().count() > 64 {
-                "…"
-            } else {
-                ""
-            };
-            ListItem::new(Line::from(vec![
+
+            let mut line1 = vec![
                 Span::styled(
                     format!(" {label} "),
-                    Style::default().fg(color).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(fg)
+                        .bg(bg)
+                        .add_modifier(Modifier::BOLD),
                 ),
-                Span::raw(" "),
-                Span::styled(
-                    format!("{}:{} ", path, entry.diagnostic.span),
-                    Style::default().fg(TEXT_MUTED),
-                ),
-                Span::styled(
-                    format!("{msg}{ellipsis}"),
-                    Style::default().fg(TEXT_PRIMARY),
-                ),
-                Span::styled(
-                    format!("  [{}]", entry.diagnostic.rule_name),
-                    Style::default().fg(TEXT_FAINT),
-                ),
-            ]))
+                Span::styled("  ", Style::default()),
+            ];
+            line1.extend(highlight_spans(
+                &entry.diagnostic.rule_name,
+                &query,
+                Style::default()
+                    .fg(TEXT_PRIMARY)
+                    .add_modifier(Modifier::BOLD),
+            ));
+
+            let mut line2 = vec![Span::styled("        ", Style::default())];
+            line2.extend(highlight_spans(
+                &format!("{}:{}", path, entry.diagnostic.span),
+                &query,
+                Style::default().fg(TEXT_MUTED),
+            ));
+
+            ListItem::new(Text::from(vec![Line::from(line1), Line::from(line2)]))
         })
         .collect();
 
+    let total = items.len();
     let list = List::new(items)
         .block(tui_common::block("Issues", app.focus == FocusPane::Issues))
         .highlight_style(
@@ -537,30 +515,46 @@ fn render_issues(frame: &mut Frame, area: ratatui::layout::Rect, app: &ResultsAp
     let mut state = ListState::default();
     state.select(Some(app.selected_issue));
     frame.render_stateful_widget(list, area, &mut state);
+
+    app.issues_scrollbar = app
+        .issues_scrollbar
+        .content_length(total)
+        .position(app.selected_issue);
+    let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+        .track_style(Style::default().fg(SCROLLBAR_TRACK))
+        .thumb_style(Style::default().fg(SCROLLBAR_THUMB));
+    let scrollbar_area = area.inner(ratatui::layout::Margin {
+        vertical: 1,
+        horizontal: 0,
+    });
+    frame.render_stateful_widget(scrollbar, scrollbar_area, &mut app.issues_scrollbar);
 }
 
-fn render_detail(frame: &mut Frame, area: ratatui::layout::Rect, app: &ResultsApp<'_>) {
+fn render_detail(frame: &mut Frame, area: ratatui::layout::Rect, app: &mut ResultsApp<'_>) {
+    let is_focused = app.focus == FocusPane::Detail;
+
     let Some(entry) = app.selected_entry() else {
         let empty = Paragraph::new(Text::from(vec![
             Line::from(Span::styled(
-                "Select an issue for full detail.",
+                "Select an issue for detail.",
                 Style::default().fg(TEXT_PRIMARY),
             )),
             Line::from(Span::styled(
-                "Rule id, help text, and optional fix metadata appear here.",
+                "Rule, help text, and fix info appear here.",
                 Style::default().fg(TEXT_MUTED),
             )),
         ]))
-        .block(tui_common::block("Detail", false))
+        .block(tui_common::block("Detail", is_focused))
         .wrap(Wrap { trim: false })
         .style(Style::default().bg(PANEL_BG_SUBTLE));
         frame.render_widget(empty, area);
         return;
     };
 
-    let (severity_label, severity_color) = tui_common::severity_badge(&entry.diagnostic.severity);
+    let (severity_label, severity_fg, severity_bg) =
+        tui_common::severity_badge(&entry.diagnostic.severity);
     let group_title = app
-        .selected_category_key()
+        .category_key_for_entry(entry)
         .map(category_display_name)
         .unwrap_or("Other");
 
@@ -569,7 +563,8 @@ fn render_detail(frame: &mut Frame, area: ratatui::layout::Rect, app: &ResultsAp
             Span::styled(
                 format!(" {severity_label} "),
                 Style::default()
-                    .fg(severity_color)
+                    .fg(severity_fg)
+                    .bg(severity_bg)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::raw(" "),
@@ -612,11 +607,19 @@ fn render_detail(frame: &mut Frame, area: ratatui::layout::Rect, app: &ResultsAp
         lines.push(Line::from(""));
         lines.push(Line::from(Span::styled(
             "Fix",
-            Style::default().fg(TEXT_MUTED).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(TEXT_MUTED)
+                .add_modifier(Modifier::BOLD),
         )));
-        lines.push(Line::from(Span::styled(desc, Style::default().fg(TEXT_PRIMARY))));
         lines.push(Line::from(Span::styled(
-            format!("Safety: {safety} · replacement {} chars", fix.replacement.len()),
+            desc,
+            Style::default().fg(TEXT_PRIMARY),
+        )));
+        lines.push(Line::from(Span::styled(
+            format!(
+                "Safety: {safety} · replacement {} chars",
+                fix.replacement.len()
+            ),
             Style::default().fg(TEXT_FAINT),
         )));
     }
@@ -624,10 +627,15 @@ fn render_detail(frame: &mut Frame, area: ratatui::layout::Rect, app: &ResultsAp
     lines.push(Line::from(""));
     lines.push(Line::from(Span::styled(
         "Help",
-        Style::default().fg(TEXT_MUTED).add_modifier(Modifier::BOLD),
+        Style::default()
+            .fg(TEXT_MUTED)
+            .add_modifier(Modifier::BOLD),
     )));
     if let Some(help) = diagnostic_help_text(entry.diagnostic) {
-        lines.push(Line::from(Span::styled(help, Style::default().fg(TEXT_PRIMARY))));
+        lines.push(Line::from(Span::styled(
+            help,
+            Style::default().fg(TEXT_PRIMARY),
+        )));
     } else {
         lines.push(Line::from(Span::styled(
             "—",
@@ -635,11 +643,26 @@ fn render_detail(frame: &mut Frame, area: ratatui::layout::Rect, app: &ResultsAp
         )));
     }
 
+    let total_lines = lines.len();
     let panel = Paragraph::new(Text::from(lines))
-        .block(tui_common::block("Detail", false))
+        .block(tui_common::block("Detail", is_focused))
         .wrap(Wrap { trim: false })
+        .scroll((app.detail_scroll, 0))
         .style(Style::default().bg(PANEL_BG_SUBTLE));
     frame.render_widget(panel, area);
+
+    app.detail_scrollbar = app
+        .detail_scrollbar
+        .content_length(total_lines)
+        .position(app.detail_scroll as usize);
+    let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+        .track_style(Style::default().fg(SCROLLBAR_TRACK))
+        .thumb_style(Style::default().fg(SCROLLBAR_THUMB));
+    let scrollbar_area = area.inner(ratatui::layout::Margin {
+        vertical: 1,
+        horizontal: 0,
+    });
+    frame.render_stateful_widget(scrollbar, scrollbar_area, &mut app.detail_scrollbar);
 }
 
 fn detail_line(label: &str, value: &str) -> Line<'static> {
@@ -653,7 +676,7 @@ fn render_footer(frame: &mut Frame, area: ratatui::layout::Rect, app: &ResultsAp
     let filter = if app.errors_only {
         "errors only"
     } else {
- "all severities"
+        "all severities"
     };
     let search_line = if app.search_mode {
         format!("Search: {}_", app.search)
@@ -663,21 +686,18 @@ fn render_footer(frame: &mut Frame, area: ratatui::layout::Rect, app: &ResultsAp
         format!("Search: {}", app.search)
     };
     let legend = if app.search_mode {
-        "type to filter · backspace edit · enter/esc close · q quit"
+        "type to filter · backspace · enter/esc close · q quit"
     } else {
-        "j/k move · tab switch pane · / search · e errors-only · g reset · q quit"
+        "j/k move · tab pane · h/l focus · / search · e errors · g reset · q quit"
     };
 
-    let footer = Paragraph::new(Text::from(vec![
-        Line::from(vec![
-            Span::styled(search_line, Style::default().fg(TEXT_PRIMARY)),
-            Span::styled("  •  ", Style::default().fg(TEXT_FAINT)),
-            Span::styled(format!("Filter: {filter}"), Style::default().fg(TEXT_MUTED)),
-        ]),
-        Line::from(Span::styled(legend, Style::default().fg(TEXT_MUTED))),
-    ]))
-    .block(tui_common::block("Keys", false))
-    .wrap(Wrap { trim: false })
+    let footer = Paragraph::new(Text::from(vec![Line::from(vec![
+        Span::styled(format!(" {search_line}"), Style::default().fg(TEXT_PRIMARY)),
+        Span::styled("  •  ", Style::default().fg(TEXT_FAINT)),
+        Span::styled(format!("Filter: {filter}"), Style::default().fg(TEXT_MUTED)),
+        Span::styled("  •  ", Style::default().fg(TEXT_FAINT)),
+        Span::styled(legend, Style::default().fg(TEXT_MUTED)),
+    ])]))
     .style(Style::default().bg(PANEL_BG));
     frame.render_widget(footer, area);
 }
@@ -724,7 +744,7 @@ mod tests {
     }
 
     #[test]
-    fn category_change_resets_issue_index() {
+    fn visible_issues_include_all_categories() {
         let results = vec![
             LintResult {
                 file: PathBuf::from("/proj/src/a.ts"),
@@ -772,15 +792,9 @@ mod tests {
             },
         ];
         let cats = group_results_for_display(&results);
-        let mut app = ResultsApp::new(cats, std::time::Duration::ZERO, PathBuf::from("/proj"));
-        app.focus = FocusPane::Categories;
-        app.move_category(1);
-        app.focus = FocusPane::Issues;
-        app.move_issue(1);
-        assert_eq!(app.selected_issue, 1);
-        app.focus = FocusPane::Categories;
-        app.move_category(-1);
-        assert_eq!(app.selected_issue, 0);
+        let app = ResultsApp::new(cats, std::time::Duration::ZERO, PathBuf::from("/proj"));
+        let visible = app.visible_issues();
+        assert_eq!(visible.len(), 3);
     }
 
     #[test]
@@ -804,5 +818,31 @@ mod tests {
         app.reset_filters();
         assert!(!app.errors_only);
         assert!(app.search.is_empty());
+    }
+
+    #[test]
+    fn detail_scroll_does_not_go_negative() {
+        let results = sample_results();
+        let cats = group_results_for_display(&results);
+        let mut app = ResultsApp::new(cats, std::time::Duration::ZERO, PathBuf::from("/proj"));
+        app.focus = FocusPane::Detail;
+        app.scroll_detail(-5);
+        assert_eq!(app.detail_scroll, 0);
+        app.scroll_detail(3);
+        assert_eq!(app.detail_scroll, 3);
+        app.scroll_detail(-1);
+        assert_eq!(app.detail_scroll, 2);
+    }
+
+    #[test]
+    fn tab_cycles_through_all_panes() {
+        let results = sample_results();
+        let cats = group_results_for_display(&results);
+        let mut app = ResultsApp::new(cats, std::time::Duration::ZERO, PathBuf::from("/proj"));
+        assert_eq!(app.focus, FocusPane::Issues);
+        app.handle_key(KeyEvent::from(KeyCode::Tab));
+        assert_eq!(app.focus, FocusPane::Detail);
+        app.handle_key(KeyEvent::from(KeyCode::Tab));
+        assert_eq!(app.focus, FocusPane::Issues);
     }
 }
