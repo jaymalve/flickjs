@@ -6,6 +6,9 @@
   "rewrites": [
     { "source": "/docs", "destination": "/docs/index.html" },
     { "source": "/docs/:path*", "destination": "/docs/:path*" },
+    { "source": "/react/demo", "destination": "/react/demo/index.html" },
+    { "source": "/react/demo/", "destination": "/react/demo/index.html" },
+    { "source": "/react/demo/:path*", "destination": "/react/demo/:path*" },
     { "source": "/:path*", "destination": "/index.html" }
   ]
 }

@@ -186,12 +186,12 @@ export function UseStateSide() {
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
         <span style={{ fontSize: 16, fontWeight: 600, color: '#fafafa' }}>useState</span>
-        <span style={tag}>React default</span>
+        {/* <span style={tag}>React default</span> */}
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
         <button style={btnPrimary} onClick={startStreaming}>
-          Stream AI
+          Stream
         </button>
         <button style={btnSecondary} onClick={reset}>
           Reset

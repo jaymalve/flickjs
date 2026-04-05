@@ -1,5 +1,8 @@
+import { scan } from 'react-scan/all-environments';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+
+scan();
 
 // Global reset matching FlickJS landing page
 const style = document.createElement('style');
@@ -9,7 +12,15 @@ style.textContent = `
   body {
     background: #000;
     color: #fafafa;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family:
+      'Geist Mono',
+      ui-monospace,
+      SFMono-Regular,
+      'SF Mono',
+      Menlo,
+      Monaco,
+      Consolas,
+      monospace;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     min-height: 100vh;

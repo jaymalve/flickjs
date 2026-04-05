@@ -190,12 +190,12 @@ export function FxSide() {
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
         <span style={{ fontSize: 16, fontWeight: 600, color: '#fafafa' }}>fx</span>
-        <span style={tagGreen}>@flickjs/react</span>
+        {/* <span style={tagGreen}>@flickjs/react</span> */}
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
         <button style={btnPrimary} onClick={startStreaming}>
-          Stream AI
+          Stream
         </button>
         <button style={btnSecondary} onClick={reset}>
           Reset
