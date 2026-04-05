@@ -22,8 +22,9 @@ use ratatui::{
     },
     Frame,
 };
-use std::io;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
 use std::time::Duration;
 
 pub(crate) fn print_or_fallback(
@@ -66,8 +67,24 @@ fn run(results: &[LintResult], elapsed: std::time::Duration, scan_root: &Path) -
 
         match event::read().into_diagnostic()? {
             Event::Key(key) => {
-                if app.handle_key(key) == AppAction::Quit {
-                    break;
+                match app.handle_key(key) {
+                    AppAction::Quit => break,
+                    AppAction::OpenSelectedLocation => {
+                        if let Some(entry) = app.selected_entry() {
+                            match terminal.suspend_for_external_command(|| {
+                                spawn_open_at_span(entry.file, &entry.diagnostic.span)
+                            }) {
+                                Ok(Ok(())) => {}
+                                Ok(Err(e)) => {
+                                    let _ = writeln!(io::stderr(), "flint: open in editor: {e}");
+                                }
+                                Err(e) => {
+                                    let _ = writeln!(io::stderr(), "flint: TUI suspend failed: {e}");
+                                }
+                            }
+                        }
+                    }
+                    AppAction::Continue => {}
                 }
             }
             Event::Resize(_, _) => {}
@@ -88,6 +105,7 @@ enum FocusPane {
 enum AppAction {
     Continue,
     Quit,
+    OpenSelectedLocation,
 }
 
 struct ResultsApp<'a> {
@@ -190,6 +208,13 @@ impl<'a> ResultsApp<'a> {
                 self.detail_scroll = 0;
                 self.normalize_selection();
                 AppAction::Continue
+            }
+            KeyCode::Char('o') | KeyCode::Char('O') => {
+                if self.selected_entry().is_some() {
+                    AppAction::OpenSelectedLocation
+                } else {
+                    AppAction::Continue
+                }
             }
             _ => AppAction::Continue,
         }
@@ -338,6 +363,134 @@ impl<'a> ResultsApp<'a> {
             .display()
             .to_string()
     }
+}
+
+fn parse_line_col(span: &str) -> (u32, u32) {
+    let mut parts = span.split(':');
+    let line = parts
+        .next()
+        .and_then(|s| s.parse().ok())
+        .filter(|&n| n > 0)
+        .unwrap_or(1);
+    let col = parts
+        .next()
+        .and_then(|s| s.parse().ok())
+        .filter(|&n| n > 0)
+        .unwrap_or(1);
+    (line, col)
+}
+
+/// Opens `path` at `line:col` from the diagnostic span.
+///
+/// Resolution order:
+/// 1. `FLINT_OPEN` — executable name or path, tried with `-g` / `--goto` / bare `path:line:col`.
+/// 2. On macOS, bundled CLIs inside `.app` (`Contents/Resources/app/bin/cursor|code`).  
+///    Using `open -a Cursor --args …` is **not** reliable: it launches the GUI binary, which often
+///    drops VS Code–style CLI flags; the `bin/cursor` shim is what understands `-g`.
+/// 3. `cursor` / `code` on `PATH`.
+///
+/// VS Code–family CLIs are invoked **once** with `-r -g path:line:col` (`-r` / `--reuse-window` targets an
+/// already running instance and avoids multiple CLI attempts that make the macOS dock flash).
+fn spawn_open_at_span(path: &Path, span: &str) -> io::Result<()> {
+    let (line, col) = parse_line_col(span);
+    let abs = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+    let spec = format!("{}:{line}:{col}", abs.display());
+
+    let mut candidates = Vec::new();
+    let mut push = |s: &str| {
+        if !candidates.iter().any(|e: &String| e == s) {
+            candidates.push(s.to_string());
+        }
+    };
+    if let Ok(p) = std::env::var("FLINT_OPEN") {
+        let p = p.trim();
+        if !p.is_empty() {
+            push(p);
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        for bundled in macos_editor_cli_candidates() {
+            push(bundled.as_str());
+        }
+    }
+
+    push("cursor");
+    push("code");
+
+    let mut last_err = None;
+    for program in candidates {
+        match try_open_vscode_goto(program.as_str(), &spec) {
+            Ok(()) => return Ok(()),
+            Err(e) => last_err = Some(e),
+        }
+    }
+
+    let _ = writeln!(
+        io::stderr(),
+        "flint: could not open an editor at {} (set FLINT_OPEN to your editor CLI, e.g. cursor or code)",
+        spec
+    );
+    Err(last_err.unwrap_or_else(|| {
+        io::Error::new(io::ErrorKind::NotFound, "no editor command succeeded")
+    }))
+}
+
+/// Standard install locations for the real VS Code–compatible CLIs (not `open -a`).
+#[cfg(target_os = "macos")]
+fn macos_editor_cli_candidates() -> Vec<String> {
+    let mut v = Vec::new();
+    for rel in [
+        "Cursor.app/Contents/Resources/app/bin/cursor",
+        "Visual Studio Code.app/Contents/Resources/app/bin/code",
+        "Visual Studio Code - Insiders.app/Contents/Resources/app/bin/code",
+    ] {
+        let p = Path::new("/Applications").join(rel);
+        if p.is_file() {
+            v.push(p.to_string_lossy().into_owned());
+        }
+    }
+    v
+}
+
+fn is_vscode_family_cli(program: &str) -> bool {
+    let lower = program.to_ascii_lowercase();
+    let base = Path::new(program)
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    base == "cursor"
+        || base == "code"
+        || base == "code-insiders"
+        || lower.contains("visual studio code")
+        || lower.contains("/resources/app/bin/cursor")
+        || lower.contains("/resources/app/bin/code")
+}
+
+/// Single spawn per candidate so we do not run `-g` / `--goto` / bare retries (each can briefly
+/// activate the app in the macOS dock).
+fn try_open_vscode_goto(program: &str, path_line_col: &str) -> io::Result<()> {
+    if is_vscode_family_cli(program) {
+        try_spawn_detached(program, &["-r", "-g", path_line_col])
+    } else {
+        // Custom `FLINT_OPEN` (e.g. a wrapper): keep one `-g` attempt; avoid `-r` (e.g. vim uses `-r` for recovery).
+        try_spawn_detached(program, &["-g", path_line_col])
+    }
+}
+
+fn try_spawn_detached(program: impl AsRef<std::ffi::OsStr>, args: &[&str]) -> io::Result<()> {
+    let mut child = Command::new(program.as_ref())
+        .args(args)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()?;
+    std::thread::spawn(move || {
+        let _ = child.wait();
+    });
+    Ok(())
 }
 
 fn shift_index(current: usize, len: usize, delta: isize) -> usize {
@@ -581,8 +734,10 @@ fn render_detail(frame: &mut Frame, area: ratatui::layout::Rect, app: &mut Resul
             Style::default().fg(TEXT_PRIMARY),
         )),
         Line::from(""),
-        detail_line("File", &app.display_path(entry.file)),
-        detail_line("Span", &entry.diagnostic.span),
+        detail_line(
+            "File",
+            &format!("{}:{}", app.display_path(entry.file), entry.diagnostic.span),
+        ),
         detail_line("Category", group_title),
     ];
 
@@ -688,7 +843,7 @@ fn render_footer(frame: &mut Frame, area: ratatui::layout::Rect, app: &ResultsAp
     let legend = if app.search_mode {
         "type to filter · backspace · enter/esc close · q quit"
     } else {
-        "j/k move · tab pane · h/l focus · / search · e errors · g reset · q quit"
+        "j/k move · tab pane · h/l focus · o open · / search · e errors · g reset · q quit"
     };
 
     let footer = Paragraph::new(Text::from(vec![Line::from(vec![
@@ -844,5 +999,47 @@ mod tests {
         assert_eq!(app.focus, FocusPane::Detail);
         app.handle_key(KeyEvent::from(KeyCode::Tab));
         assert_eq!(app.focus, FocusPane::Issues);
+    }
+
+    #[test]
+    fn parse_line_col_handles_common_spans() {
+        assert_eq!(parse_line_col("1:1"), (1, 1));
+        assert_eq!(parse_line_col("42:7"), (42, 7));
+        assert_eq!(parse_line_col("10"), (10, 1));
+    }
+
+    #[test]
+    fn parse_line_col_defaults_on_garbage() {
+        assert_eq!(parse_line_col(""), (1, 1));
+        assert_eq!(parse_line_col("0:0"), (1, 1));
+        assert_eq!(parse_line_col("abc"), (1, 1));
+    }
+
+    #[test]
+    fn vscode_family_cli_detection() {
+        assert!(super::is_vscode_family_cli("cursor"));
+        assert!(super::is_vscode_family_cli("code"));
+        assert!(super::is_vscode_family_cli(
+            "/Applications/Cursor.app/Contents/Resources/app/bin/cursor"
+        ));
+        assert!(!super::is_vscode_family_cli("vim"));
+        assert!(!super::is_vscode_family_cli("/usr/bin/emacs"));
+    }
+
+    #[test]
+    fn open_key_works_from_either_pane_with_selection() {
+        let results = sample_results();
+        let cats = group_results_for_display(&results);
+        let mut app = ResultsApp::new(cats, std::time::Duration::ZERO, PathBuf::from("/proj"));
+        assert_eq!(app.focus, FocusPane::Issues);
+        assert_eq!(
+            app.handle_key(KeyEvent::from(KeyCode::Char('o'))),
+            AppAction::OpenSelectedLocation
+        );
+        app.focus = FocusPane::Detail;
+        assert_eq!(
+            app.handle_key(KeyEvent::from(KeyCode::Char('o'))),
+            AppAction::OpenSelectedLocation
+        );
     }
 }

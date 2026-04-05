@@ -47,6 +47,17 @@ impl TerminalSession {
         terminal.clear().into_diagnostic()?;
         Ok(Self { terminal })
     }
+
+    /// Suspend alternate-screen TUI so an external editor or other subprocess can safely use the terminal.
+    pub fn suspend_for_external_command<R>(&mut self, f: impl FnOnce() -> R) -> Result<R> {
+        disable_raw_mode().into_diagnostic()?;
+        execute!(self.terminal.backend_mut(), LeaveAlternateScreen).into_diagnostic()?;
+        let out = f();
+        execute!(self.terminal.backend_mut(), EnterAlternateScreen).into_diagnostic()?;
+        self.terminal.clear().into_diagnostic()?;
+        enable_raw_mode().into_diagnostic()?;
+        Ok(out)
+    }
 }
 
 impl Drop for TerminalSession {
