@@ -73,3 +73,6 @@ packages/create-app/test-project/
 *.tgz
 
 .flint-cache.json
+
+# flick-test incremental parse cache
+.flick-test-cache.json

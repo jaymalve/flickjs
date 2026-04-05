@@ -1,0 +1,55 @@
+{
+  "name": "@flickjs/test",
+  "version": "0.1.0",
+  "description": "Diff-first test runner for React and Next.js",
+  "type": "module",
+  "main": "./dist/cli.js",
+  "bin": {
+    "flick-test": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "bun build src/cli.ts --outfile dist/cli.js --target node --packages external && bun build src/runtime/harness-boot.ts --outfile dist/harness-boot.js --target browser --packages external"
+  },
+  "keywords": [
+    "test",
+    "react",
+    "nextjs",
+    "vite",
+    "git"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jaymalave/flick.git",
+    "directory": "packages/test"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "dependencies": {
+    "@babel/parser": "^7.26.0",
+    "@babel/traverse": "^7.26.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "cac": "^6.7.14",
+    "chokidar": "^4.0.3",
+    "fast-glob": "^3.3.3",
+    "puppeteer": "^24.2.0",
+    "source-map": "^0.7.4",
+    "vite": "^6.0.3"
+  },
+  "devDependencies": {
+    "@types/babel__traverse": "^7.20.6",
+    "@types/node": "^22.10.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
