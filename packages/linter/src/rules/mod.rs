@@ -4,9 +4,7 @@ pub mod no_console;
 pub mod no_empty_catch;
 pub mod no_explicit_any;
 pub mod no_missing_return;
-pub mod no_unsafe_optional_access;
 pub mod no_unused_vars;
-pub mod no_wrong_arg_count;
 pub mod policy;
 pub mod policy_ir;
 pub mod prefer_const;
@@ -216,8 +214,6 @@ pub(crate) fn all_builtin_rules() -> Vec<Box<dyn LintRule>> {
         Box::new(no_unused_vars::NoUnusedVars),
         Box::new(unreachable_code::UnreachableCode),
         Box::new(no_missing_return::NoMissingReturn),
-        Box::new(no_wrong_arg_count::NoWrongArgCount),
-        Box::new(no_unsafe_optional_access::NoUnsafeOptionalAccess),
         Box::new(universal_security::NoEval),
         Box::new(universal_security::NoHardcodedSecrets),
     ];

@@ -11,6 +11,8 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use crate::project::ModuleResolutionConfig;
+
 use super::{LintDiagnostic, RuleOrigin, Severity};
 
 // ── Import graph types ─────────────────────────────────────
@@ -262,21 +264,29 @@ fn collect_default_export(source: &str, decl: &ExportDefaultDeclaration<'_>) -> 
 
 // ── Import resolution ──────────────────────────────────────
 
-/// Try to resolve a relative import to a file path.
-/// Handles: ./foo → ./foo.ts, ./foo/index.ts, etc.
+/// Try to resolve an import to a local file path.
+/// Handles relative imports plus tsconfig/jsconfig alias candidates.
 pub fn resolve_import(
     from_file: &Path,
     import_source: &str,
     canonical_files: &HashSet<PathBuf>,
+    resolver_config: Option<&ModuleResolutionConfig>,
 ) -> Option<PathBuf> {
-    // Only resolve relative imports
-    if !import_source.starts_with('.') {
-        return None;
+    if import_source.starts_with('.') {
+        let from_dir = from_file.parent()?;
+        return resolve_candidate_path(from_dir.join(import_source), canonical_files);
     }
 
-    let from_dir = from_file.parent()?;
-    let base = from_dir.join(import_source);
+    resolver_config
+        .and_then(|config| {
+            config
+                .resolve_non_relative(import_source)
+                .into_iter()
+                .find_map(|candidate| resolve_candidate_path(candidate, canonical_files))
+        })
+}
 
+fn resolve_candidate_path(base: PathBuf, canonical_files: &HashSet<PathBuf>) -> Option<PathBuf> {
     let extensions = [
         "", ".ts", ".tsx", ".js", ".jsx", ".mts", ".cts", ".mjs", ".cjs",
     ];
@@ -311,7 +321,11 @@ pub fn resolve_import(
 
 // ── Build import graph ─────────────────────────────────────
 
-pub fn build_import_graph(files: &[(PathBuf, String)], all_file_paths: &[PathBuf]) -> ImportGraph {
+pub fn build_import_graph(
+    files: &[(PathBuf, String)],
+    all_file_paths: &[PathBuf],
+    resolver_config: Option<ModuleResolutionConfig>,
+) -> ImportGraph {
     // Pre-canonicalize all file paths ONCE — O(N) syscalls total
     let canonical_set: Arc<HashSet<PathBuf>> = Arc::new(
         all_file_paths
@@ -319,6 +333,7 @@ pub fn build_import_graph(files: &[(PathBuf, String)], all_file_paths: &[PathBuf
             .filter_map(|f| f.canonicalize().ok())
             .collect(),
     );
+    let resolver_config = resolver_config.map(Arc::new);
 
     // Build original→canonical mapping for downstream consumers
     let canonical_paths: HashMap<PathBuf, PathBuf> = files
@@ -337,8 +352,14 @@ pub fn build_import_graph(files: &[(PathBuf, String)], all_file_paths: &[PathBuf
         .par_iter()
         .flat_map_iter(|(path, info)| {
             let canonical_set = Arc::clone(&canonical_set);
+            let resolver_config = resolver_config.clone();
             info.imports.iter().map(move |import| {
-                let resolved = resolve_import(path, &import.source, canonical_set.as_ref());
+                let resolved = resolve_import(
+                    path,
+                    &import.source,
+                    canonical_set.as_ref(),
+                    resolver_config.as_deref(),
+                );
                 ((path.clone(), import.source.clone()), resolved)
             })
         })
@@ -515,16 +536,16 @@ pub fn find_unused_dependencies(
         .map(|obj| obj.keys().cloned().collect::<Vec<_>>())
         .unwrap_or_default();
 
-    // Collect all bare (non-relative) import sources
+    // Collect all bare (non-relative) import sources that do not resolve to local files.
     let mut used_packages: HashSet<String> = HashSet::new();
-    for info in graph.files.values() {
-        for import in &info.imports {
-            if !import.source.starts_with('.') {
-                // Extract package name: "@scope/pkg/foo" → "@scope/pkg", "pkg/foo" → "pkg"
-                let package_name = extract_package_name(&import.source);
-                used_packages.insert(package_name);
-            }
+    for ((_, source), resolved) in &graph.resolved_imports {
+        if source.starts_with('.') || resolved.is_some() {
+            continue;
         }
+
+        // Extract package name: "@scope/pkg/foo" → "@scope/pkg", "pkg/foo" → "pkg"
+        let package_name = extract_package_name(source);
+        used_packages.insert(package_name);
     }
 
     for dep in &deps {
@@ -600,6 +621,9 @@ fn offset_to_line_col(source: &str, offset: usize) -> (usize, usize) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::project::{ModuleResolutionConfig, PathAlias};
+    use std::fs;
+    use tempfile::tempdir;
 
     #[test]
     fn extracts_package_name_from_scoped() {
@@ -644,5 +668,123 @@ export default class MyClass {}
         assert_eq!(info.exports[0].name, "value");
         assert_eq!(info.exports[1].name, "helper");
         assert_eq!(info.exports[2].name, "default");
+    }
+
+    #[test]
+    fn resolves_base_url_imports_in_unused_file_analysis() {
+        let dir = tempdir().unwrap();
+        let src_dir = dir.path().join("src");
+        let components_dir = src_dir.join("components");
+        fs::create_dir_all(&components_dir).unwrap();
+
+        let importer = src_dir.join("index.ts");
+        let target = components_dir.join("Tooltip.tsx");
+        fs::write(&importer, "import Tooltip from 'components/Tooltip';\n").unwrap();
+        fs::write(&target, "export default function Tooltip() {}\n").unwrap();
+
+        let files = vec![importer.clone(), target.clone()];
+        let file_sources = files
+            .iter()
+            .map(|path| (path.clone(), fs::read_to_string(path).unwrap()))
+            .collect::<Vec<_>>();
+        let graph = build_import_graph(
+            &file_sources,
+            &files,
+            Some(ModuleResolutionConfig {
+                config_dir: dir.path().to_path_buf(),
+                base_url: Some(src_dir.clone()),
+                paths: Vec::new(),
+            }),
+        );
+
+        let diagnostics = find_unused_files(&graph);
+        assert!(!diagnostics.iter().any(|(path, _)| path == &target));
+    }
+
+    #[test]
+    fn resolves_paths_alias_imports_in_unused_file_analysis() {
+        let dir = tempdir().unwrap();
+        let src_dir = dir.path().join("src");
+        let components_dir = src_dir.join("components");
+        fs::create_dir_all(&components_dir).unwrap();
+
+        let importer = src_dir.join("index.ts");
+        let target = components_dir.join("Tooltip.tsx");
+        fs::write(&importer, "import Tooltip from '@/components/Tooltip';\n").unwrap();
+        fs::write(&target, "export default function Tooltip() {}\n").unwrap();
+
+        let files = vec![importer.clone(), target.clone()];
+        let file_sources = files
+            .iter()
+            .map(|path| (path.clone(), fs::read_to_string(path).unwrap()))
+            .collect::<Vec<_>>();
+        let graph = build_import_graph(
+            &file_sources,
+            &files,
+            Some(ModuleResolutionConfig {
+                config_dir: dir.path().to_path_buf(),
+                base_url: Some(src_dir.clone()),
+                paths: vec![PathAlias {
+                    pattern: "@/*".to_string(),
+                    targets: vec!["./*".to_string()],
+                }],
+            }),
+        );
+
+        let diagnostics = find_unused_files(&graph);
+        assert!(!diagnostics.iter().any(|(path, _)| path == &target));
+    }
+
+    #[test]
+    fn keeps_bare_package_imports_unresolved_for_file_usage() {
+        let dir = tempdir().unwrap();
+        let src_dir = dir.path().join("src");
+        fs::create_dir_all(&src_dir).unwrap();
+
+        let importer = src_dir.join("index.ts");
+        fs::write(&importer, "import React from 'react';\n").unwrap();
+
+        let files = vec![importer.clone()];
+        let file_sources = vec![(importer.clone(), fs::read_to_string(&importer).unwrap())];
+        let graph = build_import_graph(
+            &file_sources,
+            &files,
+            Some(ModuleResolutionConfig {
+                config_dir: dir.path().to_path_buf(),
+                base_url: Some(src_dir),
+                paths: Vec::new(),
+            }),
+        );
+
+        assert_eq!(
+            graph
+                .resolved_imports
+                .get(&(importer, "react".to_string()))
+                .cloned()
+                .flatten(),
+            None
+        );
+    }
+
+    #[test]
+    fn keeps_relative_resolution_working_without_config() {
+        let dir = tempdir().unwrap();
+        let src_dir = dir.path().join("src");
+        fs::create_dir_all(&src_dir).unwrap();
+
+        let importer = src_dir.join("main.ts");
+        let target = src_dir.join("tooltip.ts");
+        fs::write(&importer, "import { tooltip } from './tooltip';\n").unwrap();
+        fs::write(&target, "export const tooltip = true;\n").unwrap();
+
+        let files = vec![importer.clone(), target.clone()];
+        let file_sources = files
+            .iter()
+            .map(|path| (path.clone(), fs::read_to_string(path).unwrap()))
+            .collect::<Vec<_>>();
+        let graph = build_import_graph(&file_sources, &files, None);
+
+        let diagnostics = find_unused_files(&graph);
+        assert!(!diagnostics.iter().any(|(path, _)| path == &target));
     }
 }

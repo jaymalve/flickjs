@@ -235,8 +235,6 @@ fn rule_seeds() -> Vec<RuleSeed> {
             "no-unused-vars",
             "unreachable-code",
             "no-missing-return",
-            "no-wrong-arg-count",
-            "no-unsafe-optional-access",
         ],
     );
     extend_group(
@@ -445,8 +443,6 @@ fn summary_for_rule(rule_id: &str) -> String {
         "no-missing-return" => {
             "Require consistent returns from functions that should produce a value."
         }
-        "no-wrong-arg-count" => "Catch same-file calls that pass too few or too many arguments.",
-        "no-unsafe-optional-access" => "Avoid dereferencing values that may still be nullish.",
         "unused-export" => "Show exports that are never imported anywhere else in the project.",
         "unused-file" => "Show files that are never imported by any other file.",
         "unused-dependency" => "Show package.json dependencies that are never imported.",

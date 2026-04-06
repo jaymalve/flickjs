@@ -373,7 +373,8 @@ fn run_cross_file_analysis(
         })
         .collect();
 
-    let graph = rules::dead_code::build_import_graph(&file_sources, files);
+    let resolver_config = project::load_module_resolution_config(project_root);
+    let graph = rules::dead_code::build_import_graph(&file_sources, files, resolver_config);
 
     // Apply severity overrides
     let export_severity = rule_config
