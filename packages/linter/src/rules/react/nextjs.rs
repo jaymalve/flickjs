@@ -13,6 +13,9 @@ use oxc_parser::Parser;
 use oxc_semantic::{Semantic, SemanticBuilder};
 use oxc_span::{SourceType, Span};
 use oxc_syntax::node::NodeId;
+#[cfg(test)]
+use rayon::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
@@ -409,15 +412,27 @@ fn is_app_router_metadata_file(ctx: &LintContext) -> bool {
 const SEARCH_PARAMS_RULE_NAME: &str = "nextjs/no-search-params-without-suspense";
 const SEARCH_PARAMS_MESSAGE: &str = "Wrap `useSearchParams()` consumers in `<Suspense>`";
 
-#[derive(Clone, Debug)]
-struct SearchFileAnalysis {
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SearchFileAnalysis {
     symbols: HashMap<String, SearchSymbolData>,
     exports: HashMap<String, String>,
     imports: HashMap<String, ImportedBinding>,
     top_level_search_calls: Vec<SpanInfo>,
 }
 
-#[derive(Clone, Debug)]
+impl SearchFileAnalysis {
+    /// Returns true if this file has any search-params-relevant usage that
+    /// would produce diagnostics or participate in cross-file resolution.
+    pub(crate) fn has_search_params_usage(&self) -> bool {
+        !self.top_level_search_calls.is_empty()
+            || self
+                .symbols
+                .values()
+                .any(|s| !s.direct_search_calls.is_empty())
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 struct SearchSymbolData {
     kind: SearchSymbolKind,
     direct_search_calls: Vec<SpanInfo>,
@@ -425,7 +440,7 @@ struct SearchSymbolData {
     render_edges: Vec<PendingRenderEdge>,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 enum SearchSymbolKind {
     Component,
     Hook,
@@ -437,26 +452,26 @@ struct SearchSymbolKey {
     name: String,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 struct ImportedBinding {
     source: String,
     imported_name: String,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 struct PendingCallEdge {
     target: SymbolRef,
     span: SpanInfo,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 struct PendingRenderEdge {
     target: SymbolRef,
     span: SpanInfo,
     wrapped: bool,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 enum SymbolRef {
     Local(String),
     Import(ImportedBinding),
@@ -483,7 +498,7 @@ struct ResolvedRenderEdge {
     wrapped: bool,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 struct SpanInfo {
     byte_start: u32,
     byte_end: u32,
@@ -491,6 +506,7 @@ struct SpanInfo {
     col: usize,
 }
 
+#[cfg(test)]
 pub(crate) fn collect_search_params_project_diagnostics(
     file_sources: &[(PathBuf, String)],
     graph: &ImportGraph,
@@ -498,6 +514,14 @@ pub(crate) fn collect_search_params_project_diagnostics(
 ) -> Vec<(PathBuf, LintDiagnostic)> {
     let analyses = analyze_search_params_files(file_sources);
     collect_search_params_diagnostics(&analyses, Some(graph), severity)
+}
+
+pub(crate) fn collect_search_params_diagnostics_from_analyses(
+    analyses: &HashMap<PathBuf, SearchFileAnalysis>,
+    graph: &ImportGraph,
+    severity: Severity,
+) -> Vec<(PathBuf, LintDiagnostic)> {
+    collect_search_params_diagnostics(analyses, Some(graph), severity)
 }
 
 fn collect_search_params_diagnostics_for_file(
@@ -512,11 +536,12 @@ fn collect_search_params_diagnostics_for_file(
         .collect()
 }
 
+#[cfg(test)]
 fn analyze_search_params_files(
     file_sources: &[(PathBuf, String)],
 ) -> HashMap<PathBuf, SearchFileAnalysis> {
     file_sources
-        .iter()
+        .par_iter()
         .map(|(path, source)| (path.clone(), analyze_search_params_file(path, source)))
         .collect()
 }
@@ -528,8 +553,15 @@ fn analyze_search_params_file(path: &Path, source: &str) -> SearchFileAnalysis {
     let semantic = SemanticBuilder::new()
         .with_check_syntax_error(true)
         .build(&parsed.program);
-    let semantic = &semantic.semantic;
 
+    collect_search_analysis_from_semantic(source, &semantic.semantic)
+}
+
+/// Collect search-params analysis reusing an existing Semantic from the lint pass.
+pub(crate) fn collect_search_analysis_from_semantic(
+    source: &str,
+    semantic: &Semantic<'_>,
+) -> SearchFileAnalysis {
     let mut analysis = SearchFileAnalysis {
         symbols: HashMap::new(),
         exports: HashMap::new(),

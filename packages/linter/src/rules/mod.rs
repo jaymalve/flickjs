@@ -29,6 +29,28 @@ use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
+// ── Line-offset helpers (O(log n) line/col lookup) ─────────
+
+/// Build a table of byte offsets where each line starts.
+fn build_line_starts(source: &str) -> Vec<usize> {
+    let mut starts = vec![0];
+    for (i, b) in source.bytes().enumerate() {
+        if b == b'\n' {
+            starts.push(i + 1);
+        }
+    }
+    starts
+}
+
+/// Convert a byte offset to (line, col) using binary search on a pre-built table.
+fn fast_offset_to_line_col(source: &str, line_starts: &[usize], offset: usize) -> (usize, usize) {
+    let line_idx = line_starts.partition_point(|&start| start <= offset);
+    let line = line_idx; // 1-based line number
+    let line_start = line_starts[line_idx - 1];
+    let col = source[line_start..offset].chars().count() + 1;
+    (line, col)
+}
+
 // ── Core types ──────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -107,6 +129,7 @@ pub struct LintContext<'a> {
     pub source_type: SourceType,
     pub semantic: &'a Semantic<'a>,
     pub project: &'a ProjectInfo,
+    line_starts: Vec<usize>,
 }
 
 impl<'a> LintContext<'a> {
@@ -116,31 +139,20 @@ impl<'a> LintContext<'a> {
         semantic: &'a Semantic<'a>,
         project: &'a ProjectInfo,
     ) -> Self {
+        let line_starts = build_line_starts(source);
         Self {
             source,
             file_path,
             source_type: *semantic.source_type(),
             semantic,
             project,
+            line_starts,
         }
     }
 
-    /// Get line and column for a byte offset
+    /// Get line and column for a byte offset (O(log n) via binary search)
     pub fn offset_to_line_col(&self, offset: usize) -> (usize, usize) {
-        let mut line = 1;
-        let mut col = 1;
-        for (i, ch) in self.source.char_indices() {
-            if i >= offset {
-                break;
-            }
-            if ch == '\n' {
-                line += 1;
-                col = 1;
-            } else {
-                col += 1;
-            }
-        }
-        (line, col)
+        fast_offset_to_line_col(self.source, &self.line_starts, offset)
     }
 
     pub fn diagnostic(
@@ -277,6 +289,19 @@ pub fn lint_file_with_config(
     ))
 }
 
+/// Data collected during per-file linting for cross-file analysis,
+/// avoiding redundant re-parsing.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CrossFileData {
+    pub file_info: dead_code::FileInfo,
+    pub search_analysis: react::nextjs::SearchFileAnalysis,
+}
+
+pub(crate) struct LintOutput {
+    pub(crate) result: LintResult,
+    pub(crate) cross_file: CrossFileData,
+}
+
 pub fn lint_source_with_config(
     path: &Path,
     source: &str,
@@ -284,6 +309,19 @@ pub fn lint_source_with_config(
     detect: bool,
     project: &ProjectInfo,
 ) -> LintResult {
+    lint_source_with_analysis(path, source, config, detect, project).result
+}
+
+/// Lint a file and simultaneously collect cross-file analysis data from the
+/// same parse pass, eliminating redundant re-parsing for import graph and
+/// search-params analysis.
+pub(crate) fn lint_source_with_analysis(
+    path: &Path,
+    source: &str,
+    config: &HashMap<String, serde_json::Value>,
+    detect: bool,
+    project: &ProjectInfo,
+) -> LintOutput {
     let source_type = SourceType::from_path(path).unwrap_or_default();
 
     let allocator = Allocator::default();
@@ -304,7 +342,6 @@ pub fn lint_source_with_config(
         path,
     ));
 
-    // Run built-in rules with severity overrides
     for rule in &builtin_rules {
         let mut rule_diagnostics = rule.run(&ctx);
         if let Some(severity) = builtin_rule_severity(rule.as_ref(), config, detect, project) {
@@ -315,12 +352,42 @@ pub fn lint_source_with_config(
         diagnostics.extend(rule_diagnostics);
     }
 
-    // Run config-driven policy rules
     diagnostics.extend(policy::run_compiled_rules(&ctx, &policy_rules));
 
-    LintResult {
-        file: path.to_path_buf(),
-        diagnostics,
+    let file_info = dead_code::collect_file_info(path, source, &semantic.semantic);
+    let search_analysis =
+        react::nextjs::collect_search_analysis_from_semantic(source, &semantic.semantic);
+
+    LintOutput {
+        result: LintResult {
+            file: path.to_path_buf(),
+            diagnostics,
+        },
+        cross_file: CrossFileData {
+            file_info,
+            search_analysis,
+        },
+    }
+}
+
+/// Collect cross-file data from source without running lint rules.
+/// Used for cache-hit files where lint results are already cached but
+/// cross-file data is needed for import graph and search-params analysis.
+pub(crate) fn collect_cross_file_data(path: &Path, source: &str) -> CrossFileData {
+    let source_type = SourceType::from_path(path).unwrap_or_default();
+    let allocator = Allocator::default();
+    let parsed = Parser::new(&allocator, source, source_type).parse();
+    let semantic = SemanticBuilder::new()
+        .with_check_syntax_error(true)
+        .build(&parsed.program);
+
+    let file_info = dead_code::collect_file_info(path, source, &semantic.semantic);
+    let search_analysis =
+        react::nextjs::collect_search_analysis_from_semantic(source, &semantic.semantic);
+
+    CrossFileData {
+        file_info,
+        search_analysis,
     }
 }
 
@@ -398,20 +465,8 @@ fn diagnostics_to_lints(
 }
 
 fn offset_to_line_col(source: &str, offset: usize) -> (usize, usize) {
-    let mut line = 1;
-    let mut col = 1;
-    for (i, ch) in source.char_indices() {
-        if i >= offset {
-            break;
-        }
-        if ch == '\n' {
-            line += 1;
-            col = 1;
-        } else {
-            col += 1;
-        }
-    }
-    (line, col)
+    let line_starts = build_line_starts(source);
+    fast_offset_to_line_col(source, &line_starts, offset)
 }
 
 #[cfg(test)]
@@ -628,11 +683,13 @@ impl CacheHeader {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CacheEntry {
     pub fingerprint: FileFingerprint,
     pub hash: String,
     pub result: LintResult,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cross_file: Option<CrossFileData>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -698,14 +755,21 @@ impl Cache {
         fingerprint: FileFingerprint,
         hash: String,
         result: LintResult,
+        cross_file: Option<CrossFileData>,
     ) -> bool {
-        let next = CacheEntry {
-            fingerprint,
-            hash,
-            result,
-        };
-        let changed = self.entries.get(&path) != Some(&next);
-        self.entries.insert(path, next);
+        let changed = self
+            .entries
+            .get(&path)
+            .map_or(true, |existing| existing.hash != hash || existing.result != result);
+        self.entries.insert(
+            path,
+            CacheEntry {
+                fingerprint,
+                hash,
+                result,
+                cross_file,
+            },
+        );
         changed
     }
 
@@ -770,6 +834,7 @@ mod tests {
             FileFingerprint::from_path(&file).unwrap().unwrap(),
             hash_file(&file),
             lint_source_for_test("demo.ts", "const value: any = 1;\n"),
+            None,
         );
         cache.persist(&path).unwrap();
 
@@ -794,6 +859,7 @@ mod tests {
             FileFingerprint::from_path(&file).unwrap().unwrap(),
             hash_file(&file),
             lint_source_for_test("demo.ts", "const value = 1;\n"),
+            None,
         );
         cache.persist(&path).unwrap();
 
@@ -821,6 +887,7 @@ mod tests {
                 file: file_a.clone(),
                 diagnostics: Vec::new(),
             },
+            None,
         );
         cache.upsert(
             file_b.clone(),
@@ -833,6 +900,7 @@ mod tests {
                 file: file_b.clone(),
                 diagnostics: Vec::new(),
             },
+            None,
         );
 
         let live = HashSet::from([file_a.clone()]);

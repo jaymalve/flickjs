@@ -4,9 +4,10 @@ use oxc_ast::ast::{
 };
 use oxc_ast::AstKind;
 use oxc_parser::Parser;
-use oxc_semantic::SemanticBuilder;
+use oxc_semantic::{Semantic, SemanticBuilder};
 use oxc_span::SourceType;
 use rayon::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -17,7 +18,7 @@ use super::{LintDiagnostic, RuleOrigin, Severity};
 
 // ── Import graph types ─────────────────────────────────────
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileInfo {
     pub path: PathBuf,
     pub imports: Vec<ImportInfo>,
@@ -25,7 +26,7 @@ pub struct FileInfo {
     pub has_side_effects: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImportInfo {
     pub source: String,
     pub names: Vec<ImportedName>,
@@ -33,14 +34,14 @@ pub struct ImportInfo {
     pub is_side_effect: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ImportedName {
     Default,
     Named(String),
     Namespace,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExportInfo {
     pub name: String,
     pub is_default: bool,
@@ -62,7 +63,7 @@ pub struct ImportGraph {
 
 // ── Analysis ───────────────────────────────────────────────
 
-/// Collect import/export information from a parsed file
+/// Collect import/export information from a parsed file (standalone, parses internally)
 pub fn analyze_file(path: &Path, source: &str) -> FileInfo {
     let source_type = SourceType::from_path(path).unwrap_or_default();
     let allocator = Allocator::default();
@@ -71,10 +72,15 @@ pub fn analyze_file(path: &Path, source: &str) -> FileInfo {
         .with_check_syntax_error(true)
         .build(&parsed.program);
 
+    collect_file_info(path, source, &semantic.semantic)
+}
+
+/// Collect import/export information reusing an existing Semantic from the lint pass.
+pub fn collect_file_info(path: &Path, source: &str, semantic: &Semantic<'_>) -> FileInfo {
     let mut imports = Vec::new();
     let mut exports = Vec::new();
 
-    for node in semantic.semantic.nodes().iter() {
+    for node in semantic.nodes().iter() {
         match node.kind() {
             AstKind::ImportDeclaration(decl) => {
                 imports.push(collect_import(source, decl));
@@ -277,28 +283,29 @@ pub fn resolve_import(
         return resolve_candidate_path(from_dir.join(import_source), canonical_files);
     }
 
-    resolver_config
-        .and_then(|config| {
-            config
-                .resolve_non_relative(import_source)
-                .into_iter()
-                .find_map(|candidate| resolve_candidate_path(candidate, canonical_files))
-        })
+    resolver_config.and_then(|config| {
+        config
+            .resolve_non_relative(import_source)
+            .into_iter()
+            .find_map(|candidate| resolve_candidate_path(candidate, canonical_files))
+    })
 }
 
 fn resolve_candidate_path(base: PathBuf, canonical_files: &HashSet<PathBuf>) -> Option<PathBuf> {
-    let extensions = [
+    const EXTENSIONS: &[&str] = &[
         "", ".ts", ".tsx", ".js", ".jsx", ".mts", ".cts", ".mjs", ".cjs",
     ];
-    let index_names = ["index.ts", "index.tsx", "index.js", "index.jsx"];
+    const INDEX_NAMES: &[&str] = &["index.ts", "index.tsx", "index.js", "index.jsx"];
 
-    // Try direct match with extensions
-    for ext in &extensions {
+    for ext in EXTENSIONS {
         let candidate = if ext.is_empty() {
             base.clone()
         } else {
             PathBuf::from(format!("{}{}", base.display(), ext))
         };
+        if !candidate.exists() {
+            continue;
+        }
         if let Ok(canonical) = candidate.canonicalize() {
             if canonical_files.contains(&canonical) {
                 return Some(canonical);
@@ -306,12 +313,16 @@ fn resolve_candidate_path(base: PathBuf, canonical_files: &HashSet<PathBuf>) -> 
         }
     }
 
-    // Try as directory with index file
-    for index in &index_names {
-        let candidate = base.join(index);
-        if let Ok(canonical) = candidate.canonicalize() {
-            if canonical_files.contains(&canonical) {
-                return Some(canonical);
+    if base.is_dir() {
+        for index in INDEX_NAMES {
+            let candidate = base.join(index);
+            if !candidate.exists() {
+                continue;
+            }
+            if let Ok(canonical) = candidate.canonicalize() {
+                if canonical_files.contains(&canonical) {
+                    return Some(canonical);
+                }
             }
         }
     }
@@ -326,7 +337,20 @@ pub fn build_import_graph(
     all_file_paths: &[PathBuf],
     resolver_config: Option<ModuleResolutionConfig>,
 ) -> ImportGraph {
-    // Pre-canonicalize all file paths ONCE — O(N) syscalls total
+    let file_infos: HashMap<PathBuf, FileInfo> = files
+        .par_iter()
+        .map(|(path, source)| (path.clone(), analyze_file(path, source)))
+        .collect();
+
+    build_import_graph_from_file_infos(file_infos, all_file_paths, resolver_config)
+}
+
+/// Build an import graph reusing pre-collected FileInfo from the lint pass.
+pub fn build_import_graph_from_file_infos(
+    file_infos: HashMap<PathBuf, FileInfo>,
+    all_file_paths: &[PathBuf],
+    resolver_config: Option<ModuleResolutionConfig>,
+) -> ImportGraph {
     let canonical_set: Arc<HashSet<PathBuf>> = Arc::new(
         all_file_paths
             .iter()
@@ -335,19 +359,11 @@ pub fn build_import_graph(
     );
     let resolver_config = resolver_config.map(Arc::new);
 
-    // Build original→canonical mapping for downstream consumers
-    let canonical_paths: HashMap<PathBuf, PathBuf> = files
-        .iter()
-        .filter_map(|(path, _)| path.canonicalize().ok().map(|c| (path.clone(), c)))
+    let canonical_paths: HashMap<PathBuf, PathBuf> = file_infos
+        .keys()
+        .filter_map(|path| path.canonicalize().ok().map(|c| (path.clone(), c)))
         .collect();
 
-    // Phase 1: Analyze each file (parallel)
-    let file_infos: HashMap<PathBuf, FileInfo> = files
-        .par_iter()
-        .map(|(path, source)| (path.clone(), analyze_file(path, source)))
-        .collect();
-
-    // Phase 2: Resolve imports — O(1) HashSet lookup per candidate
     let resolved_imports: HashMap<(PathBuf, String), Option<PathBuf>> = file_infos
         .par_iter()
         .flat_map_iter(|(path, info)| {
