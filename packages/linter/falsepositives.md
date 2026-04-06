@@ -1,3 +1,4 @@
-1. we should not flag peerdeps as unused deps, because the could be used by other deps.
-2. files in public should not be flagged as unwanted files
-3. alias imports used by `unused-file` and `unused-export` should resolve through `tsconfig.json` or `jsconfig.json` `compilerOptions.baseUrl` and `paths`; bundler-only aliases are still unsupported.
+1. useSearchParams is checking suspense wrapper for anything, if its just a hook, it should check if that hook has a wrapper in this case.
+2. react/no-effect-event-handler, how is this checked? lets discuss logic for this.
+3. functional setstate, is this needed? because what if someone simply does !isOpen, its the same thing right?
+4. react/no-usememo-simple-expr, how is this checked? lets discuss logic for this.

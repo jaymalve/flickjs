@@ -479,7 +479,7 @@ pub fn find_unused_files(graph: &ImportGraph) -> Vec<(PathBuf, LintDiagnostic)> 
     }
 
     for (path, _) in &graph.files {
-        if is_likely_entry_point(path) {
+        if is_likely_entry_point(path) || is_in_public_dir(path) {
             continue;
         }
 
@@ -535,6 +535,11 @@ pub fn find_unused_dependencies(
         .and_then(|v| v.as_object())
         .map(|obj| obj.keys().cloned().collect::<Vec<_>>())
         .unwrap_or_default();
+    let peer_deps: HashSet<String> = parsed
+        .get("peerDependencies")
+        .and_then(|v| v.as_object())
+        .map(|obj| obj.keys().cloned().collect())
+        .unwrap_or_default();
 
     // Collect all bare (non-relative) import sources that do not resolve to local files.
     let mut used_packages: HashSet<String> = HashSet::new();
@@ -549,20 +554,22 @@ pub fn find_unused_dependencies(
     }
 
     for dep in &deps {
-        if !used_packages.contains(dep) {
-            diagnostics.push(LintDiagnostic {
-                rule_name: "unused-dependency".to_string(),
-                message: format!("Dependency `{dep}` is listed in package.json but never imported"),
-                span: "1:1".to_string(),
-                severity: Severity::Warning,
-                origin: RuleOrigin::Engine,
-                fix: None,
-                byte_start: 0,
-                byte_end: 0,
-                node_kind: None,
-                symbol: Some(dep.clone()),
-            });
+        if peer_deps.contains(dep) || used_packages.contains(dep) {
+            continue;
         }
+
+        diagnostics.push(LintDiagnostic {
+            rule_name: "unused-dependency".to_string(),
+            message: format!("Dependency `{dep}` is listed in package.json but never imported"),
+            span: "1:1".to_string(),
+            severity: Severity::Warning,
+            origin: RuleOrigin::Engine,
+            fix: None,
+            byte_start: 0,
+            byte_end: 0,
+            node_kind: None,
+            symbol: Some(dep.clone()),
+        });
     }
 
     diagnostics
@@ -599,6 +606,11 @@ fn is_likely_entry_point(path: &Path) -> bool {
         || file_name.ends_with(".d.ts")
         || file_name.ends_with(".d.mts")
         || file_name.ends_with(".d.cts")
+}
+
+fn is_in_public_dir(path: &Path) -> bool {
+    path.components()
+        .any(|component| component.as_os_str() == std::ffi::OsStr::new("public"))
 }
 
 fn offset_to_line_col(source: &str, offset: usize) -> (usize, usize) {
@@ -786,5 +798,64 @@ export default class MyClass {}
 
         let diagnostics = find_unused_files(&graph);
         assert!(!diagnostics.iter().any(|(path, _)| path == &target));
+    }
+
+    #[test]
+    fn ignores_dependency_when_also_declared_as_peer_dependency() {
+        let dir = tempdir().unwrap();
+        let package_json = dir.path().join("package.json");
+        fs::write(
+            &package_json,
+            r#"{
+                "dependencies": {
+                    "react": "^19.0.0",
+                    "zod": "^4.0.0"
+                },
+                "peerDependencies": {
+                    "react": "^19.0.0"
+                }
+            }"#,
+        )
+        .unwrap();
+
+        let diagnostics = find_unused_dependencies(
+            &ImportGraph {
+                files: HashMap::new(),
+                resolved_imports: HashMap::new(),
+                canonical_paths: HashMap::new(),
+            },
+            &package_json,
+        );
+
+        assert!(!diagnostics.iter().any(|diagnostic| {
+            diagnostic.rule_name == "unused-dependency"
+                && diagnostic.symbol.as_deref() == Some("react")
+        }));
+        assert!(diagnostics.iter().any(|diagnostic| {
+            diagnostic.rule_name == "unused-dependency"
+                && diagnostic.symbol.as_deref() == Some("zod")
+        }));
+    }
+
+    #[test]
+    fn ignores_files_inside_public_directory() {
+        let public_file = PathBuf::from("public/sw.js");
+        let diagnostics = find_unused_files(&ImportGraph {
+            files: HashMap::from([(
+                public_file.clone(),
+                FileInfo {
+                    path: public_file.clone(),
+                    imports: Vec::new(),
+                    exports: Vec::new(),
+                    has_side_effects: false,
+                },
+            )]),
+            resolved_imports: HashMap::new(),
+            canonical_paths: HashMap::from([(public_file.clone(), public_file.clone())]),
+        });
+
+        assert!(!diagnostics.iter().any(|(path, diagnostic)| {
+            path == &public_file && diagnostic.rule_name == "unused-file"
+        }));
     }
 }
