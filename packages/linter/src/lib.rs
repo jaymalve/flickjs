@@ -249,7 +249,14 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
             false,
             &mut metrics,
         );
-        run_cross_file_analysis(&mut results, &files, rule_config, &args.path);
+        run_cross_file_analysis(
+            &mut results,
+            &files,
+            rule_config,
+            loaded_config.config.detect,
+            &project,
+            &args.path,
+        );
         metrics.total_runtime = total_start.elapsed();
         return Ok(CheckExecution { results, metrics });
     }
@@ -333,7 +340,14 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
         }
     }
 
-    run_cross_file_analysis(&mut results, &files, rule_config, &args.path);
+    run_cross_file_analysis(
+        &mut results,
+        &files,
+        rule_config,
+        loaded_config.config.detect,
+        &project,
+        &args.path,
+    );
     metrics.total_runtime = total_start.elapsed();
     Ok(CheckExecution { results, metrics })
 }
@@ -344,6 +358,8 @@ fn run_cross_file_analysis(
     results: &mut Vec<rules::LintResult>,
     files: &[PathBuf],
     rule_config: &HashMap<String, serde_json::Value>,
+    detect: bool,
+    project: &project::ProjectInfo,
     project_root: &Path,
 ) {
     let wants_unused_exports = rule_config
@@ -358,8 +374,15 @@ fn run_cross_file_analysis(
         .get("unused-dependencies")
         .and_then(|v| cli::parse_rule_severity(v))
         .is_some();
+    let wants_search_params = if let Some(value) =
+        rule_config.get("nextjs/no-search-params-without-suspense")
+    {
+        cli::parse_rule_severity(value).is_some()
+    } else {
+        detect && project.has_next
+    };
 
-    if !wants_unused_exports && !wants_unused_files && !wants_unused_deps {
+    if !wants_unused_exports && !wants_unused_files && !wants_unused_deps && !wants_search_params {
         return;
     }
 
@@ -386,6 +409,10 @@ fn run_cross_file_analysis(
     let dep_severity = rule_config
         .get("unused-dependencies")
         .and_then(|v| cli::parse_rule_severity(v));
+    let search_params_severity = rule_config
+        .get("nextjs/no-search-params-without-suspense")
+        .and_then(|v| cli::parse_rule_severity(v))
+        .unwrap_or(rules::Severity::Warning);
 
     if wants_unused_exports {
         let mut diagnostics = rules::dead_code::find_unused_exports(&graph);
@@ -424,6 +451,15 @@ fn run_cross_file_analysis(
             }
         }
     }
+
+    if wants_search_params {
+        let diagnostics = rules::react::nextjs::collect_search_params_project_diagnostics(
+            &file_sources,
+            &graph,
+            search_params_severity,
+        );
+        append_paired_diagnostics(results, diagnostics);
+    }
 }
 
 /// Append (file_path, diagnostic) pairs to matching file results, or create new entries.
@@ -433,7 +469,15 @@ fn append_paired_diagnostics(
 ) {
     for (file_path, diagnostic) in diagnostics {
         if let Some(existing) = results.iter_mut().find(|r| r.file == file_path) {
-            existing.diagnostics.push(diagnostic);
+            let already_present = existing.diagnostics.iter().any(|current| {
+                current.rule_name == diagnostic.rule_name
+                    && current.message == diagnostic.message
+                    && current.byte_start == diagnostic.byte_start
+                    && current.byte_end == diagnostic.byte_end
+            });
+            if !already_present {
+                existing.diagnostics.push(diagnostic);
+            }
         } else {
             results.push(rules::LintResult {
                 file: file_path,
