@@ -53,6 +53,7 @@ pub struct RuleCatalogEntry {
     pub scope: RuleScope,
     pub default_severity: Severity,
     pub summary: String,
+    pub why: String,
 }
 
 impl RuleCatalogEntry {
@@ -200,6 +201,7 @@ pub fn build_rule_catalog() -> Result<RuleCatalog> {
             scope: seed.scope,
             default_severity: severity,
             summary: summary_for_rule(seed.id),
+            why: why_for_rule(seed.id),
         });
     }
 
@@ -602,6 +604,326 @@ fn summary_for_rule(rule_id: &str) -> String {
     };
 
     summary.to_string()
+}
+
+pub(crate) fn why_for_rule(rule_id: &str) -> String {
+    let why = match rule_id {
+        // ── Core ──
+        "no-explicit-any" => {
+            "`any` disables type checking wherever it spreads, hiding bugs the compiler would otherwise catch for free."
+        }
+        "no-console" => {
+            "Leftover console calls clutter production logs and can accidentally leak sensitive data to the browser."
+        }
+        "no-empty-catch" => {
+            "Silently swallowing errors makes failures invisible, turning small issues into hard-to-trace outages."
+        }
+        "prefer-const" => {
+            "Signals intent clearly — readers instantly know a `const` binding won't change, reducing cognitive load."
+        }
+        "no-unused-vars" => {
+            "Dead bindings add noise and suggest incomplete refactors, making the code harder to trust and navigate."
+        }
+        "unreachable-code" => {
+            "Code after a return or throw never runs; its presence misleads readers and hides logic errors."
+        }
+        "no-missing-return" => {
+            "A function that sometimes returns a value and sometimes doesn't produces subtle `undefined` bugs at call sites."
+        }
+
+        // ── Dead Code ──
+        "unused-export" => {
+            "Exports nobody imports are dead weight — they bloat bundles and make the public API look bigger than it is."
+        }
+        "unused-file" => {
+            "Orphaned files slow down tooling, confuse new contributors, and accumulate maintenance cost for zero value."
+        }
+        "unused-dependency" => {
+            "Phantom dependencies inflate install size and attack surface while providing nothing in return."
+        }
+
+        // ── Universal Security ──
+        "no-eval" => {
+            "Dynamic code execution is the most direct path to code-injection attacks and defeats all static analysis."
+        }
+        "no-hardcoded-secrets" => {
+            "Secrets in source get committed to git history forever, making credential rotation painful and leaks likely."
+        }
+
+        // ── JS Performance ──
+        "no-chained-array-iterations" => {
+            "Each chained pass allocates a new array and walks every element again — collapsing them cuts both memory and CPU."
+        }
+        "prefer-tosorted" => {
+            "`toSorted()` avoids a manual clone step and communicates immutable intent, reducing allocation mistakes."
+        }
+        "no-regexp-in-loop" => {
+            "Constructing a regex on every iteration recompiles the pattern repeatedly — hoisting it is a free speedup."
+        }
+        "prefer-math-min-max" => {
+            "Sorting an array just to pick the smallest or largest value is O(n log n) when O(n) will do."
+        }
+        "no-array-includes-in-loop" => {
+            "Calling `includes()` inside a loop turns an O(n) scan into O(n\u{00b2}) — a Set lookup keeps it O(n)."
+        }
+        "no-sequential-style-assignment" => {
+            "Multiple individual style writes trigger layout recalculations each time; batching them lets the browser optimize."
+        }
+        "no-array-find-in-loop" => {
+            "Repeated `find()` inside a loop re-scans the array on every pass — pre-index it once instead."
+        }
+        "no-duplicate-storage-reads" => {
+            "Each storage read is a synchronous I/O call; caching the result avoids redundant blocking work."
+        }
+        "no-deep-nesting" => {
+            "Deeply nested blocks are hard to reason about and tend to hide bugs — flattening improves readability and testability."
+        }
+        "prefer-promise-all" => {
+            "Sequential awaits waste time waiting for independent work — `Promise.all` runs them in parallel."
+        }
+
+        // ── React Hooks ──
+        "react/no-derived-state-effect" => {
+            "Effects that sync derived state cause an extra render cycle; computing it inline is simpler and faster."
+        }
+        "react/no-fetch-in-effect" => {
+            "Fetches in effects lack cancellation and race-condition handling that dedicated data libraries provide out of the box."
+        }
+        "react/no-cascading-set-state" => {
+            "Stacking multiple state updates inside one effect triggers cascading re-renders that degrade performance."
+        }
+        "react/no-effect-event-handler" => {
+            "Using an effect as a proxy for an event handler adds unnecessary complexity and an extra render cycle."
+        }
+        "react/no-derived-use-state" => {
+            "State initialized from props goes stale when props change — deriving it during render keeps it in sync automatically."
+        }
+        "react/prefer-use-reducer" => {
+            "Multiple interrelated `useState` calls make state transitions hard to follow; a reducer centralizes the logic."
+        }
+        "react/lazy-state-init" => {
+            "Expensive initializers run on every render unless wrapped in a function — lazy init runs them only once."
+        }
+        "react/functional-set-state" => {
+            "Closures capture stale state; functional updates always read the latest value, preventing subtle data-loss bugs."
+        }
+        "react/unstable-deps" => {
+            "Unstable dependencies cause hooks to re-fire every render, wasting work and risking infinite loops."
+        }
+
+        // ── React Correctness ──
+        "react/no-array-index-key" => {
+            "Index keys break identity on reorder or deletion, causing React to mismatch state with the wrong element."
+        }
+        "react/no-prevent-default" => {
+            "Blanket `preventDefault` on native elements breaks accessibility — forms won't submit, links won't navigate."
+        }
+        "react/no-conditional-render-zero" => {
+            "`.length && <JSX>` renders the literal `0` when the array is empty, producing a visible zero in the UI."
+        }
+
+        // ── React Architecture ──
+        "react/no-giant-component" => {
+            "Oversized components are hard to test, reuse, and review — splitting them sharpens responsibility boundaries."
+        }
+        "react/no-render-in-render" => {
+            "Inline render helpers re-create JSX trees every render, defeating reconciliation and losing local state."
+        }
+        "react/no-nested-component" => {
+            "Components defined inside renders unmount and remount every cycle, destroying state and hurting performance."
+        }
+
+        // ── React Performance ──
+        "react/no-usememo-simple-expr" => {
+            "Memoizing a trivial expression costs more than recomputing it — the hook overhead outweighs any savings."
+        }
+        "react/no-unstable-motion-props" => {
+            "Recreating motion prop objects every render restarts animations and defeats Framer Motion's diffing."
+        }
+        "react/no-layout-animation" => {
+            "Layout animations force the browser to recalculate geometry on every frame, causing jank on busy pages."
+        }
+        "react/no-animate-presence-in-list" => {
+            "AnimatePresence around an entire list re-diffs every child on any change, turning a list update into an O(n) animation pass."
+        }
+        "react/no-motion-in-list" => {
+            "Motion wrappers on every list item multiply animation bookkeeping — use them selectively on key elements."
+        }
+        "react/no-prop-on-memo" => {
+            "Passing a new object or function literal to a memoized component invalidates the memo on every render."
+        }
+        "react/no-hydration-flicker" => {
+            "Client-only values that differ from the server HTML cause a visible flash when React hydrates the page."
+        }
+        "react/no-transition-all" => {
+            "`transition: all` forces the browser to animate every property change, including layout-triggering ones."
+        }
+        "react/no-will-change" => {
+            "Overusing `will-change` promotes elements to GPU layers, consuming memory and sometimes hurting instead of helping."
+        }
+        "react/no-blur-filter" => {
+            "Blur filters are among the most expensive CSS operations — they repaint large pixel areas every frame."
+        }
+        "react/no-heavy-shadow" => {
+            "Large or layered shadows increase paint time significantly, especially on low-end devices."
+        }
+        "react/no-barrel-import" => {
+            "Barrel files pull in every re-export, preventing tree-shaking and inflating the bundle with unused code."
+        }
+        "react/no-full-lodash" => {
+            "Importing top-level Lodash bundles the entire library (~70 KB) when you likely need a single function."
+        }
+        "react/no-moment" => {
+            "Moment.js is 300 KB+ and mutable by design — modern alternatives are smaller, faster, and immutable."
+        }
+        "react/prefer-dynamic-import" => {
+            "Statically importing heavy libraries blocks the initial bundle — lazy loading defers the cost until needed."
+        }
+        "react/use-lazy-motion" => {
+            "LazyMotion loads only the Framer Motion features you use, cutting its bundle contribution significantly."
+        }
+        "react/no-undeferred-script" => {
+            "Non-deferred scripts block HTML parsing, delaying first paint and time-to-interactive."
+        }
+
+        // ── Next.js ──
+        "nextjs/no-img-element" => {
+            "`next/image` auto-optimizes format, size, and lazy loading — raw `<img>` skips all of that."
+        }
+        "nextjs/prefer-next-link" => {
+            "`next/link` enables client-side transitions and prefetching; plain `<a>` triggers full page reloads."
+        }
+        "nextjs/no-head-element" => {
+            "Raw `<head>` conflicts with Next.js's built-in head management and can cause duplicate or missing meta tags."
+        }
+        "nextjs/no-head-import" => {
+            "`next/head` is a Pages Router API — App Router uses metadata exports, and mixing them causes conflicts."
+        }
+        "nextjs/no-document-import" => {
+            "`next/document` only works in `_document` — importing it elsewhere silently fails or breaks SSR."
+        }
+        "nextjs/no-script-in-head" => {
+            "Scripts in `<head>` block rendering; use `next/script` with a loading strategy instead."
+        }
+        "nextjs/no-search-params-without-suspense" => {
+            "Without Suspense, `useSearchParams` forces the entire page into client-side rendering, breaking static optimization."
+        }
+        "nextjs/missing-metadata" => {
+            "Pages without metadata hurt SEO and social sharing — Next.js metadata API makes it declarative and easy."
+        }
+        "nextjs/no-side-effect-in-get-handler" => {
+            "GET handlers can be cached and replayed — mutations inside them may execute unpredictably or not at all."
+        }
+        "nextjs/no-async-client-component" => {
+            "Client components cannot be async — React will throw at runtime, but the error is easy to miss during development."
+        }
+
+        // ── Server Components ──
+        "react/server-auth-actions" => {
+            "Server actions run with full backend privileges — skipping auth checks means any caller can mutate your data."
+        }
+        "react/server-after-nonblocking" => {
+            "`after()` defers side effects until after the response, keeping the user-facing response fast."
+        }
+
+        // ── React Native ──
+        "react-native/no-inline-styles" => {
+            "Inline style objects are re-created every render, defeating the native bridge's style caching."
+        }
+        "react-native/no-inline-callbacks" => {
+            "New function references every render cause child components to re-render unnecessarily on native."
+        }
+        "react-native/no-anonymous-list-render" => {
+            "An unstable `renderItem` remounts every cell on each render, destroying scroll position and local state."
+        }
+        "react-native/no-scrollview-list" => {
+            "ScrollView renders all children at once — virtualized lists only render what's on screen, saving memory."
+        }
+        "react-native/no-raw-text" => {
+            "Raw strings outside `<Text>` crash on native platforms — they must be wrapped to render correctly."
+        }
+        "react-native/no-alert" => {
+            "Platform alerts block the JS thread and offer no customization — use a modal component instead."
+        }
+        "react-native/no-image-uri-literal" => {
+            "Hardcoded URIs scatter asset management across files and make cache-busting and CDN changes painful."
+        }
+        "react-native/require-key-extractor" => {
+            "Without `keyExtractor`, FlatList falls back to index keys which break identity on list mutations."
+        }
+
+        // ── Server Security ──
+        "server/no-sql-injection" => {
+            "Interpolating user input into SQL lets attackers read, modify, or delete your entire database."
+        }
+        "server/no-shell-injection" => {
+            "Unsanitized input in shell commands lets attackers execute arbitrary code on your server."
+        }
+        "server/no-path-traversal" => {
+            "Request-controlled paths like `../../etc/passwd` let attackers read or overwrite arbitrary files."
+        }
+        "server/no-unsafe-redirect" => {
+            "Open redirects let attackers send users to phishing pages that appear to come from your domain."
+        }
+        "server/no-cors-wildcard" => {
+            "Wildcard CORS with credentials lets any origin make authenticated requests to your API."
+        }
+        "server/no-hardcoded-jwt-secret" => {
+            "A leaked signing secret lets anyone forge valid tokens — secrets must come from secure config."
+        }
+        "server/no-jwt-none-algorithm" => {
+            "The `none` algorithm accepts unsigned tokens, letting anyone bypass authentication entirely."
+        }
+
+        // ── Server Reliability ──
+        "server/no-unhandled-async-route" => {
+            "Unhandled rejections in async handlers crash the process or return opaque 500s instead of useful errors."
+        }
+        "server/no-swallowed-error" => {
+            "Swallowed errors make failures silent — problems compound until they surface somewhere harder to debug."
+        }
+        "server/no-process-exit-in-handler" => {
+            "`process.exit` in a handler kills every in-flight request, not just the one that failed."
+        }
+        "server/require-error-status" => {
+            "Returning an error body with a 200 status confuses clients and breaks error-handling middleware."
+        }
+        "server/no-throw-string" => {
+            "Thrown strings lose the stack trace — `Error` objects preserve it, making debugging far easier."
+        }
+
+        // ── Server Performance ──
+        "server/no-n-plus-one" => {
+            "A query per loop iteration turns one request into hundreds of database round-trips, destroying latency."
+        }
+        "server/no-unbounded-query" => {
+            "Loading an entire table into memory can exhaust RAM and block the event loop on large datasets."
+        }
+        "server/no-sync-fs-in-handler" => {
+            "Sync filesystem calls block the event loop, stalling every other request until the I/O completes."
+        }
+        "server/no-blocking-crypto" => {
+            "Blocking crypto (pbkdf2Sync, scryptSync) freezes the event loop for hundreds of milliseconds per call."
+        }
+        "server/no-large-json-parse-sync" => {
+            "Parsing large JSON synchronously blocks the event loop, causing latency spikes for all concurrent requests."
+        }
+
+        // ── Server Architecture ──
+        "server/require-input-validation" => {
+            "Unvalidated input is the root cause of most security and data-integrity bugs — validate at the boundary."
+        }
+        "server/no-floating-transaction" => {
+            "Without a transaction, a failure between two writes leaves your data in an inconsistent state."
+        }
+        "server/no-business-logic-in-route" => {
+            "Logic buried in route handlers can't be reused or unit-tested — extracting it makes both possible."
+        }
+
+        _ => "This rule catches a pattern that commonly leads to bugs, performance issues, or maintenance headaches.",
+    };
+
+    why.to_string()
 }
 
 fn fallback_summary(rule_id: &str) -> &'static str {

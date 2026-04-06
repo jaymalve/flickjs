@@ -608,6 +608,17 @@ fn render_details(frame: &mut Frame, area: ratatui::layout::Rect, app: &mut Rule
             Style::default().fg(TEXT_PRIMARY),
         )),
         Line::from(""),
+        Line::from(Span::styled(
+            "Why",
+            Style::default()
+                .fg(TEXT_MUTED)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from(Span::styled(
+            entry.why.as_str(),
+            Style::default().fg(TEXT_MUTED),
+        )),
+        Line::from(""),
         detail_line("Group", group_title),
         detail_line("Applies To", entry.scope.label()),
         Line::from(vec![

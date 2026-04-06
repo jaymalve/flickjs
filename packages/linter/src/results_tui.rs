@@ -4,6 +4,7 @@ use crate::{
     category_display_name, diagnostic_counts, diagnostic_help_text, group_results_for_display,
     print_pretty, PrettyEntry, Summary,
 };
+use crate::rule_catalog::why_for_rule;
 use crate::rules::{FixSafety, LintResult, Severity};
 use crate::tui_common::{
     self, ERROR_COLOR, PANEL_BG, PANEL_BG_SUBTLE, SCROLLBAR_THUMB, SCROLLBAR_TRACK, SELECT_BG,
@@ -732,6 +733,17 @@ fn render_detail(frame: &mut Frame, area: ratatui::layout::Rect, app: &mut Resul
         Line::from(Span::styled(
             entry.diagnostic.message.as_str(),
             Style::default().fg(TEXT_PRIMARY),
+        )),
+        Line::from(""),
+        Line::from(Span::styled(
+            "Why",
+            Style::default()
+                .fg(TEXT_MUTED)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from(Span::styled(
+            why_for_rule(&entry.diagnostic.rule_name),
+            Style::default().fg(TEXT_MUTED),
         )),
         Line::from(""),
         detail_line(
