@@ -4,18 +4,21 @@ use oxc_ast::ast::{
 };
 use oxc_ast::AstKind;
 use oxc_parser::Parser;
-use oxc_semantic::SemanticBuilder;
+use oxc_semantic::{Semantic, SemanticBuilder};
 use oxc_span::SourceType;
 use rayon::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+
+use crate::project::ModuleResolutionConfig;
 
 use super::{LintDiagnostic, RuleOrigin, Severity};
 
 // ── Import graph types ─────────────────────────────────────
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileInfo {
     pub path: PathBuf,
     pub imports: Vec<ImportInfo>,
@@ -23,7 +26,7 @@ pub struct FileInfo {
     pub has_side_effects: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImportInfo {
     pub source: String,
     pub names: Vec<ImportedName>,
@@ -31,14 +34,14 @@ pub struct ImportInfo {
     pub is_side_effect: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ImportedName {
     Default,
     Named(String),
     Namespace,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExportInfo {
     pub name: String,
     pub is_default: bool,
@@ -60,7 +63,7 @@ pub struct ImportGraph {
 
 // ── Analysis ───────────────────────────────────────────────
 
-/// Collect import/export information from a parsed file
+/// Collect import/export information from a parsed file (standalone, parses internally)
 pub fn analyze_file(path: &Path, source: &str) -> FileInfo {
     let source_type = SourceType::from_path(path).unwrap_or_default();
     let allocator = Allocator::default();
@@ -69,10 +72,15 @@ pub fn analyze_file(path: &Path, source: &str) -> FileInfo {
         .with_check_syntax_error(true)
         .build(&parsed.program);
 
+    collect_file_info(path, source, &semantic.semantic)
+}
+
+/// Collect import/export information reusing an existing Semantic from the lint pass.
+pub fn collect_file_info(path: &Path, source: &str, semantic: &Semantic<'_>) -> FileInfo {
     let mut imports = Vec::new();
     let mut exports = Vec::new();
 
-    for node in semantic.semantic.nodes().iter() {
+    for node in semantic.nodes().iter() {
         match node.kind() {
             AstKind::ImportDeclaration(decl) => {
                 imports.push(collect_import(source, decl));
@@ -262,33 +270,42 @@ fn collect_default_export(source: &str, decl: &ExportDefaultDeclaration<'_>) -> 
 
 // ── Import resolution ──────────────────────────────────────
 
-/// Try to resolve a relative import to a file path.
-/// Handles: ./foo → ./foo.ts, ./foo/index.ts, etc.
+/// Try to resolve an import to a local file path.
+/// Handles relative imports plus tsconfig/jsconfig alias candidates.
 pub fn resolve_import(
     from_file: &Path,
     import_source: &str,
     canonical_files: &HashSet<PathBuf>,
+    resolver_config: Option<&ModuleResolutionConfig>,
 ) -> Option<PathBuf> {
-    // Only resolve relative imports
-    if !import_source.starts_with('.') {
-        return None;
+    if import_source.starts_with('.') {
+        let from_dir = from_file.parent()?;
+        return resolve_candidate_path(from_dir.join(import_source), canonical_files);
     }
 
-    let from_dir = from_file.parent()?;
-    let base = from_dir.join(import_source);
+    resolver_config.and_then(|config| {
+        config
+            .resolve_non_relative(import_source)
+            .into_iter()
+            .find_map(|candidate| resolve_candidate_path(candidate, canonical_files))
+    })
+}
 
-    let extensions = [
+fn resolve_candidate_path(base: PathBuf, canonical_files: &HashSet<PathBuf>) -> Option<PathBuf> {
+    const EXTENSIONS: &[&str] = &[
         "", ".ts", ".tsx", ".js", ".jsx", ".mts", ".cts", ".mjs", ".cjs",
     ];
-    let index_names = ["index.ts", "index.tsx", "index.js", "index.jsx"];
+    const INDEX_NAMES: &[&str] = &["index.ts", "index.tsx", "index.js", "index.jsx"];
 
-    // Try direct match with extensions
-    for ext in &extensions {
+    for ext in EXTENSIONS {
         let candidate = if ext.is_empty() {
             base.clone()
         } else {
             PathBuf::from(format!("{}{}", base.display(), ext))
         };
+        if !candidate.exists() {
+            continue;
+        }
         if let Ok(canonical) = candidate.canonicalize() {
             if canonical_files.contains(&canonical) {
                 return Some(canonical);
@@ -296,12 +313,16 @@ pub fn resolve_import(
         }
     }
 
-    // Try as directory with index file
-    for index in &index_names {
-        let candidate = base.join(index);
-        if let Ok(canonical) = candidate.canonicalize() {
-            if canonical_files.contains(&canonical) {
-                return Some(canonical);
+    if base.is_dir() {
+        for index in INDEX_NAMES {
+            let candidate = base.join(index);
+            if !candidate.exists() {
+                continue;
+            }
+            if let Ok(canonical) = candidate.canonicalize() {
+                if canonical_files.contains(&canonical) {
+                    return Some(canonical);
+                }
             }
         }
     }
@@ -311,34 +332,50 @@ pub fn resolve_import(
 
 // ── Build import graph ─────────────────────────────────────
 
-pub fn build_import_graph(files: &[(PathBuf, String)], all_file_paths: &[PathBuf]) -> ImportGraph {
-    // Pre-canonicalize all file paths ONCE — O(N) syscalls total
+pub fn build_import_graph(
+    files: &[(PathBuf, String)],
+    all_file_paths: &[PathBuf],
+    resolver_config: Option<ModuleResolutionConfig>,
+) -> ImportGraph {
+    let file_infos: HashMap<PathBuf, FileInfo> = files
+        .par_iter()
+        .map(|(path, source)| (path.clone(), analyze_file(path, source)))
+        .collect();
+
+    build_import_graph_from_file_infos(file_infos, all_file_paths, resolver_config)
+}
+
+/// Build an import graph reusing pre-collected FileInfo from the lint pass.
+pub fn build_import_graph_from_file_infos(
+    file_infos: HashMap<PathBuf, FileInfo>,
+    all_file_paths: &[PathBuf],
+    resolver_config: Option<ModuleResolutionConfig>,
+) -> ImportGraph {
     let canonical_set: Arc<HashSet<PathBuf>> = Arc::new(
         all_file_paths
             .iter()
             .filter_map(|f| f.canonicalize().ok())
             .collect(),
     );
+    let resolver_config = resolver_config.map(Arc::new);
 
-    // Build original→canonical mapping for downstream consumers
-    let canonical_paths: HashMap<PathBuf, PathBuf> = files
-        .iter()
-        .filter_map(|(path, _)| path.canonicalize().ok().map(|c| (path.clone(), c)))
+    let canonical_paths: HashMap<PathBuf, PathBuf> = file_infos
+        .keys()
+        .filter_map(|path| path.canonicalize().ok().map(|c| (path.clone(), c)))
         .collect();
 
-    // Phase 1: Analyze each file (parallel)
-    let file_infos: HashMap<PathBuf, FileInfo> = files
-        .par_iter()
-        .map(|(path, source)| (path.clone(), analyze_file(path, source)))
-        .collect();
-
-    // Phase 2: Resolve imports — O(1) HashSet lookup per candidate
     let resolved_imports: HashMap<(PathBuf, String), Option<PathBuf>> = file_infos
         .par_iter()
         .flat_map_iter(|(path, info)| {
             let canonical_set = Arc::clone(&canonical_set);
+            let resolver_config = resolver_config.clone();
             info.imports.iter().map(move |import| {
-                let resolved = resolve_import(path, &import.source, canonical_set.as_ref());
+                let resolved = resolve_import(
+                    path,
+                    &import.source,
+                    canonical_set.as_ref(),
+                    resolver_config.as_deref(),
+                );
                 ((path.clone(), import.source.clone()), resolved)
             })
         })
@@ -458,7 +495,7 @@ pub fn find_unused_files(graph: &ImportGraph) -> Vec<(PathBuf, LintDiagnostic)> 
     }
 
     for (path, _) in &graph.files {
-        if is_likely_entry_point(path) {
+        if is_likely_entry_point(path) || is_in_public_dir(path) {
             continue;
         }
 
@@ -514,34 +551,41 @@ pub fn find_unused_dependencies(
         .and_then(|v| v.as_object())
         .map(|obj| obj.keys().cloned().collect::<Vec<_>>())
         .unwrap_or_default();
+    let peer_deps: HashSet<String> = parsed
+        .get("peerDependencies")
+        .and_then(|v| v.as_object())
+        .map(|obj| obj.keys().cloned().collect())
+        .unwrap_or_default();
 
-    // Collect all bare (non-relative) import sources
+    // Collect all bare (non-relative) import sources that do not resolve to local files.
     let mut used_packages: HashSet<String> = HashSet::new();
-    for info in graph.files.values() {
-        for import in &info.imports {
-            if !import.source.starts_with('.') {
-                // Extract package name: "@scope/pkg/foo" → "@scope/pkg", "pkg/foo" → "pkg"
-                let package_name = extract_package_name(&import.source);
-                used_packages.insert(package_name);
-            }
+    for ((_, source), resolved) in &graph.resolved_imports {
+        if source.starts_with('.') || resolved.is_some() {
+            continue;
         }
+
+        // Extract package name: "@scope/pkg/foo" → "@scope/pkg", "pkg/foo" → "pkg"
+        let package_name = extract_package_name(source);
+        used_packages.insert(package_name);
     }
 
     for dep in &deps {
-        if !used_packages.contains(dep) {
-            diagnostics.push(LintDiagnostic {
-                rule_name: "unused-dependency".to_string(),
-                message: format!("Dependency `{dep}` is listed in package.json but never imported"),
-                span: "1:1".to_string(),
-                severity: Severity::Warning,
-                origin: RuleOrigin::Engine,
-                fix: None,
-                byte_start: 0,
-                byte_end: 0,
-                node_kind: None,
-                symbol: Some(dep.clone()),
-            });
+        if peer_deps.contains(dep) || used_packages.contains(dep) {
+            continue;
         }
+
+        diagnostics.push(LintDiagnostic {
+            rule_name: "unused-dependency".to_string(),
+            message: format!("Dependency `{dep}` is listed in package.json but never imported"),
+            span: "1:1".to_string(),
+            severity: Severity::Warning,
+            origin: RuleOrigin::Engine,
+            fix: None,
+            byte_start: 0,
+            byte_end: 0,
+            node_kind: None,
+            symbol: Some(dep.clone()),
+        });
     }
 
     diagnostics
@@ -580,6 +624,11 @@ fn is_likely_entry_point(path: &Path) -> bool {
         || file_name.ends_with(".d.cts")
 }
 
+fn is_in_public_dir(path: &Path) -> bool {
+    path.components()
+        .any(|component| component.as_os_str() == std::ffi::OsStr::new("public"))
+}
+
 fn offset_to_line_col(source: &str, offset: usize) -> (usize, usize) {
     let mut line = 1;
     let mut col = 1;
@@ -600,6 +649,9 @@ fn offset_to_line_col(source: &str, offset: usize) -> (usize, usize) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::project::{ModuleResolutionConfig, PathAlias};
+    use std::fs;
+    use tempfile::tempdir;
 
     #[test]
     fn extracts_package_name_from_scoped() {
@@ -644,5 +696,182 @@ export default class MyClass {}
         assert_eq!(info.exports[0].name, "value");
         assert_eq!(info.exports[1].name, "helper");
         assert_eq!(info.exports[2].name, "default");
+    }
+
+    #[test]
+    fn resolves_base_url_imports_in_unused_file_analysis() {
+        let dir = tempdir().unwrap();
+        let src_dir = dir.path().join("src");
+        let components_dir = src_dir.join("components");
+        fs::create_dir_all(&components_dir).unwrap();
+
+        let importer = src_dir.join("index.ts");
+        let target = components_dir.join("Tooltip.tsx");
+        fs::write(&importer, "import Tooltip from 'components/Tooltip';\n").unwrap();
+        fs::write(&target, "export default function Tooltip() {}\n").unwrap();
+
+        let files = vec![importer.clone(), target.clone()];
+        let file_sources = files
+            .iter()
+            .map(|path| (path.clone(), fs::read_to_string(path).unwrap()))
+            .collect::<Vec<_>>();
+        let graph = build_import_graph(
+            &file_sources,
+            &files,
+            Some(ModuleResolutionConfig {
+                config_dir: dir.path().to_path_buf(),
+                base_url: Some(src_dir.clone()),
+                paths: Vec::new(),
+            }),
+        );
+
+        let diagnostics = find_unused_files(&graph);
+        assert!(!diagnostics.iter().any(|(path, _)| path == &target));
+    }
+
+    #[test]
+    fn resolves_paths_alias_imports_in_unused_file_analysis() {
+        let dir = tempdir().unwrap();
+        let src_dir = dir.path().join("src");
+        let components_dir = src_dir.join("components");
+        fs::create_dir_all(&components_dir).unwrap();
+
+        let importer = src_dir.join("index.ts");
+        let target = components_dir.join("Tooltip.tsx");
+        fs::write(&importer, "import Tooltip from '@/components/Tooltip';\n").unwrap();
+        fs::write(&target, "export default function Tooltip() {}\n").unwrap();
+
+        let files = vec![importer.clone(), target.clone()];
+        let file_sources = files
+            .iter()
+            .map(|path| (path.clone(), fs::read_to_string(path).unwrap()))
+            .collect::<Vec<_>>();
+        let graph = build_import_graph(
+            &file_sources,
+            &files,
+            Some(ModuleResolutionConfig {
+                config_dir: dir.path().to_path_buf(),
+                base_url: Some(src_dir.clone()),
+                paths: vec![PathAlias {
+                    pattern: "@/*".to_string(),
+                    targets: vec!["./*".to_string()],
+                }],
+            }),
+        );
+
+        let diagnostics = find_unused_files(&graph);
+        assert!(!diagnostics.iter().any(|(path, _)| path == &target));
+    }
+
+    #[test]
+    fn keeps_bare_package_imports_unresolved_for_file_usage() {
+        let dir = tempdir().unwrap();
+        let src_dir = dir.path().join("src");
+        fs::create_dir_all(&src_dir).unwrap();
+
+        let importer = src_dir.join("index.ts");
+        fs::write(&importer, "import React from 'react';\n").unwrap();
+
+        let files = vec![importer.clone()];
+        let file_sources = vec![(importer.clone(), fs::read_to_string(&importer).unwrap())];
+        let graph = build_import_graph(
+            &file_sources,
+            &files,
+            Some(ModuleResolutionConfig {
+                config_dir: dir.path().to_path_buf(),
+                base_url: Some(src_dir),
+                paths: Vec::new(),
+            }),
+        );
+
+        assert_eq!(
+            graph
+                .resolved_imports
+                .get(&(importer, "react".to_string()))
+                .cloned()
+                .flatten(),
+            None
+        );
+    }
+
+    #[test]
+    fn keeps_relative_resolution_working_without_config() {
+        let dir = tempdir().unwrap();
+        let src_dir = dir.path().join("src");
+        fs::create_dir_all(&src_dir).unwrap();
+
+        let importer = src_dir.join("main.ts");
+        let target = src_dir.join("tooltip.ts");
+        fs::write(&importer, "import { tooltip } from './tooltip';\n").unwrap();
+        fs::write(&target, "export const tooltip = true;\n").unwrap();
+
+        let files = vec![importer.clone(), target.clone()];
+        let file_sources = files
+            .iter()
+            .map(|path| (path.clone(), fs::read_to_string(path).unwrap()))
+            .collect::<Vec<_>>();
+        let graph = build_import_graph(&file_sources, &files, None);
+
+        let diagnostics = find_unused_files(&graph);
+        assert!(!diagnostics.iter().any(|(path, _)| path == &target));
+    }
+
+    #[test]
+    fn ignores_dependency_when_also_declared_as_peer_dependency() {
+        let dir = tempdir().unwrap();
+        let package_json = dir.path().join("package.json");
+        fs::write(
+            &package_json,
+            r#"{
+                "dependencies": {
+                    "react": "^19.0.0",
+                    "zod": "^4.0.0"
+                },
+                "peerDependencies": {
+                    "react": "^19.0.0"
+                }
+            }"#,
+        )
+        .unwrap();
+
+        let diagnostics = find_unused_dependencies(
+            &ImportGraph {
+                files: HashMap::new(),
+                resolved_imports: HashMap::new(),
+                canonical_paths: HashMap::new(),
+            },
+            &package_json,
+        );
+
+        assert!(!diagnostics.iter().any(|diagnostic| {
+            diagnostic.rule_name == "unused-dependency"
+                && diagnostic.symbol.as_deref() == Some("react")
+        }));
+        assert!(diagnostics.iter().any(|diagnostic| {
+            diagnostic.rule_name == "unused-dependency"
+                && diagnostic.symbol.as_deref() == Some("zod")
+        }));
+    }
+
+    #[test]
+    fn ignores_files_inside_public_directory() {
+        let public_file = PathBuf::from("public/sw.js");
+        let diagnostics = find_unused_files(&ImportGraph {
+            files: HashMap::from([(
+                public_file.clone(),
+                FileInfo {
+                    path: public_file.clone(),
+                    imports: Vec::new(),
+                    exports: Vec::new(),
+                    has_side_effects: false,
+                },
+            )]),
+            resolved_imports: HashMap::new(),
+            canonical_paths: HashMap::from([(public_file.clone(), public_file.clone())]),
+        });
+
+        assert!(!diagnostics.iter().any(|(path, diagnostic)| {
+            path == &public_file && diagnostic.rule_name == "unused-file"
+        }));
     }
 }

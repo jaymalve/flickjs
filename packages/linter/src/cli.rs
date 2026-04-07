@@ -301,8 +301,6 @@ fn starter_rules_for_project(project: &ProjectInfo) -> serde_json::Map<String, s
         ("no-empty-catch", "error"),
         ("unreachable-code", "error"),
         ("no-missing-return", "error"),
-        ("no-wrong-arg-count", "error"),
-        ("no-unsafe-optional-access", "error"),
         ("no-eval", "error"),
         ("no-hardcoded-secrets", "warn"),
     ] {

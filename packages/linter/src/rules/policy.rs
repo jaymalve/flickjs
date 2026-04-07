@@ -153,9 +153,7 @@ fn config_key_to_rule_ir(key: &str, value: &serde_json::Value) -> Option<RuleIR>
         | "prefer-const"
         | "no-unused-vars"
         | "unreachable-code"
-        | "no-missing-return"
-        | "no-wrong-arg-count"
-        | "no-unsafe-optional-access" => None,
+        | "no-missing-return" => None,
 
         // Cross-file dead code rules (handled by the dead_code engine, not policy)
         "unused-exports" | "unused-files" | "unused-dependencies" => None,

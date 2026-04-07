@@ -33,6 +33,14 @@ pub fn is_component_name(name: &str) -> bool {
         .is_some_and(|ch| ch.is_ascii_uppercase())
 }
 
+pub fn is_custom_hook_name(name: &str) -> bool {
+    name.starts_with("use")
+        && name
+            .chars()
+            .nth(3)
+            .is_some_and(|ch| ch.is_ascii_uppercase())
+}
+
 pub fn is_setter_identifier(name: &str) -> bool {
     name.starts_with("set")
         && name

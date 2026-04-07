@@ -177,6 +177,7 @@ struct CacheUpdate {
     fingerprint: rules::FileFingerprint,
     hash: String,
     result: rules::LintResult,
+    cross_file: Option<rules::CrossFileData>,
 }
 
 enum FileStatus {
@@ -187,6 +188,7 @@ enum FileStatus {
 
 struct FileExecution {
     result: rules::LintResult,
+    cross_file: Option<rules::CrossFileData>,
     update: Option<CacheUpdate>,
     status: FileStatus,
     hash_time: Duration,
@@ -241,7 +243,7 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
 
     if args.no_cache {
         let snapshots = collect_file_snapshots(&files, &mut metrics);
-        let (mut results, _) = execute_without_cache(
+        let (mut results, _, cross_file_data) = execute_without_cache(
             &snapshots,
             rule_config,
             loaded_config.config.detect,
@@ -249,7 +251,15 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
             false,
             &mut metrics,
         );
-        run_cross_file_analysis(&mut results, &files, rule_config, &args.path);
+        run_cross_file_analysis(
+            &mut results,
+            &files,
+            rule_config,
+            loaded_config.config.detect,
+            &project,
+            &args.path,
+            &cross_file_data,
+        );
         metrics.total_runtime = total_start.elapsed();
         return Ok(CheckExecution { results, metrics });
     }
@@ -261,7 +271,7 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
     let snapshots = collect_file_snapshots(&files, &mut metrics);
     let strategy = select_strategy(&cache, load_status, &snapshots, &metrics);
 
-    let (mut results, updates, dirty_entries) = match strategy {
+    let (mut results, updates, dirty_entries, cross_file_data) = match strategy {
         ExecutionStrategy::Bypass {
             reason,
             prime_cache,
@@ -270,7 +280,7 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
             metrics.cache_reason = reason;
             metrics.primed_cache = prime_cache;
 
-            let (results, updates) = execute_without_cache(
+            let (results, updates, cross_file_data) = execute_without_cache(
                 &snapshots,
                 rule_config,
                 loaded_config.config.detect,
@@ -278,19 +288,20 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
                 prime_cache,
                 &mut metrics,
             );
-            (results, updates, prime_cache)
+            (results, updates, prime_cache, cross_file_data)
         }
         ExecutionStrategy::UseCache { reason } => {
             metrics.cache_decision = CacheDecision::Used;
             metrics.cache_reason = reason;
-            execute_with_cache(
+            let (results, updates, dirty, cross_file_data) = execute_with_cache(
                 &snapshots,
                 &cache,
                 rule_config,
                 loaded_config.config.detect,
                 &project,
                 &mut metrics,
-            )
+            );
+            (results, updates, dirty, cross_file_data)
         }
     };
 
@@ -306,7 +317,7 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
 
         for update in updates {
             should_persist |=
-                cache.upsert(update.path, update.fingerprint, update.hash, update.result);
+                cache.upsert(update.path, update.fingerprint, update.hash, update.result, update.cross_file);
         }
 
         cache
@@ -333,18 +344,29 @@ fn execute_check(args: &cli::CheckArgs) -> Result<CheckExecution> {
         }
     }
 
-    run_cross_file_analysis(&mut results, &files, rule_config, &args.path);
+    run_cross_file_analysis(
+        &mut results,
+        &files,
+        rule_config,
+        loaded_config.config.detect,
+        &project,
+        &args.path,
+        &cross_file_data,
+    );
     metrics.total_runtime = total_start.elapsed();
     Ok(CheckExecution { results, metrics })
 }
 
-/// Run cross-file dead code analysis (unused exports, unused files, unused dependencies).
-/// Appends diagnostics to the existing per-file results.
+/// Run cross-file analysis (unused exports, unused files, unused dependencies, search params).
+/// Uses pre-collected FileInfo and SearchFileAnalysis from the lint pass to avoid re-parsing.
 fn run_cross_file_analysis(
     results: &mut Vec<rules::LintResult>,
     files: &[PathBuf],
     rule_config: &HashMap<String, serde_json::Value>,
+    detect: bool,
+    project: &project::ProjectInfo,
     project_root: &Path,
+    pre_collected: &[(PathBuf, rules::CrossFileData)],
 ) {
     let wants_unused_exports = rule_config
         .get("unused-exports")
@@ -358,24 +380,38 @@ fn run_cross_file_analysis(
         .get("unused-dependencies")
         .and_then(|v| cli::parse_rule_severity(v))
         .is_some();
+    let wants_search_params = if let Some(value) =
+        rule_config.get("nextjs/no-search-params-without-suspense")
+    {
+        cli::parse_rule_severity(value).is_some()
+    } else {
+        detect && project.has_next
+    };
 
-    if !wants_unused_exports && !wants_unused_files && !wants_unused_deps {
+    if !wants_unused_exports && !wants_unused_files && !wants_unused_deps && !wants_search_params {
         return;
     }
 
-    // Read all file sources for import graph analysis
-    let file_sources: Vec<(PathBuf, String)> = files
-        .par_iter()
-        .filter_map(|path| {
-            std::fs::read_to_string(path)
-                .ok()
-                .map(|source| (path.clone(), source))
-        })
+    let needs_import_graph = wants_unused_exports || wants_unused_files || wants_unused_deps;
+
+    if wants_search_params
+        && !needs_import_graph
+        && !pre_collected
+            .iter()
+            .any(|(_, data)| data.search_analysis.has_search_params_usage())
+    {
+        return;
+    }
+
+    let file_infos: HashMap<PathBuf, rules::dead_code::FileInfo> = pre_collected
+        .iter()
+        .map(|(path, data)| (path.clone(), data.file_info.clone()))
         .collect();
 
-    let graph = rules::dead_code::build_import_graph(&file_sources, files);
+    let resolver_config = project::load_module_resolution_config(project_root);
+    let graph =
+        rules::dead_code::build_import_graph_from_file_infos(file_infos, files, resolver_config);
 
-    // Apply severity overrides
     let export_severity = rule_config
         .get("unused-exports")
         .and_then(|v| cli::parse_rule_severity(v));
@@ -385,6 +421,10 @@ fn run_cross_file_analysis(
     let dep_severity = rule_config
         .get("unused-dependencies")
         .and_then(|v| cli::parse_rule_severity(v));
+    let search_params_severity = rule_config
+        .get("nextjs/no-search-params-without-suspense")
+        .and_then(|v| cli::parse_rule_severity(v))
+        .unwrap_or(rules::Severity::Warning);
 
     if wants_unused_exports {
         let mut diagnostics = rules::dead_code::find_unused_exports(&graph);
@@ -423,6 +463,21 @@ fn run_cross_file_analysis(
             }
         }
     }
+
+    if wants_search_params {
+        let search_analyses: HashMap<PathBuf, rules::react::nextjs::SearchFileAnalysis> =
+            pre_collected
+                .iter()
+                .map(|(path, data)| (path.clone(), data.search_analysis.clone()))
+                .collect();
+        let diagnostics =
+            rules::react::nextjs::collect_search_params_diagnostics_from_analyses(
+                &search_analyses,
+                &graph,
+                search_params_severity,
+            );
+        append_paired_diagnostics(results, diagnostics);
+    }
 }
 
 /// Append (file_path, diagnostic) pairs to matching file results, or create new entries.
@@ -432,7 +487,15 @@ fn append_paired_diagnostics(
 ) {
     for (file_path, diagnostic) in diagnostics {
         if let Some(existing) = results.iter_mut().find(|r| r.file == file_path) {
-            existing.diagnostics.push(diagnostic);
+            let already_present = existing.diagnostics.iter().any(|current| {
+                current.rule_name == diagnostic.rule_name
+                    && current.message == diagnostic.message
+                    && current.byte_start == diagnostic.byte_start
+                    && current.byte_end == diagnostic.byte_end
+            });
+            if !already_present {
+                existing.diagnostics.push(diagnostic);
+            }
         } else {
             results.push(rules::LintResult {
                 file: file_path,
@@ -572,7 +635,11 @@ fn execute_without_cache(
     project: &project::ProjectInfo,
     prepare_cache_entries: bool,
     metrics: &mut RunMetrics,
-) -> (Vec<rules::LintResult>, Vec<CacheUpdate>) {
+) -> (
+    Vec<rules::LintResult>,
+    Vec<CacheUpdate>,
+    Vec<(PathBuf, rules::CrossFileData)>,
+) {
     let executions = snapshots
         .par_iter()
         .filter_map(|snapshot| {
@@ -580,7 +647,7 @@ fn execute_without_cache(
                 let lint_start = Instant::now();
                 match rules::load_source_with_hash(&snapshot.path) {
                     Ok(loaded) => {
-                        let result = rules::lint_source_with_config(
+                        let output = rules::lint_source_with_analysis(
                             &snapshot.path,
                             &loaded.source,
                             rule_config,
@@ -588,14 +655,17 @@ fn execute_without_cache(
                             project,
                         );
                         let lint_time = lint_start.elapsed();
+                        let cross_file = Some(output.cross_file);
                         Some(FileExecution {
                             update: Some(CacheUpdate {
                                 path: snapshot.path.clone(),
                                 fingerprint: snapshot.fingerprint.clone(),
                                 hash: loaded.hash,
-                                result: result.clone(),
+                                result: output.result.clone(),
+                                cross_file: cross_file.clone(),
                             }),
-                            result,
+                            result: output.result,
+                            cross_file,
                             status: FileStatus::Miss,
                             hash_time: Duration::ZERO,
                             hash_bytes: 0,
@@ -610,27 +680,37 @@ fn execute_without_cache(
                 }
             } else {
                 let lint_start = Instant::now();
-                match rules::lint_file_with_config(&snapshot.path, rule_config, detect, project) {
-                    Ok(result) => Some(FileExecution {
-                        result,
-                        update: None,
-                        status: FileStatus::Miss,
-                        hash_time: Duration::ZERO,
-                        hash_bytes: 0,
-                        lint_time: lint_start.elapsed(),
-                        lint_bytes: snapshot.fingerprint.size,
-                    }),
+                let source = match std::fs::read_to_string(&snapshot.path) {
+                    Ok(s) => s,
                     Err(error) => {
                         eprintln!("Error linting {}: {}", snapshot.path.display(), error);
-                        None
+                        return None;
                     }
-                }
+                };
+                let output = rules::lint_source_with_analysis(
+                    &snapshot.path,
+                    &source,
+                    rule_config,
+                    detect,
+                    project,
+                );
+                Some(FileExecution {
+                    result: output.result,
+                    cross_file: Some(output.cross_file),
+                    update: None,
+                    status: FileStatus::Miss,
+                    hash_time: Duration::ZERO,
+                    hash_bytes: 0,
+                    lint_time: lint_start.elapsed(),
+                    lint_bytes: snapshot.fingerprint.size,
+                })
             }
         })
         .collect::<Vec<_>>();
 
     let mut results = Vec::with_capacity(executions.len());
     let mut updates = Vec::new();
+    let mut cross_file_data = Vec::with_capacity(executions.len());
 
     for execution in executions {
         metrics.cache_misses += 1;
@@ -642,10 +722,14 @@ fn execute_without_cache(
         if let Some(update) = execution.update {
             updates.push(update);
         }
+        let path = execution.result.file.clone();
         results.push(execution.result);
+        if let Some(cf) = execution.cross_file {
+            cross_file_data.push((path, cf));
+        }
     }
 
-    (results, updates)
+    (results, updates, cross_file_data)
 }
 
 fn execute_with_cache(
@@ -655,14 +739,25 @@ fn execute_with_cache(
     detect: bool,
     project: &project::ProjectInfo,
     metrics: &mut RunMetrics,
-) -> (Vec<rules::LintResult>, Vec<CacheUpdate>, bool) {
+) -> (
+    Vec<rules::LintResult>,
+    Vec<CacheUpdate>,
+    bool,
+    Vec<(PathBuf, rules::CrossFileData)>,
+) {
     let executions: Vec<FileExecution> = snapshots
         .par_iter()
         .filter_map(|snapshot| {
             if let Some(cached) = cache.get(&snapshot.path) {
                 if cached.fingerprint.matches(&snapshot.fingerprint) {
+                    // Metadata hit: use cached cross-file data (no file I/O or parsing)
+                    let cross_file = cached.cross_file.clone().or_else(|| {
+                        // Fallback for old cache entries without cross_file
+                        collect_cross_file_data_only(&snapshot.path)
+                    });
                     return Some(FileExecution {
                         result: cached.result.clone(),
+                        cross_file,
                         update: None,
                         status: FileStatus::MetadataHit,
                         hash_time: Duration::ZERO,
@@ -683,14 +778,22 @@ fn execute_with_cache(
                 let hash_time = hash_start.elapsed();
 
                 if loaded.hash == cached.hash {
+                    // Hash hit: use cached cross-file data (no parsing needed)
+                    let cross_file = cached.cross_file.clone().or_else(|| {
+                        // Fallback for old cache entries without cross_file
+                        Some(rules::collect_cross_file_data(&snapshot.path, &loaded.source))
+                    });
+                    let result = cached.result.clone();
                     return Some(FileExecution {
-                        result: cached.result.clone(),
                         update: Some(CacheUpdate {
                             path: snapshot.path.clone(),
                             fingerprint: snapshot.fingerprint.clone(),
                             hash: loaded.hash,
-                            result: cached.result.clone(),
+                            result: result.clone(),
+                            cross_file: cross_file.clone(),
                         }),
+                        result,
+                        cross_file,
                         status: FileStatus::HashHit,
                         hash_time,
                         hash_bytes: loaded.size,
@@ -700,7 +803,7 @@ fn execute_with_cache(
                 }
 
                 let lint_start = Instant::now();
-                let result = rules::lint_source_with_config(
+                let output = rules::lint_source_with_analysis(
                     &snapshot.path,
                     &loaded.source,
                     rule_config,
@@ -709,14 +812,17 @@ fn execute_with_cache(
                 );
                 let lint_time = lint_start.elapsed();
 
+                let cross_file = Some(output.cross_file);
                 return Some(FileExecution {
                     update: Some(CacheUpdate {
                         path: snapshot.path.clone(),
                         fingerprint: snapshot.fingerprint.clone(),
                         hash: loaded.hash,
-                        result: result.clone(),
+                        result: output.result.clone(),
+                        cross_file: cross_file.clone(),
                     }),
-                    result,
+                    result: output.result,
+                    cross_file,
                     status: FileStatus::Miss,
                     hash_time,
                     hash_bytes: loaded.size,
@@ -736,7 +842,7 @@ fn execute_with_cache(
             let hash_time = hash_start.elapsed();
 
             let lint_start = Instant::now();
-            let result = rules::lint_source_with_config(
+            let output = rules::lint_source_with_analysis(
                 &snapshot.path,
                 &loaded.source,
                 rule_config,
@@ -745,14 +851,17 @@ fn execute_with_cache(
             );
             let lint_time = lint_start.elapsed();
 
+            let cross_file = Some(output.cross_file);
             Some(FileExecution {
                 update: Some(CacheUpdate {
                     path: snapshot.path.clone(),
                     fingerprint: snapshot.fingerprint.clone(),
                     hash: loaded.hash,
-                    result: result.clone(),
+                    result: output.result.clone(),
+                    cross_file: cross_file.clone(),
                 }),
-                result,
+                result: output.result,
+                cross_file,
                 status: FileStatus::Miss,
                 hash_time,
                 hash_bytes: loaded.size,
@@ -765,6 +874,7 @@ fn execute_with_cache(
     let mut results = Vec::with_capacity(executions.len());
     let mut updates = Vec::new();
     let mut dirty_entries = false;
+    let mut cross_file_data = Vec::with_capacity(executions.len());
 
     for execution in executions {
         match execution.status {
@@ -791,10 +901,19 @@ fn execute_with_cache(
         if let Some(update) = execution.update {
             updates.push(update);
         }
+        let path = execution.result.file.clone();
         results.push(execution.result);
+        if let Some(cf) = execution.cross_file {
+            cross_file_data.push((path, cf));
+        }
     }
 
-    (results, updates, dirty_entries)
+    (results, updates, dirty_entries, cross_file_data)
+}
+
+fn collect_cross_file_data_only(path: &Path) -> Option<rules::CrossFileData> {
+    let source = std::fs::read_to_string(path).ok()?;
+    Some(rules::collect_cross_file_data(path, &source))
 }
 
 fn duration_ns(duration: Duration) -> u64 {

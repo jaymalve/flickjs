@@ -24,7 +24,7 @@ impl LintRule for NoExplicitAny {
             .filter_map(|node| match node.kind() {
                 AstKind::TSAnyKeyword(keyword) => Some(ctx.diagnostic(
                     self.name(),
-                    "Unexpected `any` type — use `unknown` for type-safe alternative",
+                    "Unexpected `any` type, use `unknown` for type-safe alternative",
                     keyword.span,
                     Severity::Warning,
                 )),
