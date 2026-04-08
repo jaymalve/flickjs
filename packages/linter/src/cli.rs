@@ -285,7 +285,7 @@ pub fn init_config() -> Result<()> {
 
 fn build_init_config(project: &ProjectInfo) -> serde_json::Value {
     serde_json::json!({
-        "$schema": "https://flickjs.com/scan/schema.json",
+        "$schema": "https://www.flickjs.com/scan/schema.json",
         "detect": true,
         "rules": starter_rules_for_project(project),
         "files": {
