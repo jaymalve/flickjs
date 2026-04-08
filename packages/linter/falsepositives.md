@@ -2,3 +2,4 @@
 2. react/no-effect-event-handler, how is this checked? lets discuss logic for this.
 3. functional setstate, is this needed? because what if someone simply does !isOpen, its the same thing right?
 4. react/no-usememo-simple-expr, how is this checked? lets discuss logic for this.
+5. no-missing-return false positive resolving.

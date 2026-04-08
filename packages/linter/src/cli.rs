@@ -53,6 +53,10 @@ pub struct CheckArgs {
     /// Output format
     #[arg(long, default_value = "pretty")]
     pub format: OutputFormat,
+
+    /// Show a health score (0-100) after linting
+    #[arg(long)]
+    pub score: bool,
 }
 
 #[derive(Clone, clap::ValueEnum)]

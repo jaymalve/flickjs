@@ -4,6 +4,7 @@ pub mod rule_catalog;
 pub mod rules;
 pub mod results_tui;
 pub mod rules_tui;
+pub mod scoring;
 pub mod tui_common;
 
 use clap::Parser;
@@ -31,6 +32,8 @@ pub fn run() -> Result<i32> {
                 &args.format,
                 execution.metrics.total_runtime,
                 &args.path,
+                execution.metrics.files_discovered,
+                args.score,
             );
             (
                 if summary.errors > 0 { 1 } else { 0 },
@@ -945,6 +948,8 @@ fn print_timing(metrics: &RunMetrics) {
 
 pub(crate) struct Summary {
     pub(crate) errors: usize,
+    #[allow(dead_code)]
+    pub(crate) score: Option<scoring::HealthScore>,
 }
 
 pub(crate) struct PrettyEntry<'a> {
@@ -1009,17 +1014,28 @@ fn print_results(
     format: &cli::OutputFormat,
     elapsed: std::time::Duration,
     scan_root: &Path,
+    files_scanned: usize,
+    show_score: bool,
 ) -> Summary {
     match format {
-        cli::OutputFormat::Json => print_json(results),
-        cli::OutputFormat::Compact => print_compact(results),
-        cli::OutputFormat::Pretty => print_pretty(results, elapsed),
-        cli::OutputFormat::Tui => results_tui::print_or_fallback(results, elapsed, scan_root),
-        cli::OutputFormat::AgentJson => print_agent_json(results),
+        cli::OutputFormat::Json => print_json(results, files_scanned, show_score),
+        cli::OutputFormat::Compact => print_compact(results, files_scanned, show_score),
+        cli::OutputFormat::Pretty => print_pretty(results, elapsed, files_scanned, show_score),
+        cli::OutputFormat::Tui => {
+            results_tui::print_or_fallback(results, elapsed, scan_root, files_scanned, show_score)
+        }
+        cli::OutputFormat::AgentJson => {
+            print_agent_json(results, files_scanned, show_score)
+        }
     }
 }
 
-pub(crate) fn print_pretty(results: &[rules::LintResult], elapsed: std::time::Duration) -> Summary {
+pub(crate) fn print_pretty(
+    results: &[rules::LintResult],
+    elapsed: std::time::Duration,
+    files_scanned: usize,
+    show_score: bool,
+) -> Summary {
     let (total_errors, total_warnings) = diagnostic_counts(results);
     let categories = group_results_for_display(results);
 
@@ -1076,8 +1092,27 @@ pub(crate) fn print_pretty(results: &[rules::LintResult], elapsed: std::time::Du
         );
     }
 
+    let score = if show_score {
+        let health = scoring::HealthScore::compute(results, files_scanned);
+        let bullet = match health.score {
+            90..=100 => "●".green().bold(),
+            70..=89 => "●".yellow().bold(),
+            _ => "●".red().bold(),
+        };
+        println!(
+            "  {} Health score: {}/100 ({})",
+            bullet,
+            health.score,
+            health.label()
+        );
+        Some(health)
+    } else {
+        None
+    };
+
     Summary {
         errors: total_errors,
+        score,
     }
 }
 
@@ -1146,7 +1181,11 @@ pub(crate) fn diagnostic_help_text(diagnostic: &rules::LintDiagnostic) -> Option
     }
 }
 
-fn print_compact(results: &[rules::LintResult]) -> Summary {
+fn print_compact(
+    results: &[rules::LintResult],
+    files_scanned: usize,
+    show_score: bool,
+) -> Summary {
     let mut total_errors = 0;
 
     for result in results {
@@ -1164,25 +1203,53 @@ fn print_compact(results: &[rules::LintResult]) -> Summary {
         }
     }
 
+    let score = if show_score {
+        let health = scoring::HealthScore::compute(results, files_scanned);
+        println!("# score: {}/100 ({})", health.score, health.label());
+        Some(health)
+    } else {
+        None
+    };
+
     Summary {
         errors: total_errors,
+        score,
     }
 }
 
-fn print_json(results: &[rules::LintResult]) -> Summary {
+fn print_json(
+    results: &[rules::LintResult],
+    files_scanned: usize,
+    show_score: bool,
+) -> Summary {
     let total_errors = results
         .iter()
         .flat_map(|result| &result.diagnostics)
         .filter(|diagnostic| diagnostic.severity == rules::Severity::Error)
         .count();
 
-    println!(
-        "{}",
-        serde_json::to_string_pretty(results).unwrap_or_else(|_| "[]".to_string())
-    );
+    let score = if show_score {
+        let health = scoring::HealthScore::compute(results, files_scanned);
+        let output = serde_json::json!({
+            "health": health,
+            "results": results,
+        });
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&output).unwrap_or_else(|_| "{}".to_string())
+        );
+        Some(health)
+    } else {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(results).unwrap_or_else(|_| "[]".to_string())
+        );
+        None
+    };
 
     Summary {
         errors: total_errors,
+        score,
     }
 }
 
@@ -1244,7 +1311,11 @@ struct AgentFileResult {
     diagnostics: Vec<AgentDiagnostic>,
 }
 
-fn print_agent_json(results: &[rules::LintResult]) -> Summary {
+fn print_agent_json(
+    results: &[rules::LintResult],
+    files_scanned: usize,
+    show_score: bool,
+) -> Summary {
     let mut total_errors = 0;
     let mut agent_results = Vec::new();
 
@@ -1333,13 +1404,28 @@ fn print_agent_json(results: &[rules::LintResult]) -> Summary {
         }
     }
 
-    println!(
-        "{}",
-        serde_json::to_string_pretty(&agent_results).unwrap_or_else(|_| "[]".to_string())
-    );
+    let score = if show_score {
+        let health = scoring::HealthScore::compute(results, files_scanned);
+        let output = serde_json::json!({
+            "health": health,
+            "files": agent_results,
+        });
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&output).unwrap_or_else(|_| "{}".to_string())
+        );
+        Some(health)
+    } else {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&agent_results).unwrap_or_else(|_| "[]".to_string())
+        );
+        None
+    };
 
     Summary {
         errors: total_errors,
+        score,
     }
 }
 
@@ -1673,6 +1759,7 @@ mod tests {
             ignore: Vec::new(),
             no_cache,
             format: cli::OutputFormat::Compact,
+            score: false,
         }
     }
 
