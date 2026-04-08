@@ -51,8 +51,12 @@ pub struct CheckArgs {
     pub no_cache: bool,
 
     /// Output format
-    #[arg(long, default_value = "pretty")]
+    #[arg(long, default_value = "tui")]
     pub format: OutputFormat,
+
+    /// Disable interactive TUI and use pretty output instead
+    #[arg(long)]
+    pub no_tui: bool,
 
     /// Show a health score (0-100) after linting
     #[arg(long)]
@@ -481,11 +485,23 @@ mod tests {
     }
 
     #[test]
-    fn parses_format_tui() {
-        let cli = Cli::parse_from(["flick-scan", "check", ".", "--format", "tui"]);
+    fn default_format_is_tui() {
+        let cli = Cli::parse_from(["flick-scan", "check", "."]);
         match cli.command {
             Command::Check(args) => {
                 assert!(matches!(args.format, OutputFormat::Tui));
+                assert!(!args.no_tui);
+            }
+            _ => panic!("expected check command"),
+        }
+    }
+
+    #[test]
+    fn no_tui_flag_is_parsed() {
+        let cli = Cli::parse_from(["flick-scan", "check", ".", "--no-tui"]);
+        match cli.command {
+            Command::Check(args) => {
+                assert!(args.no_tui);
             }
             _ => panic!("expected check command"),
         }

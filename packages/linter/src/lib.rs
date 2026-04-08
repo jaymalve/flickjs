@@ -27,9 +27,14 @@ pub fn run() -> Result<i32> {
     let (exit_code, metrics) = match &cli.command {
         cli::Command::Check(args) => {
             let execution = execute_check(args)?;
+            let effective_format = if args.no_tui {
+                cli::OutputFormat::Pretty
+            } else {
+                args.format.clone()
+            };
             let summary = print_results(
                 &execution.results,
-                &args.format,
+                &effective_format,
                 execution.metrics.total_runtime,
                 &args.path,
                 execution.metrics.files_discovered,
@@ -1768,6 +1773,7 @@ mod tests {
             ignore: Vec::new(),
             no_cache,
             format: cli::OutputFormat::Compact,
+            no_tui: false,
             score: false,
         }
     }
