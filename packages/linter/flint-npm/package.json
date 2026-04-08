@@ -28,7 +28,8 @@
   "files": [
     "bin.js",
     "binaries/",
-    "README.md"
+    "README.md",
+    "../schema.json"
   ],
   "scripts": {},
   "os": [
