@@ -53,7 +53,7 @@ pub fn run() -> Result<i32> {
     if cli.timing {
         match metrics {
             Some(metrics) => print_timing(&metrics),
-            None => eprintln!("\n⚡ Flint finished in {:.2?}", process_start.elapsed()),
+            None => eprintln!("\n⚡ Flick Scan finished in {:.2?}", process_start.elapsed()),
         }
     }
 
@@ -924,7 +924,7 @@ fn duration_ns(duration: Duration) -> u64 {
 }
 
 fn print_timing(metrics: &RunMetrics) {
-    eprintln!("\n⚡ Flint finished in {:.2?}", metrics.total_runtime);
+    eprintln!("\n⚡ Flick Scan finished in {:.2?}", metrics.total_runtime);
     eprintln!(
         "  cache mode={} decision={} reason={} hits={} hash_hits={} misses={} changed={} primed={}",
         metrics.cache_mode.as_str(),
@@ -1166,9 +1166,9 @@ pub(crate) fn category_display_name(category: &str) -> &'static str {
 
 pub(crate) fn diagnostic_help_text(diagnostic: &rules::LintDiagnostic) -> Option<String> {
     match diagnostic.rule_name.as_str() {
-        "parse-error" => Some("Fix syntax issues before Flint can run rule checks.".to_string()),
+        "parse-error" => Some("Fix syntax issues before Flick Scan can run rule checks.".to_string()),
         "semantic-error" => {
-            Some("Fix semantic issues before Flint can analyze this file fully.".to_string())
+            Some("Fix semantic issues before Flick Scan can analyze this file fully.".to_string())
         }
         _ if matches!(
             diagnostic.origin,
@@ -1176,7 +1176,7 @@ pub(crate) fn diagnostic_help_text(diagnostic: &rules::LintDiagnostic) -> Option
         ) =>
         {
             Some(format!(
-                "configure in flint.json -> rules.\"{}\": \"off\"",
+                "configure in flick.json -> rules.\"{}\": \"off\"",
                 diagnostic.rule_name
             ))
         }
@@ -1533,7 +1533,7 @@ mod tests {
         assert_eq!(
             diagnostic_help_text(&diagnostic),
             Some(
-                "configure in flint.json -> rules.\"react/no-fetch-in-effect\": \"off\""
+                "configure in flick.json -> rules.\"react/no-fetch-in-effect\": \"off\""
                     .to_string()
             )
         );

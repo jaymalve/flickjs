@@ -1,38 +1,38 @@
-# @flickjs/lint
+# @flickjs/scan
 
 Blazing-fast JavaScript and TypeScript linter, powered by Rust.
 
 ## Install
 
 ```bash
-npm install -g @flickjs/lint
+npm install -g @flickjs/scan
 ```
 
 Or as a dev dependency:
 
 ```bash
-npm install -D @flickjs/lint
+npm install -D @flickjs/scan
 ```
 
 ## Usage
 
 ```bash
 # Generate a starter config for the current project
-flint init
+flick-scan init
 
 # Lint current directory
-flint check .
+flick-scan check .
 
 # Lint a specific directory
-flint check src
+flick-scan check src
 
 # JSON output
-flint check . --format json
+flick-scan check . --format json
 ```
 
 ## Configuration
 
-Create a `flint.json` in your project root:
+Create a `flick.json` in your project root:
 
 ```json
 {
@@ -47,7 +47,7 @@ Create a `flint.json` in your project root:
 }
 ```
 
-With `"detect": true`, Flint auto-enables matching built-in categories for React, Next.js, React
+With `"detect": true`, Flick Scan auto-enables matching built-in categories for React, Next.js, React
 Native, and server-side projects when their frameworks are detected from `package.json`. Explicit
 rule settings still win, including `"off"`.
 

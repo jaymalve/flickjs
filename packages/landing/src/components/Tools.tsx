@@ -1,9 +1,9 @@
 const tools = [
   {
-    name: 'Flint',
+    name: 'Flick Scan',
     description:
       'Rust-powered JS/TS linting with semantic rules and millisecond cold starts. Works with any project.',
-    href: '/docs/flint'
+    href: '/scan'
   },
   {
     name: 'Compiler',

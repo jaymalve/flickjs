@@ -1,6 +1,6 @@
 # Semantic Policy Refinement Example
 
-This file shows one concrete example of how semantic policy refinement would be implemented in Flint.
+This file shows one concrete example of how semantic policy refinement would be implemented in Flick Scan.
 
 ## Example Rule
 
@@ -15,7 +15,7 @@ This is the best example because the rule is not just about syntax. It depends o
 
 ## Problem
 
-Suppose Flint currently flags this:
+Suppose Flick Scan currently flags this:
 
 ```ts
 import type { Foo } from './types';
@@ -44,7 +44,7 @@ Before touching the rule code, define the behavior clearly.
 - `import { Foo } ...` and later `create<Foo>()`:
   - no diagnostic
 - `catch (error) { ... }` with no read of `error`:
-  - no diagnostic if Flint chooses to exempt `error`
+  - no diagnostic if Flick Scan chooses to exempt `error`
 - `function run(_unused) {}`:
   - no diagnostic
 
@@ -161,7 +161,7 @@ if has_meaningful_usage(ctx, symbol_id, flags) {
 
 ## Step 4: Verify Against Real Code
 
-After the unit tests pass, run Flint on a few real projects and inspect:
+After the unit tests pass, run Flick Scan on a few real projects and inspect:
 
 - false positives
 - false negatives
@@ -176,7 +176,7 @@ That distinction matters. A linter should not silently drift just because one re
 
 ## What This Means
 
-Semantic policy refinement in Flint is this loop:
+Semantic policy refinement in Flick Scan is this loop:
 
 1. Define exact behavior.
 2. Add a failing test.
@@ -186,7 +186,7 @@ Semantic policy refinement in Flint is this loop:
 
 ## Why This Matters
 
-This is how Flint becomes trustworthy.
+This is how Flick Scan becomes trustworthy.
 
 The parser and AST walker can already find symbols and references. The real product quality comes from deciding what those references mean for each rule, then locking that behavior down with tests.
 
@@ -200,7 +200,7 @@ This rule is another good example because it looks simple at first, but correct 
 
 ## Problem
 
-Suppose Flint currently flags simple cases like:
+Suppose Flick Scan currently flags simple cases like:
 
 ```js
 let count = 1;
@@ -218,7 +218,7 @@ Again, this is not a parser problem. It is a semantic policy decision.
 
 ## Step 1: Write The Policy
 
-Define what Flint means by "prefer const".
+Define what Flick Scan means by "prefer const".
 
 ### Desired behavior
 
@@ -326,11 +326,11 @@ Alternative policy:
 
 - flag only the stable sub-bindings and attach diagnostics to each name
 
-Those are different product decisions. The semantic layer enables both, but Flint has to choose one.
+Those are different product decisions. The semantic layer enables both, but Flick Scan has to choose one.
 
 ## Step 4: Validate On Real Code
 
-Run Flint on real repos and look specifically for:
+Run Flick Scan on real repos and look specifically for:
 
 - false positives on loop variables
 - false positives on destructuring

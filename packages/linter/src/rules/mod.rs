@@ -798,7 +798,7 @@ impl Cache {
         let file_name = path
             .file_name()
             .and_then(OsStr::to_str)
-            .unwrap_or("flint-cache.json");
+            .unwrap_or("flick-cache.json");
         let temp_path = parent.join(format!(".{}.{}.tmp", file_name, std::process::id()));
 
         fs::write(&temp_path, data).map_err(|e| miette::miette!("Failed to write cache: {}", e))?;

@@ -7,18 +7,18 @@ const { platform, arch } = process;
 
 // Platform-specific binary mapping
 const BINARY_MAP = {
-  'darwin-arm64': 'flint-aarch64-apple-darwin',
-  'darwin-x64': 'flint-x86_64-apple-darwin',
-  'linux-x64': 'flint-x86_64-unknown-linux-gnu',
-  'linux-arm64': 'flint-aarch64-unknown-linux-gnu',
-  'win32-x64': 'flint-x86_64-pc-windows-msvc.exe'
+  'darwin-arm64': 'flick-scan-aarch64-apple-darwin',
+  'darwin-x64': 'flick-scan-x86_64-apple-darwin',
+  'linux-x64': 'flick-scan-x86_64-unknown-linux-gnu',
+  'linux-arm64': 'flick-scan-aarch64-unknown-linux-gnu',
+  'win32-x64': 'flick-scan-x86_64-pc-windows-msvc.exe'
 };
 
 const key = `${platform}-${arch}`;
 const binaryName = BINARY_MAP[key];
 
 if (!binaryName) {
-  console.error(`Flint does not support ${platform}-${arch} yet.`);
+  console.error(`Flick Scan does not support ${platform}-${arch} yet.`);
   console.error('Supported: macOS (arm64/x64), Linux (x64/arm64), Windows (x64)');
   process.exit(1);
 }
@@ -27,7 +27,7 @@ const binaryPath = join(__dirname, 'binaries', binaryName);
 
 if (!existsSync(binaryPath)) {
   console.error(`Binary not found: ${binaryPath}`);
-  console.error('Try reinstalling: npm install -g @flickjs/lint');
+  console.error('Try reinstalling: npm install -g @flickjs/scan');
   process.exit(1);
 }
 

@@ -16,7 +16,7 @@ TARGETS=(
 
 mkdir -p "$BINARIES_DIR"
 
-echo "Building flint for all targets..."
+echo "Building flick-scan for all targets..."
 echo "Note: Cross-compilation requires appropriate toolchains."
 echo "      Install 'cross' (cargo install cross) for Linux/Windows targets."
 echo ""
@@ -26,11 +26,11 @@ for target in "${TARGETS[@]}"; do
 
   # Determine binary name
   if [[ "$target" == *"windows"* ]]; then
-    src_binary="flint.exe"
-    dest_binary="flint-${target}.exe"
+    src_binary="flick-scan.exe"
+    dest_binary="flick-scan-${target}.exe"
   else
-    src_binary="flint"
-    dest_binary="flint-${target}"
+    src_binary="flick-scan"
+    dest_binary="flick-scan-${target}"
   fi
 
   # Use cross for non-native targets, cargo for native

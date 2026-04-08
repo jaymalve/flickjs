@@ -11,7 +11,7 @@ const Hero = () => {
         </p>
         <p className="text-base text-stone-400 leading-relaxed">
           A{' '}
-          <a href="/docs/flint" className="link text-stone-300">
+          <a href="/scan" className="link text-stone-300">
             linter
           </a>{' '}
           built in Rust with millisecond cold starts. A{' '}

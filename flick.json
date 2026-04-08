@@ -1,6 +1,11 @@
 {
-  "$schema": "https://zarc.dev/schema.json",
-  "rules": {},
+  "$schema": "https://www.flickjs.com/scan/schema.json",
+  "detect": true,
+  "rules": {
+    "no-console": "off",
+    "no-unused-vars": "error",
+    "no-undef": "error"
+  },
   "files": {
     "exclude": ["node_modules", "dist", "build", ".git"]
   }

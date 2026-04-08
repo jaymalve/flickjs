@@ -1,5 +1,5 @@
 {
-  "name": "@flickjs/lint-workspace",
+  "name": "@flickjs/scan-workspace",
   "dependencies": {
     "codex": "^0.2.3"
   }

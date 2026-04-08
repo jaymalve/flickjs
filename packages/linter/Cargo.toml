@@ -1,15 +1,15 @@
 [package]
-name = "flint"
+name = "flick-scan"
 version = "0.1.0"
 edition = "2021"
-description = "The JavaScript Static Analysis Engine"
+description = "Flick Scan — The JavaScript Static Analysis Engine"
 license = "MIT"
 repository = "https://github.com/aspect-build/flickjs"
 keywords = ["linter", "typescript", "javascript", "static-analysis"]
 categories = ["development-tools", "command-line-utilities"]
 
 [[bin]]
-name = "flint"
+name = "flick-scan"
 path = "src/main.rs"
 
 [dependencies]

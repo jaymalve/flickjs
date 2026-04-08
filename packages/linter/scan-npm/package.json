@@ -1,5 +1,5 @@
 {
-  "name": "@flickjs/lint",
+  "name": "@flickjs/scan",
   "version": "0.0.1-beta.2",
   "description": "Hyper-fast JavaScript and TypeScript linter",
   "keywords": [
@@ -23,7 +23,7 @@
     "node": ">=16"
   },
   "bin": {
-    "flint": "./bin.js"
+    "flick-scan": "./bin.js"
   },
   "files": [
     "bin.js",

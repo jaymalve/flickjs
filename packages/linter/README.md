@@ -1,47 +1,47 @@
-# Flint
+# Flick Scan
 
 Blazing-fast JavaScript and TypeScript linting with a deliberately narrow MVP surface.
 
 ## Current Product Direction
 
-Flint is focused on one job:
+Flick Scan is focused on one job:
 
 - lint JS/TS files fast
 - keep startup overhead low
 - keep the rule set small and high-value
 - optimize cold CLI performance first
 
-Code health scoring is intentionally out of scope. Flint now also supports plain-English policies
+Code health scoring is intentionally out of scope. Flick Scan now also supports plain-English policies
 that compile into deterministic native rule IR.
 
 ## Commands
 
 ```bash
 # Initialize config
-flint init
+flick-scan init
 
 # Lint the current project
-flint check .
+flick-scan check .
 
 # Lint a specific directory
-flint check ./src
+flick-scan check ./src
 
 # Print JSON output
-flint check . --format json
+flick-scan check . --format json
 
 # Skip the adaptive cache for a cold-run measurement
-flint check . --no-cache --timing
+flick-scan check . --no-cache --timing
 ```
 
-By default, `flint check` uses an adaptive cache. It reuses cached results when that is predicted to beat a cold run and bypasses the cache when the cache overhead would likely lose.
+By default, `flick-scan check` uses an adaptive cache. It reuses cached results when that is predicted to beat a cold run and bypasses the cache when the cache overhead would likely lose.
 
-`flint init` detects the current project's framework hints from `package.json`, writes a starter
-`flint.json`, and leaves `"detect": true` enabled so matching built-in rule categories activate
+`flick-scan init` detects the current project's framework hints from `package.json`, writes a starter
+`flick.json`, and leaves `"detect": true` enabled so matching built-in rule categories activate
 automatically unless you override them explicitly.
 
 ## Configuration
 
-Flint uses `flint.json`:
+Flick Scan uses `flick.json`:
 
 ```json
 {
@@ -61,14 +61,14 @@ Flint uses `flint.json`:
 ```
 
 When `detect` is `true`, framework-specific built-in rules are enabled at their default severities
-when Flint detects a matching project. Explicit `rules` entries still take precedence, including
+when Flick Scan detects a matching project. Explicit `rules` entries still take precedence, including
 `"off"`.
 
-If you want broader natural-language compilation for English rules, add a Flint API key in
-`.flintrc`:
+If you want broader natural-language compilation for English rules, add a Flick API key in
+`.flickrc`:
 
 ```toml
-api_key = "zk_your_flint_api_key"
+api_key = "zk_your_flick_api_key"
 ```
 
 Severity values:
@@ -79,7 +79,7 @@ Severity values:
 
 ## Built-in Rules
 
-Flint now ships built-in rules across these categories:
+Flick Scan now ships built-in rules across these categories:
 
 - core JS/TS rules
 - universal security and performance rules
@@ -108,7 +108,7 @@ implementations.
 
 ## Plain-English Rules
 
-Custom English rules now compile into a typed native policy IR and then execute inside Flint's
+Custom English rules now compile into a typed native policy IR and then execute inside Flick Scan's
 normal OXC-backed lint pass. The hosted compiler is compile-time only: lint execution remains fully
 local, deterministic, and millisecond-scale. Compiled policy artifacts are cached, so there is no
 per-file remote call in the lint execution path.
@@ -138,7 +138,7 @@ Each English rule compiles to an ID like `policy/<category>/<kind>/<hash>`; plac
 `[lint].rules` to enable/disable the rule and choose `warn`/`error`. By default the rule uses the
 severity declared in the `[[lint.english_rules]]` block.
 
-`.flintrc` is resolved project-first and then from `~/.flintrc`. When a Flint API key is available,
+`.flickrc` is resolved project-first and then from `~/.flickrc`. When a Flick API key is available,
 semantically equivalent phrasing can compile into the same native policy IR even if it does not
 match the canonical templates exactly. Unsupported or ambiguous English rules still fail fast
 during compilation instead of being approximated.
@@ -148,7 +148,7 @@ artifacts are treated as stale and will be regenerated under the new policy sche
 
 ## File Support
 
-Flint currently discovers and lints:
+Flick Scan currently discovers and lints:
 
 - `.js`
 - `.jsx`
@@ -162,13 +162,13 @@ Flint currently discovers and lints:
 ## Architecture
 
 ```text
-flint/
+flick-scan/
 ├── src/
 │   ├── lib.rs            # CLI orchestration and output
 │   ├── main.rs           # Binary entrypoint
 │   ├── cli.rs            # CLI args, config loading, file discovery
 │   └── rules/            # Built-in rules, policy IR compiler, and runtime evaluators
-└── flint-npm/             # npm wrapper package for native binaries
+└── scan-npm/             # npm wrapper package for native binaries
 ```
 
 ## Performance Priorities
@@ -181,10 +181,10 @@ flint/
 
 ## Roadmap
 
-- [x] Rename public product surface to `flint`
+- [x] Rebrand from Flint to Flick Scan
 - [x] Remove code health scoring from the MVP
 - [x] Support JS and TS file discovery
-- [x] Add a minimal `flint.json`
+- [x] Add a minimal `flick.json`
 - [x] Add cached plain-English rule compilation for supported native checks
 - [ ] Replace the current heuristic rule implementations with proper AST/semantic analysis
 - [ ] Reduce the shipped rule set to the few rules we want to support extremely well
