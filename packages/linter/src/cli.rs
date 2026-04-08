@@ -53,6 +53,10 @@ pub struct CheckArgs {
     /// Output format
     #[arg(long, default_value = "pretty")]
     pub format: OutputFormat,
+
+    /// Show a health score (0-100) after linting
+    #[arg(long)]
+    pub score: bool,
 }
 
 #[derive(Clone, clap::ValueEnum)]
@@ -281,7 +285,7 @@ pub fn init_config() -> Result<()> {
 
 fn build_init_config(project: &ProjectInfo) -> serde_json::Value {
     serde_json::json!({
-        "$schema": "https://flickjs.dev/lint/schema.json",
+        "$schema": "https://flickjs.com/scan/schema.json",
         "detect": true,
         "rules": starter_rules_for_project(project),
         "files": {

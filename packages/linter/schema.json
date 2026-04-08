@@ -1,0 +1,432 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Flint Configuration",
+  "description": "Configuration file for the Flint linter (@flickjs/lint)",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "URL or path to the Flint JSON Schema"
+    },
+    "detect": {
+      "type": "boolean",
+      "default": true,
+      "description": "Auto-detect project frameworks and enable matching built-in rules"
+    },
+    "rules": {
+      "type": "object",
+      "description": "Configure lint rule severities",
+      "properties": {
+        "no-explicit-any": {
+          "description": "Avoid TypeScript `any` in favor of safer types.",
+          "$ref": "#/$defs/severity"
+        },
+        "no-console": {
+          "description": "Flag console calls that leak debug output into runtime code.",
+          "$ref": "#/$defs/severity"
+        },
+        "no-empty-catch": {
+          "description": "Catch blocks should handle, log, or rethrow errors.",
+          "$ref": "#/$defs/severity"
+        },
+        "prefer-const": {
+          "description": "Use `const` when a binding is never reassigned.",
+          "$ref": "#/$defs/severity"
+        },
+        "no-unused-vars": {
+          "description": "Surface declared bindings that are never used.",
+          "$ref": "#/$defs/severity"
+        },
+        "unreachable-code": {
+          "description": "Flag statements that can never execute after control flow exits.",
+          "$ref": "#/$defs/severity"
+        },
+        "no-missing-return": {
+          "description": "Require consistent returns from functions that should produce a value.",
+          "$ref": "#/$defs/severity"
+        },
+        "unused-export": {
+          "description": "Show exports that are never imported anywhere else in the project.",
+          "$ref": "#/$defs/severity"
+        },
+        "unused-file": {
+          "description": "Show files that are never imported by any other file.",
+          "$ref": "#/$defs/severity"
+        },
+        "unused-dependency": {
+          "description": "Show package.json dependencies that are never imported.",
+          "$ref": "#/$defs/severity"
+        },
+        "no-eval": {
+          "description": "Block dynamic code execution APIs such as `eval` and string timers.",
+          "$ref": "#/$defs/severity"
+        },
+        "no-hardcoded-secrets": {
+          "description": "Catch literal secrets committed directly in source.",
+          "$ref": "#/$defs/severity"
+        },
+        "no-chained-array-iterations": {
+          "description": "Prefer collapsing chained array passes into a single traversal.",
+          "$ref": "#/$defs/severity"
+        },
+        "prefer-tosorted": {
+          "description": "Prefer `toSorted()` over clone-then-sort patterns.",
+          "$ref": "#/$defs/severity"
+        },
+        "no-regexp-in-loop": {
+          "description": "Move regular expression construction out of hot loops.",
+          "$ref": "#/$defs/severity"
+        },
+        "prefer-math-min-max": {
+          "description": "Use `Math.min` or `Math.max` instead of sorting to pick extremes.",
+          "$ref": "#/$defs/severity"
+        },
+        "no-array-includes-in-loop": {
+          "description": "Avoid repeated `includes()` lookups inside loops.",
+          "$ref": "#/$defs/severity"
+        },
+        "no-sequential-style-assignment": {
+          "description": "Batch style writes instead of mutating many properties one by one.",
+          "$ref": "#/$defs/severity"
+        },
+        "no-array-find-in-loop": {
+          "description": "Avoid `find()` scans inside loops when indexing or caching is cheaper.",
+          "$ref": "#/$defs/severity"
+        },
+        "no-duplicate-storage-reads": {
+          "description": "Reuse repeated storage reads instead of fetching the same key multiple times.",
+          "$ref": "#/$defs/severity"
+        },
+        "no-deep-nesting": {
+          "description": "Flag deeply nested control flow that is hard to scan and optimize.",
+          "$ref": "#/$defs/severity"
+        },
+        "prefer-promise-all": {
+          "description": "Run independent async work concurrently with `Promise.all`.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/no-derived-state-effect": {
+          "description": "Derive render state directly instead of syncing it through effects.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/no-fetch-in-effect": {
+          "description": "Move fetches out of `useEffect` when a better data flow exists.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/no-cascading-set-state": {
+          "description": "Avoid stacking many state updates inside a single effect.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/no-effect-event-handler": {
+          "description": "Do not use `useEffect` as an event-handler wrapper.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/no-derived-use-state": {
+          "description": "Avoid initializing state directly from props when it can be derived.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/prefer-use-reducer": {
+          "description": "Prefer `useReducer` once state transitions become coordinated or complex.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/lazy-state-init": {
+          "description": "Use lazy initializers for expensive `useState` defaults.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/functional-set-state": {
+          "description": "Use functional updates when the next state depends on the previous value.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/unstable-deps": {
+          "description": "Keep hook dependency arrays stable and explicit.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/no-array-index-key": {
+          "description": "Avoid array indexes as React keys on dynamic lists.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/no-prevent-default": {
+          "description": "Be deliberate about canceling native browser behavior in JSX handlers.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/no-conditional-render-zero": {
+          "description": "Avoid `.length && <JSX>` patterns that can render `0`.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/no-giant-component": {
+          "description": "Surface oversized components that need decomposition.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/no-render-in-render": {
+          "description": "Avoid calling `render*()` helpers inline from JSX trees.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/no-nested-component": {
+          "description": "Keep component definitions at module scope, not inside renders.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/no-usememo-simple-expr": {
+          "description": "Skip `useMemo` around trivial expressions that do not need caching.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/no-unstable-motion-props": {
+          "description": "Keep motion prop objects stable across renders.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/no-layout-animation": {
+          "description": "Avoid layout animations on hot React surfaces.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/no-animate-presence-in-list": {
+          "description": "Do not wrap list rendering directly in `AnimatePresence`.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/no-motion-in-list": {
+          "description": "Keep motion-heavy elements out of large list renders.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/no-prop-on-memo": {
+          "description": "Avoid recreating props that defeat memoized components.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/no-hydration-flicker": {
+          "description": "Flag patterns that cause visible client/server hydration flicker.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/no-transition-all": {
+          "description": "Avoid broad `transition: all` rules on interactive UI.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/no-will-change": {
+          "description": "Use `will-change` sparingly on React surfaces.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/no-blur-filter": {
+          "description": "Flag heavy blur filters that are expensive to render.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/no-heavy-shadow": {
+          "description": "Flag expensive shadow styles that hurt paint performance.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/no-barrel-import": {
+          "description": "Avoid barrel imports on hot paths when they inflate bundles.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/no-full-lodash": {
+          "description": "Avoid importing the full Lodash bundle.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/no-moment": {
+          "description": "Avoid Moment.js where lighter date utilities are enough.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/prefer-dynamic-import": {
+          "description": "Load heavy dependencies lazily with dynamic imports.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/use-lazy-motion": {
+          "description": "Use `LazyMotion` when shipping Framer Motion to the client.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/no-undeferred-script": {
+          "description": "Defer non-critical scripts so they do not block rendering.",
+          "$ref": "#/$defs/severity"
+        },
+        "nextjs/no-img-element": {
+          "description": "Prefer `next/image` over raw `<img>` in Next.js apps.",
+          "$ref": "#/$defs/severity"
+        },
+        "nextjs/prefer-next-link": {
+          "description": "Use `next/link` for internal navigation.",
+          "$ref": "#/$defs/severity"
+        },
+        "nextjs/no-head-element": {
+          "description": "Avoid raw `<head>` usage in Next.js components.",
+          "$ref": "#/$defs/severity"
+        },
+        "nextjs/no-head-import": {
+          "description": "Avoid `next/head` in modern App Router code.",
+          "$ref": "#/$defs/severity"
+        },
+        "nextjs/no-document-import": {
+          "description": "Restrict `next/document` imports to custom document files.",
+          "$ref": "#/$defs/severity"
+        },
+        "nextjs/no-script-in-head": {
+          "description": "Avoid placing `<script>` tags directly inside `<head>`.",
+          "$ref": "#/$defs/severity"
+        },
+        "nextjs/no-search-params-without-suspense": {
+          "description": "Wrap `useSearchParams()` consumers in `Suspense`.",
+          "$ref": "#/$defs/severity"
+        },
+        "nextjs/missing-metadata": {
+          "description": "Require route metadata on pages that should declare it.",
+          "$ref": "#/$defs/severity"
+        },
+        "nextjs/no-side-effect-in-get-handler": {
+          "description": "Keep GET handlers free of mutations and side effects.",
+          "$ref": "#/$defs/severity"
+        },
+        "nextjs/no-async-client-component": {
+          "description": "Client components should not be declared `async`.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/server-auth-actions": {
+          "description": "Require auth checks before mutating inside server actions.",
+          "$ref": "#/$defs/severity"
+        },
+        "react/server-after-nonblocking": {
+          "description": "Wrap non-blocking side effects in `after()` inside server actions.",
+          "$ref": "#/$defs/severity"
+        },
+        "react-native/no-inline-styles": {
+          "description": "Avoid inline style objects on React Native surfaces.",
+          "$ref": "#/$defs/severity"
+        },
+        "react-native/no-inline-callbacks": {
+          "description": "Avoid recreating inline callbacks on native components.",
+          "$ref": "#/$defs/severity"
+        },
+        "react-native/no-anonymous-list-render": {
+          "description": "Keep `renderItem` stable instead of recreating it inline.",
+          "$ref": "#/$defs/severity"
+        },
+        "react-native/no-scrollview-list": {
+          "description": "Prefer virtualized lists over mapping large collections in `ScrollView`.",
+          "$ref": "#/$defs/severity"
+        },
+        "react-native/no-raw-text": {
+          "description": "Wrap text in `Text` instead of rendering raw strings directly.",
+          "$ref": "#/$defs/severity"
+        },
+        "react-native/no-alert": {
+          "description": "Avoid platform alerts as a default UX escape hatch.",
+          "$ref": "#/$defs/severity"
+        },
+        "react-native/no-image-uri-literal": {
+          "description": "Avoid hardcoded remote image URIs in JSX.",
+          "$ref": "#/$defs/severity"
+        },
+        "react-native/require-key-extractor": {
+          "description": "Provide `keyExtractor` for virtualized React Native lists.",
+          "$ref": "#/$defs/severity"
+        },
+        "server/no-sql-injection": {
+          "description": "Avoid building SQL with request-controlled interpolation.",
+          "$ref": "#/$defs/severity"
+        },
+        "server/no-shell-injection": {
+          "description": "Do not pass dynamic input to shell execution APIs.",
+          "$ref": "#/$defs/severity"
+        },
+        "server/no-path-traversal": {
+          "description": "Avoid feeding request data directly into filesystem paths.",
+          "$ref": "#/$defs/severity"
+        },
+        "server/no-unsafe-redirect": {
+          "description": "Do not redirect to request-controlled destinations.",
+          "$ref": "#/$defs/severity"
+        },
+        "server/no-cors-wildcard": {
+          "description": "Do not combine wildcard CORS origins with credentials.",
+          "$ref": "#/$defs/severity"
+        },
+        "server/no-hardcoded-jwt-secret": {
+          "description": "Avoid shipping hardcoded JWT signing secrets.",
+          "$ref": "#/$defs/severity"
+        },
+        "server/no-jwt-none-algorithm": {
+          "description": "Reject insecure JWT `none` algorithm usage.",
+          "$ref": "#/$defs/severity"
+        },
+        "server/no-unhandled-async-route": {
+          "description": "Async route handlers should catch and translate failures.",
+          "$ref": "#/$defs/severity"
+        },
+        "server/no-swallowed-error": {
+          "description": "Catch blocks must surface, handle, or rethrow server errors.",
+          "$ref": "#/$defs/severity"
+        },
+        "server/no-process-exit-in-handler": {
+          "description": "Do not call `process.exit()` inside request handlers.",
+          "$ref": "#/$defs/severity"
+        },
+        "server/require-error-status": {
+          "description": "Always set an explicit HTTP status on error responses.",
+          "$ref": "#/$defs/severity"
+        },
+        "server/no-throw-string": {
+          "description": "Throw `Error` objects instead of bare strings.",
+          "$ref": "#/$defs/severity"
+        },
+        "server/no-n-plus-one": {
+          "description": "Avoid N+1 query patterns that issue a query per loop iteration.",
+          "$ref": "#/$defs/severity"
+        },
+        "server/no-unbounded-query": {
+          "description": "Require limits on database queries to prevent unbounded result sets.",
+          "$ref": "#/$defs/severity"
+        },
+        "server/no-sync-fs-in-handler": {
+          "description": "Avoid synchronous filesystem calls inside request handlers.",
+          "$ref": "#/$defs/severity"
+        },
+        "server/no-blocking-crypto": {
+          "description": "Avoid blocking crypto operations in request handlers.",
+          "$ref": "#/$defs/severity"
+        },
+        "server/no-large-json-parse-sync": {
+          "description": "Avoid synchronous parsing of large JSON payloads in handlers.",
+          "$ref": "#/$defs/severity"
+        },
+        "server/require-input-validation": {
+          "description": "Validate request input before processing.",
+          "$ref": "#/$defs/severity"
+        },
+        "server/no-floating-transaction": {
+          "description": "Ensure database transactions are properly committed or rolled back.",
+          "$ref": "#/$defs/severity"
+        },
+        "server/no-business-logic-in-route": {
+          "description": "Keep route handlers thin — move business logic to service layers.",
+          "$ref": "#/$defs/severity"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/severity"
+      }
+    },
+    "files": {
+      "type": "object",
+      "description": "File selection and exclusion options",
+      "properties": {
+        "exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": ["node_modules", "dist", "build", ".git"],
+          "description": "Glob patterns to exclude from linting"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "severity": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": ["off", "warn", "error"]
+        },
+        {
+          "type": "boolean"
+        }
+      ],
+      "default": "warn"
+    }
+  }
+}

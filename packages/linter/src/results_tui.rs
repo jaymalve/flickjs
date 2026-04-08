@@ -32,28 +32,39 @@ pub(crate) fn print_or_fallback(
     results: &[LintResult],
     elapsed: std::time::Duration,
     scan_root: &Path,
+    files_scanned: usize,
+    show_score: bool,
 ) -> Summary {
-    let summary = Summary {
-        errors: diagnostic_counts(results).0,
-    };
-
     if !io::stdout().is_tty() {
         eprintln!("flint: stdout is not a tty; using pretty output instead of interactive TUI");
-        print_pretty(results, elapsed);
-        return summary;
+        return print_pretty(results, elapsed, files_scanned, show_score);
     }
 
-    if let Err(e) = run(results, elapsed, scan_root) {
+    let score = if show_score {
+        Some(crate::scoring::HealthScore::compute(results, files_scanned))
+    } else {
+        None
+    };
+
+    if let Err(e) = run(results, elapsed, scan_root, score.as_ref()) {
         eprintln!("flint: TUI failed ({e}); falling back to pretty output");
-        print_pretty(results, elapsed);
+        return print_pretty(results, elapsed, files_scanned, show_score);
     }
 
-    summary
+    Summary {
+        errors: diagnostic_counts(results).0,
+        score,
+    }
 }
 
-fn run(results: &[LintResult], elapsed: std::time::Duration, scan_root: &Path) -> Result<()> {
+fn run(
+    results: &[LintResult],
+    elapsed: std::time::Duration,
+    scan_root: &Path,
+    score: Option<&crate::scoring::HealthScore>,
+) -> Result<()> {
     let categories = group_results_for_display(results);
-    let mut app = ResultsApp::new(categories, elapsed, scan_root.to_path_buf());
+    let mut app = ResultsApp::new(categories, elapsed, scan_root.to_path_buf(), score);
     let mut terminal = tui_common::TerminalSession::enter()?;
 
     loop {
@@ -113,6 +124,7 @@ struct ResultsApp<'a> {
     categories: Vec<(String, Vec<PrettyEntry<'a>>)>,
     elapsed: std::time::Duration,
     scan_root: PathBuf,
+    score: Option<crate::scoring::HealthScore>,
     selected_issue: usize,
     focus: FocusPane,
     search: String,
@@ -128,11 +140,13 @@ impl<'a> ResultsApp<'a> {
         categories: Vec<(String, Vec<PrettyEntry<'a>>)>,
         elapsed: std::time::Duration,
         scan_root: PathBuf,
+        score: Option<&crate::scoring::HealthScore>,
     ) -> Self {
         let mut app = Self {
             categories,
             elapsed,
             scan_root,
+            score: score.cloned(),
             selected_issue: 0,
             focus: FocusPane::Issues,
             search: String::new(),
@@ -503,10 +517,11 @@ fn shift_index(current: usize, len: usize, delta: isize) -> usize {
 }
 
 fn render(frame: &mut Frame, app: &mut ResultsApp<'_>) {
+    let header_height = if app.score.is_some() { 3 } else { 2 };
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(2),
+            Constraint::Length(header_height),
             Constraint::Min(0),
             Constraint::Length(2),
         ])
@@ -565,9 +580,42 @@ fn render_header(frame: &mut Frame, area: ratatui::layout::Rect, app: &ResultsAp
         Span::styled(scan, Style::default().fg(TEXT_MUTED)),
     ]);
 
-    let header = Paragraph::new(Text::from(vec![line, Line::from("")]))
-        .style(Style::default().bg(PANEL_BG));
-    frame.render_widget(header, area);
+    if let Some(ref health) = app.score {
+        let score_color = match health.score {
+            90..=100 => ratatui::style::Color::Green,
+            70..=89 => ratatui::style::Color::Yellow,
+            _ => ratatui::style::Color::Red,
+        };
+        let score_line = Line::from(vec![
+            Span::styled(
+                format!(" Score: {}/100", health.score),
+                Style::default()
+                    .fg(score_color)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                format!(" {}", health.progress_bar()),
+                Style::default().fg(score_color),
+            ),
+            Span::styled(
+                format!(" {}", health.ascii_face()),
+                Style::default()
+                    .fg(score_color)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                format!("  {}", health.label()),
+                Style::default().fg(TEXT_MUTED),
+            ),
+        ]);
+        let header = Paragraph::new(Text::from(vec![line, score_line, Line::from("")]))
+            .style(Style::default().bg(PANEL_BG));
+        frame.render_widget(header, area);
+    } else {
+        let header = Paragraph::new(Text::from(vec![line, Line::from("")]))
+            .style(Style::default().bg(PANEL_BG));
+        frame.render_widget(header, area);
+    }
 }
 
 fn highlight_spans(text: &str, query: &str, base_style: Style) -> Vec<Span<'static>> {
@@ -959,7 +1007,7 @@ mod tests {
             },
         ];
         let cats = group_results_for_display(&results);
-        let app = ResultsApp::new(cats, std::time::Duration::ZERO, PathBuf::from("/proj"));
+        let app = ResultsApp::new(cats, std::time::Duration::ZERO, PathBuf::from("/proj"), None);
         let visible = app.visible_issues();
         assert_eq!(visible.len(), 3);
     }
@@ -968,7 +1016,7 @@ mod tests {
     fn search_filters_issues() {
         let results = sample_results();
         let cats = group_results_for_display(&results);
-        let mut app = ResultsApp::new(cats, std::time::Duration::ZERO, PathBuf::from("/proj"));
+        let mut app = ResultsApp::new(cats, std::time::Duration::ZERO, PathBuf::from("/proj"), None);
         app.search = "console".to_string();
         let visible = app.visible_issues();
         assert_eq!(visible.len(), 1);
@@ -979,7 +1027,7 @@ mod tests {
     fn reset_clears_search_and_errors_only() {
         let results = sample_results();
         let cats = group_results_for_display(&results);
-        let mut app = ResultsApp::new(cats, std::time::Duration::ZERO, PathBuf::from("/proj"));
+        let mut app = ResultsApp::new(cats, std::time::Duration::ZERO, PathBuf::from("/proj"), None);
         app.errors_only = true;
         app.search = "noop".to_string();
         app.reset_filters();
@@ -991,7 +1039,7 @@ mod tests {
     fn detail_scroll_does_not_go_negative() {
         let results = sample_results();
         let cats = group_results_for_display(&results);
-        let mut app = ResultsApp::new(cats, std::time::Duration::ZERO, PathBuf::from("/proj"));
+        let mut app = ResultsApp::new(cats, std::time::Duration::ZERO, PathBuf::from("/proj"), None);
         app.focus = FocusPane::Detail;
         app.scroll_detail(-5);
         assert_eq!(app.detail_scroll, 0);
@@ -1005,7 +1053,7 @@ mod tests {
     fn tab_cycles_through_all_panes() {
         let results = sample_results();
         let cats = group_results_for_display(&results);
-        let mut app = ResultsApp::new(cats, std::time::Duration::ZERO, PathBuf::from("/proj"));
+        let mut app = ResultsApp::new(cats, std::time::Duration::ZERO, PathBuf::from("/proj"), None);
         assert_eq!(app.focus, FocusPane::Issues);
         app.handle_key(KeyEvent::from(KeyCode::Tab));
         assert_eq!(app.focus, FocusPane::Detail);
@@ -1042,7 +1090,7 @@ mod tests {
     fn open_key_works_from_either_pane_with_selection() {
         let results = sample_results();
         let cats = group_results_for_display(&results);
-        let mut app = ResultsApp::new(cats, std::time::Duration::ZERO, PathBuf::from("/proj"));
+        let mut app = ResultsApp::new(cats, std::time::Duration::ZERO, PathBuf::from("/proj"), None);
         assert_eq!(app.focus, FocusPane::Issues);
         assert_eq!(
             app.handle_key(KeyEvent::from(KeyCode::Char('o'))),
