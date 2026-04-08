@@ -31,9 +31,16 @@ if (!existsSync(binaryPath)) {
   process.exit(1);
 }
 
-// Forward all args to the Rust binary
+// Default to "check" when no subcommand is given (e.g. `scan .` → `check .`)
+const SUBCOMMANDS = new Set(['check', 'init', 'rules', '--help', '-h', '--version', '-V']);
+const args = process.argv.slice(2);
+if (args.length === 0 || !SUBCOMMANDS.has(args[0])) {
+  args.unshift('check');
+}
+
+// Forward args to the Rust binary
 try {
-  execFileSync(binaryPath, process.argv.slice(2), {
+  execFileSync(binaryPath, args, {
     stdio: 'inherit',
     env: process.env
   });
