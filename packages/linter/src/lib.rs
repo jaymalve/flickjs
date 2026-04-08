@@ -1094,15 +1094,18 @@ pub(crate) fn print_pretty(
 
     let score = if show_score {
         let health = scoring::HealthScore::compute(results, files_scanned);
-        let bullet = match health.score {
-            90..=100 => "●".green().bold(),
-            70..=89 => "●".yellow().bold(),
-            _ => "●".red().bold(),
-        };
+        let (bullet, color_fn): (colored::ColoredString, fn(&str) -> colored::ColoredString) =
+            match health.score {
+                90..=100 => ("●".green().bold(), |s: &str| s.green()),
+                70..=89 => ("●".yellow().bold(), |s: &str| s.yellow()),
+                _ => ("●".red().bold(), |s: &str| s.red()),
+            };
         println!(
-            "  {} Health score: {}/100 ({})",
+            "  {} Health score: {}/100 {} {} {}",
             bullet,
             health.score,
+            color_fn(&health.progress_bar()),
+            color_fn(health.ascii_face()).bold(),
             health.label()
         );
         Some(health)
@@ -1205,7 +1208,13 @@ fn print_compact(
 
     let score = if show_score {
         let health = scoring::HealthScore::compute(results, files_scanned);
-        println!("# score: {}/100 ({})", health.score, health.label());
+        println!(
+            "# score: {}/100 {} {} {}",
+            health.score,
+            health.progress_bar(),
+            health.ascii_face(),
+            health.label()
+        );
         Some(health)
     } else {
         None

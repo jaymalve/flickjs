@@ -594,7 +594,17 @@ fn render_header(frame: &mut Frame, area: ratatui::layout::Rect, app: &ResultsAp
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled(
-                format!("  ({})", health.label()),
+                format!(" {}", health.progress_bar()),
+                Style::default().fg(score_color),
+            ),
+            Span::styled(
+                format!(" {}", health.ascii_face()),
+                Style::default()
+                    .fg(score_color)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                format!("  {}", health.label()),
                 Style::default().fg(TEXT_MUTED),
             ),
         ]);
