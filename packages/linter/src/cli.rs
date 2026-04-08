@@ -58,9 +58,13 @@ pub struct CheckArgs {
     #[arg(long)]
     pub no_tui: bool,
 
-    /// Show a health score (0-100) after linting
-    #[arg(long)]
+    /// Show a health score (0-100) after linting (enabled by default)
+    #[arg(long, default_value_t = true)]
     pub score: bool,
+
+    /// Disable health score display
+    #[arg(long)]
+    pub no_score: bool,
 }
 
 #[derive(Clone, clap::ValueEnum)]

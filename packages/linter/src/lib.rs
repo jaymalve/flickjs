@@ -38,7 +38,7 @@ pub fn run() -> Result<i32> {
                 execution.metrics.total_runtime,
                 &args.path,
                 execution.metrics.files_discovered,
-                args.score,
+                args.score && !args.no_score,
             );
             (
                 if summary.errors > 0 { 1 } else { 0 },
@@ -1775,6 +1775,7 @@ mod tests {
             format: cli::OutputFormat::Compact,
             no_tui: false,
             score: false,
+            no_score: false,
         }
     }
 
