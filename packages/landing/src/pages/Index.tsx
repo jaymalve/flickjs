@@ -12,8 +12,8 @@ const Index = () => {
       <main>
         <Hero />
         <Tools />
-        <FrameworkSpotlight />
-        <Installation />
+        {/* <FrameworkSpotlight />
+        <Installation /> */}
       </main>
       <Footer />
     </div>
