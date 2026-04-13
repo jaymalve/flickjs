@@ -1,4 +1,4 @@
-//! Interactive TUI for browsing `flint check` results.
+//! Interactive TUI for browsing `flick-scan check` results.
 
 use crate::{
     category_display_name, diagnostic_counts, diagnostic_help_text, group_results_for_display,
@@ -36,7 +36,7 @@ pub(crate) fn print_or_fallback(
     show_score: bool,
 ) -> Summary {
     if !io::stdout().is_tty() {
-        eprintln!("flint: stdout is not a tty; using pretty output instead of interactive TUI");
+        eprintln!("flick-scan: stdout is not a tty; using pretty output instead of interactive TUI");
         return print_pretty(results, elapsed, files_scanned, show_score);
     }
 
@@ -47,7 +47,7 @@ pub(crate) fn print_or_fallback(
     };
 
     if let Err(e) = run(results, elapsed, scan_root, score.as_ref()) {
-        eprintln!("flint: TUI failed ({e}); falling back to pretty output");
+        eprintln!("flick-scan: TUI failed ({e}); falling back to pretty output");
         return print_pretty(results, elapsed, files_scanned, show_score);
     }
 
@@ -88,10 +88,10 @@ fn run(
                             }) {
                                 Ok(Ok(())) => {}
                                 Ok(Err(e)) => {
-                                    let _ = writeln!(io::stderr(), "flint: open in editor: {e}");
+                                    let _ = writeln!(io::stderr(), "flick-scan: open in editor: {e}");
                                 }
                                 Err(e) => {
-                                    let _ = writeln!(io::stderr(), "flint: TUI suspend failed: {e}");
+                                    let _ = writeln!(io::stderr(), "flick-scan: TUI suspend failed: {e}");
                                 }
                             }
                         }
@@ -398,7 +398,7 @@ fn parse_line_col(span: &str) -> (u32, u32) {
 /// Opens `path` at `line:col` from the diagnostic span.
 ///
 /// Resolution order:
-/// 1. `FLINT_OPEN` — executable name or path, tried with `-g` / `--goto` / bare `path:line:col`.
+/// 1. `FLICK_OPEN` — executable name or path, tried with `-g` / `--goto` / bare `path:line:col`.
 /// 2. On macOS, bundled CLIs inside `.app` (`Contents/Resources/app/bin/cursor|code`).  
 ///    Using `open -a Cursor --args …` is **not** reliable: it launches the GUI binary, which often
 ///    drops VS Code–style CLI flags; the `bin/cursor` shim is what understands `-g`.
@@ -417,7 +417,7 @@ fn spawn_open_at_span(path: &Path, span: &str) -> io::Result<()> {
             candidates.push(s.to_string());
         }
     };
-    if let Ok(p) = std::env::var("FLINT_OPEN") {
+    if let Ok(p) = std::env::var("FLICK_OPEN") {
         let p = p.trim();
         if !p.is_empty() {
             push(p);
@@ -444,7 +444,7 @@ fn spawn_open_at_span(path: &Path, span: &str) -> io::Result<()> {
 
     let _ = writeln!(
         io::stderr(),
-        "flint: could not open an editor at {} (set FLINT_OPEN to your editor CLI, e.g. cursor or code)",
+        "flick-scan: could not open an editor at {} (set FLICK_OPEN to your editor CLI, e.g. cursor or code)",
         spec
     );
     Err(last_err.unwrap_or_else(|| {
@@ -490,7 +490,7 @@ fn try_open_vscode_goto(program: &str, path_line_col: &str) -> io::Result<()> {
     if is_vscode_family_cli(program) {
         try_spawn_detached(program, &["-r", "-g", path_line_col])
     } else {
-        // Custom `FLINT_OPEN` (e.g. a wrapper): keep one `-g` attempt; avoid `-r` (e.g. vim uses `-r` for recovery).
+        // Custom `FLICK_OPEN` (e.g. a wrapper): keep one `-g` attempt; avoid `-r` (e.g. vim uses `-r` for recovery).
         try_spawn_detached(program, &["-g", path_line_col])
     }
 }
@@ -545,7 +545,7 @@ fn render_header(frame: &mut Frame, area: ratatui::layout::Rect, app: &ResultsAp
 
     let line = Line::from(vec![
         Span::styled(
-            " Flint Check",
+            " Flick Scan",
             Style::default()
                 .fg(TEXT_PRIMARY)
                 .add_modifier(Modifier::BOLD),

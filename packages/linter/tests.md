@@ -87,13 +87,13 @@ Defined in [src/rules/mod.rs](/Users/jaymalave/Desktop/FlickJS/flickjs/packages/
 
 Defined in [src/cli.rs](/Users/jaymalave/Desktop/FlickJS/flickjs/packages/linter/src/cli.rs).
 
-- `project_flintrc_overrides_home_flintrc`
-  Why: proves `.flintrc` resolution prefers the project key over the home-directory fallback.
+- `project_flickrc_overrides_home_flickrc`
+  Why: proves `.flickrc` resolution prefers the project key over the home-directory fallback.
 
-- `falls_back_to_home_flintrc_when_project_missing`
-  Why: proves hosted compiler auth still works when only `~/.flintrc` is present.
+- `falls_back_to_home_flickrc_when_project_missing`
+  Why: proves hosted compiler auth still works when only `~/.flickrc` is present.
 
-- `rejects_empty_api_key_in_flintrc`
+- `rejects_empty_api_key_in_flickrc`
   Why: proves malformed hosted-auth config fails clearly instead of silently disabling compilation.
 
 ## `english_rules`
@@ -106,8 +106,8 @@ Defined in [src/rules/policy.rs](/Users/jaymalave/Desktop/FlickJS/flickjs/packag
 - `rejects_unsupported_english_rule`
   Why: proves unsupported plain-English rules still fail fast when no hosted compiler auth is available.
 
-- `unsupported_english_rule_points_to_flintrc_auth_flow`
-  Why: proves the unsupported-rule guidance points users at `.flintrc` rather than provider config.
+- `unsupported_english_rule_points_to_flickrc_auth_flow`
+  Why: proves the unsupported-rule guidance points users at `.flickrc` rather than provider config.
 
 - `compiled_artifact_round_trips`
   Why: proves the compiled English-rule artifact persists and reloads from cache correctly.

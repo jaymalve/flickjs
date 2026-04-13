@@ -8,10 +8,10 @@ use std::path::{Path, PathBuf};
 
 #[derive(Parser)]
 #[command(
-    name = "flint",
-    about = "⚡ Flint — The JavaScript Static Analysis Engine",
+    name = "flick-scan",
+    about = "⚡ Flick Scan — The JavaScript Static Analysis Engine",
     version,
-    after_help = "Examples:\n  flint check ./src\n  flint check . --format agent-json\n  flint init"
+    after_help = "Examples:\n  flick-scan check ./src\n  flick-scan check . --format agent-json\n  flick-scan init"
 )]
 pub struct Cli {
     #[command(subcommand)]
@@ -26,9 +26,9 @@ pub struct Cli {
 pub enum Command {
     /// Lint JavaScript and TypeScript files
     Check(CheckArgs),
-    /// Initialize flint config in current directory
+    /// Initialize flick.json config in current directory
     Init,
-    /// Browse Flint's built-in rules in a terminal UI
+    /// Browse Flick Scan's built-in rules in a terminal UI
     Rules(RulesArgs),
 }
 
@@ -39,7 +39,7 @@ pub struct CheckArgs {
     pub path: PathBuf,
 
     /// Path to cache file
-    #[arg(long, default_value = ".flint-cache.json")]
+    #[arg(long, default_value = ".flick-cache.json")]
     pub cache_path: PathBuf,
 
     /// Additional patterns to ignore
@@ -51,12 +51,20 @@ pub struct CheckArgs {
     pub no_cache: bool,
 
     /// Output format
-    #[arg(long, default_value = "pretty")]
+    #[arg(long, default_value = "tui")]
     pub format: OutputFormat,
 
-    /// Show a health score (0-100) after linting
+    /// Disable interactive TUI and use pretty output instead
     #[arg(long)]
+    pub no_tui: bool,
+
+    /// Show a health score (0-100) after linting (enabled by default)
+    #[arg(long, default_value_t = true)]
     pub score: bool,
+
+    /// Disable health score display
+    #[arg(long)]
+    pub no_score: bool,
 }
 
 #[derive(Clone, clap::ValueEnum)]
@@ -98,7 +106,7 @@ pub struct FilesConfig {
     pub exclude: Vec<String>,
 }
 
-/// Separate deserialization type for flint.json — rules default to empty
+/// Separate deserialization type for flick.json — rules default to empty
 /// but detection may still enable built-ins when `detect` is true.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct FileConfig {
@@ -176,7 +184,7 @@ pub fn load_config() -> Result<Config> {
 }
 
 pub fn load_config_with_fingerprint() -> Result<LoadedConfig> {
-    let path = Path::new("flint.json");
+    let path = Path::new("flick.json");
     if !path.exists() {
         let config = Config::default();
         return Ok(LoadedConfig {
@@ -187,7 +195,7 @@ pub fn load_config_with_fingerprint() -> Result<LoadedConfig> {
 
     let raw = std::fs::read_to_string(path).into_diagnostic()?;
     let file_config: FileConfig = serde_json::from_str(&raw)
-        .map_err(|e| miette::miette!("Failed to parse flint.json: {}", e))?;
+        .map_err(|e| miette::miette!("Failed to parse flick.json: {}", e))?;
     let config = Config {
         detect: file_config.detect,
         rules: file_config.rules,
@@ -249,22 +257,22 @@ fn is_ignored_path(path: &Path, patterns: &[&str]) -> bool {
     })
 }
 
-/// Initialize a flint.json config file
+/// Initialize a flick.json config file
 pub fn init_config() -> Result<()> {
     use colored::*;
 
     let project = ProjectInfo::detect(Path::new("."));
     let config = build_init_config(&project);
 
-    let path = Path::new("flint.json");
+    let path = Path::new("flick.json");
     if path.exists() {
-        eprintln!("{} flint.json already exists", "warning:".yellow().bold());
+        eprintln!("{} flick.json already exists", "warning:".yellow().bold());
         return Ok(());
     }
 
     let raw = serde_json::to_string_pretty(&config).into_diagnostic()? + "\n";
     std::fs::write(path, raw).into_diagnostic()?;
-    println!("{} Created flint.json", "✓".green().bold());
+    println!("{} Created flick.json", "✓".green().bold());
     let detected = detected_frameworks(&project);
     if detected.is_empty() {
         println!("  Detected frameworks: none");
@@ -277,7 +285,7 @@ pub fn init_config() -> Result<()> {
     );
     println!(
         "  Edit the config and run {} to start linting",
-        "flint check".cyan()
+        "flick-scan check".cyan()
     );
 
     Ok(())
@@ -481,11 +489,23 @@ mod tests {
     }
 
     #[test]
-    fn parses_format_tui() {
-        let cli = Cli::parse_from(["flint", "check", ".", "--format", "tui"]);
+    fn default_format_is_tui() {
+        let cli = Cli::parse_from(["flick-scan", "check", "."]);
         match cli.command {
             Command::Check(args) => {
                 assert!(matches!(args.format, OutputFormat::Tui));
+                assert!(!args.no_tui);
+            }
+            _ => panic!("expected check command"),
+        }
+    }
+
+    #[test]
+    fn no_tui_flag_is_parsed() {
+        let cli = Cli::parse_from(["flick-scan", "check", ".", "--no-tui"]);
+        match cli.command {
+            Command::Check(args) => {
+                assert!(args.no_tui);
             }
             _ => panic!("expected check command"),
         }
@@ -494,7 +514,7 @@ mod tests {
     #[test]
     fn parses_rules_command_flags() {
         let cli = Cli::parse_from([
-            "flint",
+            "flick-scan",
             "rules",
             "--group",
             "react-hooks",
@@ -515,6 +535,6 @@ mod tests {
     fn help_mentions_rules_command() {
         let help = Cli::command().render_long_help().to_string();
         assert!(help.contains("rules"));
-        assert!(help.contains("Browse Flint's built-in rules"));
+        assert!(help.contains("Browse Flick Scan's built-in rules"));
     }
 }

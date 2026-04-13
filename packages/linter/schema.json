@@ -1,12 +1,12 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Flint Configuration",
-  "description": "Configuration file for the Flint linter (@flickjs/lint)",
+  "title": "Flick Scan Configuration",
+  "description": "Configuration file for the Flick Scan linter (@flickjs/scan)",
   "type": "object",
   "properties": {
     "$schema": {
       "type": "string",
-      "description": "URL or path to the Flint JSON Schema"
+      "description": "URL or path to the Flick Scan JSON Schema"
     },
     "detect": {
       "type": "boolean",

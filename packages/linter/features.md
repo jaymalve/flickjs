@@ -1,6 +1,6 @@
 **Direction**
 
-Flint already has the right kernel for an agent-native linter: one parse + semantic pass, perf-conscious execution, JSON output, and a latent fix model in [src/rules/mod.rs](/Users/jaymalave/Desktop/FlickJS/flickjs/packages/linter/src/rules/mod.rs):31. What it does not have yet is a machine contract. Right now it mostly tells a human “here is a warning.” An agent needs “here is the problem, here are the valid edits, here is how safe they are, here is what to verify next.”
+Flick Scan already has the right kernel for an agent-native linter: one parse + semantic pass, perf-conscious execution, JSON output, and a latent fix model in [src/rules/mod.rs](/Users/jaymalave/Desktop/FlickJS/flickjs/packages/linter/src/rules/mod.rs):31. What it does not have yet is a machine contract. Right now it mostly tells a human “here is a warning.” An agent needs “here is the problem, here are the valid edits, here is how safe they are, here is what to verify next.”
 
 Hard truth: “AI coding agent native” does not mean “chatty” or “natural-language rules.” Your own doc is already pointing in the better direction at [semantic-policy.md](/Users/jaymalave/Desktop/FlickJS/flickjs/packages/linter/semantic-policy.md):179: explicit policy, tests, semantic intent, trustworthiness. Keep the core deterministic. Let the model choose among structured actions, not invent lint semantics on the fly.
 

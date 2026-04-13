@@ -1,0 +1,49 @@
+#!/usr/bin/env node
+
+const { execFileSync } = require('child_process');
+const { existsSync } = require('fs');
+const { join } = require('path');
+const { platform, arch } = process;
+
+// Platform-specific binary mapping
+const BINARY_MAP = {
+  'darwin-arm64': 'flick-scan-aarch64-apple-darwin',
+  'darwin-x64': 'flick-scan-x86_64-apple-darwin',
+  'linux-x64': 'flick-scan-x86_64-unknown-linux-gnu',
+  'linux-arm64': 'flick-scan-aarch64-unknown-linux-gnu',
+  'win32-x64': 'flick-scan-x86_64-pc-windows-msvc.exe'
+};
+
+const key = `${platform}-${arch}`;
+const binaryName = BINARY_MAP[key];
+
+if (!binaryName) {
+  console.error(`Flick Scan does not support ${platform}-${arch} yet.`);
+  console.error('Supported: macOS (arm64/x64), Linux (x64/arm64), Windows (x64)');
+  process.exit(1);
+}
+
+const binaryPath = join(__dirname, 'binaries', binaryName);
+
+if (!existsSync(binaryPath)) {
+  console.error(`Binary not found: ${binaryPath}`);
+  console.error('Try reinstalling: npm install -g @flickjs/scan');
+  process.exit(1);
+}
+
+// Default to "check" when no subcommand is given (e.g. `scan .` → `check .`)
+const SUBCOMMANDS = new Set(['check', 'init', 'rules', '--help', '-h', '--version', '-V']);
+const args = process.argv.slice(2);
+if (args.length === 0 || !SUBCOMMANDS.has(args[0])) {
+  args.unshift('check');
+}
+
+// Forward args to the Rust binary
+try {
+  execFileSync(binaryPath, args, {
+    stdio: 'inherit',
+    env: process.env
+  });
+} catch (e) {
+  process.exit(e.status || 1);
+}

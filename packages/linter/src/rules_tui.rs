@@ -376,7 +376,7 @@ fn render_header(frame: &mut Frame, area: ratatui::layout::Rect, app: &RulesApp)
 
     let line = Line::from(vec![
         Span::styled(
-            " Flint Rules",
+            " Flick Scan Rules",
             Style::default()
                 .fg(TEXT_PRIMARY)
                 .add_modifier(Modifier::BOLD),

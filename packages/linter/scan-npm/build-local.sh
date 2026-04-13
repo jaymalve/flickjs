@@ -20,13 +20,13 @@ case "$OS-$ARCH" in
     ;;
 esac
 
-echo "Building flint for $TARGET..."
+echo "Building flick-scan for $TARGET..."
 
 mkdir -p "$BINARIES_DIR"
 (cd "$LINTER_DIR" && cargo build --release --target "$TARGET")
 
-DEST="$BINARIES_DIR/flint-${TARGET}"
-cp "$LINTER_DIR/target/$TARGET/release/flint" "$DEST"
+DEST="$BINARIES_DIR/flick-scan-${TARGET}"
+cp "$LINTER_DIR/target/$TARGET/release/flick-scan" "$DEST"
 
 echo "Binary copied to: $DEST"
 echo ""

@@ -16,7 +16,7 @@ const Installation = () => {
             </pre>
           </div>
           <p>
-            Or just the linter: <span className="text-stone-300">cargo install flint</span>
+            Or just the linter: <span className="text-stone-300">npm install -g @flickjs/scan</span>
           </p>
         </div>
       </div>

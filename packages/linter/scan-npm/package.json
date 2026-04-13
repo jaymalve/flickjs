@@ -1,19 +1,17 @@
 {
-  "name": "@flickjs/lint",
-  "version": "0.0.1-beta.2",
-  "description": "Hyper-fast JavaScript and TypeScript linter",
+  "name": "@flickjs/scan",
+  "version": "0.0.1-beta.3",
+  "description": "Hyper-fast JavaScript and TypeScript scan tool",
   "keywords": [
-    "linter",
+    "scan",
     "typescript",
     "javascript",
-    "static-analysis",
-    "lint",
-    "rust"
+    "static-analysis"
   ],
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jaymalve/flick.git",
+    "url": "git+https://github.com/jaymalve/flickjs.git",
     "directory": "packages/linter"
   },
   "publishConfig": {
@@ -23,7 +21,7 @@
     "node": ">=16"
   },
   "bin": {
-    "flint": "./bin.js"
+    "scan": "./bin.js"
   },
   "files": [
     "bin.js",
