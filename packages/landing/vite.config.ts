@@ -9,6 +9,11 @@ export default defineConfig(({ mode }) => ({
     host: '::',
     port: 8080
   },
+  preview: {
+    host: '::',
+    port: 8080
+  },
+  appType: 'spa',
   plugins: [react(), mode === 'development' && componentTagger()].filter(Boolean),
   resolve: {
     dedupe: ['react', 'react-dom'],

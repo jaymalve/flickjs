@@ -7,6 +7,7 @@ import Index from './pages/Index';
 import Benchmarks from './pages/Benchmarks';
 import NotFound from './pages/NotFound';
 import Scan from './pages/Scan';
+import ScanRules from './pages/ScanRules';
 import ReactPage from './pages/React';
 import { CompareFramework } from '@/lib/frameworks';
 
@@ -21,6 +22,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/benchmarks" element={<Benchmarks compareFrameworks={[]} />} />
+          <Route path="/scan/rules" element={<ScanRules />} />
           <Route path="/scan" element={<Scan />} />
           <Route path="/react" element={<ReactPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
