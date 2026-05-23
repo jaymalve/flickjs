@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/toast';
 
 export function Toaster() {
+  console.log('Render: Toaster');
   const { toasts } = useToast();
 
   return (

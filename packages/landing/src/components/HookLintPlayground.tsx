@@ -15,6 +15,7 @@ export function HookLintPlayground({
   open,
   label,
 }: HookLintPlaygroundProps) {
+  console.log('[Render] HookLintPlayground');
   function InlineCard() {
     return <aside>Nested component for {label}</aside>;
   }

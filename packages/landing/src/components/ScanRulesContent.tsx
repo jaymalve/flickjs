@@ -7,6 +7,7 @@ const groupedScanRules = getGroupedScanRules();
 const defaultRulesTab = groupedScanRules[0]?.category ?? 'core';
 
 export const ScanRulesContent = () => {
+  console.log('[Render] ScanRulesContent');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const copyResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 

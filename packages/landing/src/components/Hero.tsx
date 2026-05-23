@@ -1,4 +1,5 @@
 const Hero = () => {
+  console.log('[Render] Hero');
   return (
     <section className="container py-12 lg:py-16">
       <div className="flex flex-col gap-4">

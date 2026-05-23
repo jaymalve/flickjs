@@ -10,6 +10,7 @@ interface NavLinkCompatProps extends Omit<NavLinkProps, 'className'> {
 
 const NavLink = forwardRef<HTMLAnchorElement, NavLinkCompatProps>(
   ({ className, activeClassName, pendingClassName, to, ...props }, ref) => {
+    console.log('[Render] NavLink');
     return (
       <RouterNavLink
         ref={ref}

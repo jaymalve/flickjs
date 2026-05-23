@@ -4,6 +4,7 @@ import Footer from '@/components/Footer';
 import { ScanRulesContent } from '@/components/ScanRulesContent';
 
 const ScanRules = () => {
+  console.log('[Render] ScanRules');
   return (
     <div className="min-h-screen bg-background">
       <Navigation />

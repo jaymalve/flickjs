@@ -39,6 +39,7 @@ const comparisonData = [
 ];
 
 const Comparison = () => {
+  console.log('[Render] Comparison');
   return (
     <section className="py-16 md:py-24 border-t border-input">
       <div className="container">
@@ -97,6 +98,7 @@ const CellValue = ({
   value: string | boolean;
   highlight?: boolean;
 }) => {
+  console.log('[Render] CellValue');
   if (typeof value === 'boolean') {
     return value ? (
       <Check className={`h-4 w-4 mx-auto ${highlight ? 'text-accent' : 'text-muted-foreground'}`} />
