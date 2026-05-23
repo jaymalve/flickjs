@@ -1,4 +1,5 @@
 const Installation = () => {
+  console.log('[Render] Installation');
   return (
     <section className="container pb-12 lg:pb-16">
       <div className="flex flex-col gap-3">

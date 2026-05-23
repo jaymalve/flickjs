@@ -1,6 +1,12 @@
 import { fx, getCurrentSuspense } from '@flickjs/runtime';
 import type { AiChat, AiChatOptions, ChatStatus, Message } from './types';
 import { parseStream } from '../utils/stream-parser';
+import {
+  createAiClientLogger,
+  summarizeBody,
+  summarizeHeaders,
+  summarizeJsonPayload
+} from './logger';
 
 /**
  * Generate a unique ID for messages
@@ -42,6 +48,8 @@ export function aiChat(options: AiChatOptions): AiChat {
     generateId: customGenerateId = generateId,
     credentials
   } = options;
+  const logger = createAiClientLogger('chat');
+  let requestCount = 0;
 
   // Reactive state
   const messages = fx<Message[]>(initialMessages);
@@ -65,8 +73,28 @@ export function aiChat(options: AiChatOptions): AiChat {
    */
   const submit = async (message?: string): Promise<void> => {
     const content = message ?? input();
+    const requestId = ++requestCount;
+    const startedAt = Date.now();
 
-    if (!content.trim()) return;
+    logger.debug('submit:start', {
+      requestId,
+      api,
+      source: message === undefined ? 'state' : 'argument',
+      rawInputLength: content.length,
+      existingMessageCount: messages().length,
+      hasCredentials: credentials !== undefined
+    });
+
+    const normalizedContent = content.trim();
+
+    if (!normalizedContent) {
+      logger.debug('submit:skip-empty', {
+        requestId,
+        api,
+        rawInputLength: content.length
+      });
+      return;
+    }
 
     // Clear input immediately
     if (!message) {
@@ -77,7 +105,7 @@ export function aiChat(options: AiChatOptions): AiChat {
     const userMessage: Message = {
       id: customGenerateId(),
       role: 'user',
-      content: content.trim(),
+      content: normalizedContent,
       createdAt: new Date()
     };
 
@@ -103,25 +131,50 @@ export function aiChat(options: AiChatOptions): AiChat {
 
     // Create promise for Suspense integration
     const streamPromise = (async () => {
+      let enteredStreaming = false;
+
       try {
+        const requestMessages = messages().map((m: Message) => ({
+          role: m.role,
+          content: m.content
+        }));
+        const requestBody = JSON.stringify({
+          messages: requestMessages,
+          ...body
+        });
+
+        logger.debug('submit:normalized', {
+          requestId,
+          api,
+          normalizedInputLength: normalizedContent.length,
+          requestMessageCount: requestMessages.length,
+          requestRoles: requestMessages.map((m) => m.role),
+          suspense,
+          ...summarizeHeaders(headers),
+          ...summarizeBody(body),
+          ...summarizeJsonPayload(requestBody)
+        });
+
         const response = await fetch(api, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             ...headers
           },
-          body: JSON.stringify({
-            messages: messages().map((m: Message) => ({
-              role: m.role,
-              content: m.content
-            })),
-            ...body
-          }),
+          body: requestBody,
           signal: abortController!.signal,
           credentials
         });
 
         onResponse?.(response);
+
+        logger.debug('submit:response', {
+          requestId,
+          api,
+          status: response.status,
+          ok: response.ok,
+          hasBody: response.body !== null
+        });
 
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -132,6 +185,7 @@ export function aiChat(options: AiChatOptions): AiChat {
         }
 
         status.set('streaming');
+        enteredStreaming = true;
 
         const reader = response.body.getReader();
         let accumulatedText = '';
@@ -166,12 +220,25 @@ export function aiChat(options: AiChatOptions): AiChat {
         const finalMessages = messages();
         const finalAssistant = finalMessages[finalMessages.length - 1];
         if (finalAssistant && finalAssistant.role === 'assistant') {
+          logger.debug('submit:success', {
+            requestId,
+            api,
+            durationMs: Date.now() - startedAt,
+            assistantContentLength: finalAssistant.content.length,
+            totalMessageCount: finalMessages.length
+          });
           onFinish?.(finalAssistant);
         }
       } catch (err) {
         // Handle abort
         if (err instanceof Error && err.name === 'AbortError') {
           status.set('idle');
+          logger.debug('submit:aborted', {
+            requestId,
+            api,
+            durationMs: Date.now() - startedAt,
+            phase: enteredStreaming ? 'streaming' : 'submitting'
+          });
           return;
         }
 
@@ -179,6 +246,14 @@ export function aiChat(options: AiChatOptions): AiChat {
         error.set(errorInstance);
         status.set('error');
         onError?.(errorInstance);
+
+        logger.error('submit:error', errorInstance, {
+          requestId,
+          api,
+          durationMs: Date.now() - startedAt,
+          phase: enteredStreaming ? 'streaming' : 'submitting',
+          messageCount: messages().length
+        });
 
         // Remove the empty assistant message on error
         messages.set((prev: Message[]) => {
@@ -212,6 +287,10 @@ export function aiChat(options: AiChatOptions): AiChat {
    */
   const stop = (): void => {
     if (abortController) {
+      logger.debug('stop', {
+        api,
+        status: status()
+      });
       abortController.abort();
       abortController = null;
       status.set('idle');
@@ -233,10 +312,21 @@ export function aiChat(options: AiChatOptions): AiChat {
       }
     }
 
-    if (lastUserIndex === -1) return;
+    if (lastUserIndex === -1) {
+      logger.debug('reload:skip-no-user-message', {
+        api,
+        messageCount: currentMessages.length
+      });
+      return;
+    }
 
     // Remove messages from last user message onwards
     const lastUserMessage = currentMessages[lastUserIndex];
+    logger.debug('reload:start', {
+      api,
+      replayFromIndex: lastUserIndex,
+      removedMessageCount: currentMessages.length - lastUserIndex
+    });
     messages.set(currentMessages.slice(0, lastUserIndex));
 
     // Re-submit

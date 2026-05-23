@@ -1,4 +1,5 @@
 const Navigation = () => {
+  console.log('[Render] Navigation');
   return (
     <nav className="container pt-7 pb-4 lg:pt-10">
       <div className="flex items-center justify-between">

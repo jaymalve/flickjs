@@ -1,6 +1,6 @@
 import { streamText, generateText, type LanguageModel } from 'ai';
 import type { CoreMessage } from 'ai';
-import { resolveModel } from '../providers/registry';
+import { resolveModel } from '../providers';
 import type { Agent, AgentConfig, AgentChatOptions, AgentResult } from './types';
 
 /**

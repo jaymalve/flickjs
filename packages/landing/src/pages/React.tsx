@@ -2,6 +2,7 @@ import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 
 const ReactPage = () => {
+  console.log('[Render] ReactPage');
   return (
     <div className="min-h-screen bg-background">
       <Navigation />

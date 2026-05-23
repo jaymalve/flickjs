@@ -1,4 +1,5 @@
 const Footer = () => {
+  console.log('[Render] Footer');
   return (
     <footer className="container pb-20 lg:pb-32">
       <div className="flex items-center gap-4 text-sm text-stone-600">

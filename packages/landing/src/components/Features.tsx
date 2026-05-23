@@ -25,6 +25,7 @@ const features = [
 ];
 
 const Features = () => {
+  console.log('[Render] Features');
   return (
     <section className="py-16 md:py-24 border-t border-input">
       <div className="container">

@@ -39,6 +39,7 @@ const ChartContainer = React.forwardRef<
     children: React.ComponentProps<typeof RechartsPrimitive.ResponsiveContainer>['children'];
   }
 >(({ id, className, children, config, ...props }, ref) => {
+  console.log('ChartContainer');
   const uniqueId = React.useId();
   const chartId = `chart-${id || uniqueId.replace(/:/g, '')}`;
 
@@ -62,6 +63,7 @@ const ChartContainer = React.forwardRef<
 ChartContainer.displayName = 'Chart';
 
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
+  console.log('ChartStyle');
   const colorConfig = Object.entries(config).filter(([_, config]) => config.theme || config.color);
 
   if (!colorConfig.length) {
@@ -121,6 +123,7 @@ const ChartTooltipContent = React.forwardRef<
     },
     ref
   ) => {
+    console.log('ChartTooltipContent');
     const { config } = useChart();
 
     const tooltipLabel = React.useMemo(() => {
@@ -246,6 +249,7 @@ const ChartLegendContent = React.forwardRef<
       nameKey?: string;
     }
 >(({ className, hideIcon = false, payload, verticalAlign = 'bottom', nameKey }, ref) => {
+  console.log('ChartLegendContent');
   const { config } = useChart();
 
   if (!payload?.length) {

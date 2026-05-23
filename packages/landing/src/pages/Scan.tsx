@@ -17,6 +17,7 @@ const USAGE_COMMANDS: { comment: string; cmd: string }[] = [
 ];
 
 const Scan = () => {
+  console.log('[Render] Scan');
   const [copied, setCopied] = useState(false);
   const [copiedUsageCmd, setCopiedUsageCmd] = useState<string | null>(null);
   const usageCopyResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);

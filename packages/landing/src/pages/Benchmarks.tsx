@@ -92,6 +92,7 @@ function BarChart({
 }
 
 const Benchmarks = ({ compareFrameworks = [CompareFramework.SolidJS] }: BenchmarksProps) => {
+  console.log('[Render] Benchmarks');
   const showSolid = compareFrameworks.includes(CompareFramework.SolidJS);
 
   // Filter bar chart data based on compareFrameworks

@@ -7,4 +7,4 @@ export { cerebras, createCerebras } from '@ai-sdk/cerebras';
 export { createOpenRouter } from '@openrouter/ai-sdk-provider';
 
 // Re-export registry utilities
-export { resolveModel, registerProvider, getProviders } from './registry';
+export { resolveModel, registerProvider, getProviders } from '../../providers';

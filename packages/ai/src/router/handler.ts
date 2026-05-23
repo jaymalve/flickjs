@@ -1,6 +1,7 @@
 import type { CoreMessage } from 'ai';
 import type { Agent } from '../server/agent/types';
 import type { AgentRouter } from './types';
+import { describeAgentModel, logAgentRouterEvent, nextRouterRequestId } from './router';
 
 /**
  * Minimal Express types to avoid requiring express as a dependency
@@ -151,8 +152,27 @@ export function createHandler<T extends Record<string, Agent>>(
   const corsHeaders = getCorsHeaders(cors);
 
   return async (req: Request): Promise<Response> => {
+    const requestId = nextRouterRequestId();
+    const url = new URL(req.url);
+
+    logAgentRouterEvent('request received', {
+      requestId,
+      transport: 'fetch',
+      method: req.method,
+      pathname: url.pathname
+    });
+
     // Handle CORS preflight requests
     if (req.method === 'OPTIONS') {
+      logAgentRouterEvent('request completed', {
+        requestId,
+        transport: 'fetch',
+        method: req.method,
+        pathname: url.pathname,
+        outcome: 'cors-preflight',
+        status: 204
+      });
+
       return new Response(null, {
         status: 204,
         headers: corsHeaders
@@ -160,7 +180,6 @@ export function createHandler<T extends Record<string, Agent>>(
     }
 
     // Extract agent name from URL path
-    const url = new URL(req.url);
     const pathParts = url.pathname.split('/').filter(Boolean);
     const agentName = pathParts[pathParts.length - 1];
 
@@ -168,6 +187,18 @@ export function createHandler<T extends Record<string, Agent>>(
     const agent = router._agents[agentName];
 
     if (!agent) {
+      logAgentRouterEvent(
+        'route resolution failed',
+        {
+          requestId,
+          transport: 'fetch',
+          pathname: url.pathname,
+          agent: agentName,
+          availableAgents: Object.keys(router._agents)
+        },
+        'warn'
+      );
+
       return withCors(
         new Response(
           JSON.stringify({
@@ -188,7 +219,19 @@ export function createHandler<T extends Record<string, Agent>>(
     let body: { messages?: CoreMessage[]; stream?: boolean };
     try {
       body = await req.json();
-    } catch {
+    } catch (error) {
+      logAgentRouterEvent(
+        'request rejected',
+        {
+          requestId,
+          transport: 'fetch',
+          agent: agentName,
+          reason: 'invalid-json-body'
+        },
+        'warn',
+        error
+      );
+
       return withCors(
         new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
           status: 400,
@@ -201,6 +244,17 @@ export function createHandler<T extends Record<string, Agent>>(
     const { messages } = body;
 
     if (!messages || !Array.isArray(messages)) {
+      logAgentRouterEvent(
+        'request rejected',
+        {
+          requestId,
+          transport: 'fetch',
+          agent: agentName,
+          reason: 'invalid-messages'
+        },
+        'warn'
+      );
+
       return withCors(
         new Response(
           JSON.stringify({
@@ -226,15 +280,49 @@ export function createHandler<T extends Record<string, Agent>>(
       (acceptHeader.includes('text/event-stream') ||
         acceptHeader.includes('*/*') ||
         acceptHeader === '');
+    const model = describeAgentModel(agent);
+
+    logAgentRouterEvent('route resolved', {
+      requestId,
+      transport: 'fetch',
+      agent: agentName,
+      model
+    });
+
+    logAgentRouterEvent('dispatch selected', {
+      requestId,
+      transport: 'fetch',
+      agent: agentName,
+      model,
+      mode: wantsStream ? 'stream' : 'run',
+      messageCount: coreMessages.length
+    });
 
     try {
       if (wantsStream) {
         // Streaming response
         const response = await agent.chat(coreMessages);
+        logAgentRouterEvent('request completed', {
+          requestId,
+          transport: 'fetch',
+          agent: agentName,
+          model,
+          mode: 'stream',
+          status: response.status
+        });
         return withCors(response, corsHeaders);
       } else {
         // Non-streaming response
         const result = await agent.run(coreMessages);
+        logAgentRouterEvent('request completed', {
+          requestId,
+          transport: 'fetch',
+          agent: agentName,
+          model,
+          mode: 'run',
+          finishReason: result.finishReason,
+          totalTokens: result.usage?.totalTokens
+        });
         return withCors(
           new Response(JSON.stringify(result), {
             headers: { 'Content-Type': 'application/json' }
@@ -243,8 +331,20 @@ export function createHandler<T extends Record<string, Agent>>(
         );
       }
     } catch (error) {
-      console.error('[createHandler] Error:', error);
       const message = error instanceof Error ? error.message : 'Unknown error';
+      logAgentRouterEvent(
+        'request failed',
+        {
+          requestId,
+          transport: 'fetch',
+          agent: agentName,
+          model,
+          mode: wantsStream ? 'stream' : 'run',
+          message
+        },
+        'error',
+        error
+      );
       return withCors(
         new Response(JSON.stringify({ error: message }), {
           status: 500,
@@ -302,6 +402,16 @@ export function createExpressHandler<T extends Record<string, Agent>>(
   const corsHeaders = getCorsHeaders(cors);
 
   return async (req, res, _next) => {
+    const requestId = nextRouterRequestId();
+    const pathname = req.url.split('?')[0];
+
+    logAgentRouterEvent('request received', {
+      requestId,
+      transport: 'express',
+      method: req.method,
+      pathname
+    });
+
     // Apply CORS headers
     for (const [key, value] of Object.entries(corsHeaders)) {
       res.setHeader(key, value);
@@ -309,18 +419,39 @@ export function createExpressHandler<T extends Record<string, Agent>>(
 
     // Handle CORS preflight
     if (req.method === 'OPTIONS') {
+      logAgentRouterEvent('request completed', {
+        requestId,
+        transport: 'express',
+        method: req.method,
+        pathname,
+        outcome: 'cors-preflight',
+        status: 204
+      });
+
       res.status(204).end();
       return;
     }
 
     // Extract agent name from URL path
-    const pathParts = req.url.split('?')[0].split('/').filter(Boolean);
+    const pathParts = pathname.split('/').filter(Boolean);
     const agentName = pathParts[pathParts.length - 1];
 
     // Find the agent
     const agent = router._agents[agentName];
 
     if (!agent) {
+      logAgentRouterEvent(
+        'route resolution failed',
+        {
+          requestId,
+          transport: 'express',
+          pathname,
+          agent: agentName,
+          availableAgents: Object.keys(router._agents)
+        },
+        'warn'
+      );
+
       res.status(404).json({
         error: 'Agent not found',
         agent: agentName,
@@ -333,6 +464,17 @@ export function createExpressHandler<T extends Record<string, Agent>>(
     const body = req.body as { messages?: CoreMessage[]; stream?: boolean } | undefined;
 
     if (!body) {
+      logAgentRouterEvent(
+        'request rejected',
+        {
+          requestId,
+          transport: 'express',
+          agent: agentName,
+          reason: 'missing-body'
+        },
+        'warn'
+      );
+
       res.status(400).json({
         error: 'Missing request body. Make sure express.json() middleware is applied.'
       });
@@ -342,6 +484,17 @@ export function createExpressHandler<T extends Record<string, Agent>>(
     const { messages } = body;
 
     if (!messages || !Array.isArray(messages)) {
+      logAgentRouterEvent(
+        'request rejected',
+        {
+          requestId,
+          transport: 'express',
+          agent: agentName,
+          reason: 'invalid-messages'
+        },
+        'warn'
+      );
+
       res.status(400).json({
         error: "Missing or invalid 'messages' array in request body"
       });
@@ -357,6 +510,23 @@ export function createExpressHandler<T extends Record<string, Agent>>(
       (acceptHeader.includes('text/event-stream') ||
         acceptHeader.includes('*/*') ||
         acceptHeader === '');
+    const model = describeAgentModel(agent);
+
+    logAgentRouterEvent('route resolved', {
+      requestId,
+      transport: 'express',
+      agent: agentName,
+      model
+    });
+
+    logAgentRouterEvent('dispatch selected', {
+      requestId,
+      transport: 'express',
+      agent: agentName,
+      model,
+      mode: wantsStream ? 'stream' : 'run',
+      messageCount: coreMessages.length
+    });
 
     try {
       if (wantsStream) {
@@ -382,15 +552,44 @@ export function createExpressHandler<T extends Record<string, Agent>>(
             reader.releaseLock();
           }
         }
+        logAgentRouterEvent('request completed', {
+          requestId,
+          transport: 'express',
+          agent: agentName,
+          model,
+          mode: 'stream',
+          status: response.status
+        });
         res.end();
       } else {
         // Non-streaming response
         const result = await agent.run(coreMessages);
+        logAgentRouterEvent('request completed', {
+          requestId,
+          transport: 'express',
+          agent: agentName,
+          model,
+          mode: 'run',
+          finishReason: result.finishReason,
+          totalTokens: result.usage?.totalTokens
+        });
         res.json(result);
       }
     } catch (error) {
-      console.error('[createExpressHandler] Error:', error);
       const message = error instanceof Error ? error.message : 'Unknown error';
+      logAgentRouterEvent(
+        'request failed',
+        {
+          requestId,
+          transport: 'express',
+          agent: agentName,
+          model,
+          mode: wantsStream ? 'stream' : 'run',
+          message
+        },
+        'error',
+        error
+      );
       if (!res.headersSent) {
         res.status(500).json({ error: message });
       }
